@@ -8,8 +8,6 @@ The templates defined in this repository have been customized for our build proc
 
 The templates defined in this repository are also the source of truth for the `im-` templates in each of the Enterprise Org `.github` repos.  When a merge to master happens, the template files in this repo will be copied to the other `.github` repositories in the Enterprise.  If changes have been made to any of the `im-` template files in those organizations' `.github` repos they will be overwritten by these changes.
 
-
-
 ## Adding new Templates
 If there are new templates that can be used across many organizations, please make a PR to this repository so they can be shared with each organization in the Enterprise.  
 
@@ -25,12 +23,12 @@ The templates in this repository fall into one of the following categories:
  
 ### Template Standards
 - For new `.svg` files ensure:
-  - The file contains the `im_` prefix
+  - [ ] The file contains the `im_` prefix
 - For new `properties.json` files ensure:
-  - The file contains the appropriate `im-<build|deploy|test|run>-` prefix
-  - The `name` field has a category prefix (Build, Deploy, Test, Run)
+  - [ ] The file contains the appropriate `im-<build|deploy|test|run>-` prefix
+  - [ ] The `name` field has a category prefix (Build, Deploy, Test, Run)
     - This is included so templates are easier to identify when looking for workflows to add
-  - The `iconName` field contains one of the [SVGs](#svgs) listed below
+  - [ ] The `iconName` field contains one of the [SVGs](#svgs) listed below
     - im_build
     - im_deploy
     - im_test
@@ -38,10 +36,10 @@ The templates in this repository fall into one of the following categories:
     - im_tf
     - im_checkmarx
 - For new `.yml` files ensure:
-  - The file contains the appropriate `im-<build|deploy|test|run>-` prefix
-  - Clearly mark what needs to be customized or populated by the user
-  - Avoid using default values that may be overlooked
-  - Clearly state the format if something specific is required
+  - [ ] The file contains the appropriate `im-<build|deploy|test|run>-` prefix
+  - [ ] Clearly mark what needs to be customized or populated by the user
+  - [ ] Avoid using default values that may be overlooked
+  - [ ] Clearly state the format if something specific is required
   
 
 [add a workflow]: https://docs.github.com/en/actions/guides/setting-up-continuous-integration-using-workflow-templates
