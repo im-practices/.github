@@ -1,0 +1,5 @@
+{
+  "name": "Deploy - Auto apply tf on merge",
+  "description": "Workflow template for auto applying the main branch to the dev environment on PR Merge",
+  "iconName": "tf"
+}
