@@ -1,0 +1,48 @@
+name: Checkmarx CLI SAST Scan
+
+on:
+  workflow_dispatch:
+  pull_request:
+  schedule:
+    # 05:00 on Monday
+    - cron: 0 5 * * 1 #TODO:  Pick a new time to avoid running scheduled scans at the same time as everyone else.
+
+jobs:
+  scan-the-code:
+    runs-on: [self-hosted, ubuntu-20.04]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run the Scan
+        id: scan
+        uses: im-open/checkmarx-cli-sast-scan@v1.0.0
+        with:
+          checkmarx-server-url: ${{ secrets.CHECKMARX_URL }}
+          checkmarx-username: ${{ secrets.CHECKMARX_USERNAME }}
+          checkmarx-password: ${{ secrets.CHECKMARX_PASSWORD }}
+          team: 'CxServer\SP\Company\Users\BDA_IndividualMarketplace\BDAOutSourceTeamCity' # Same for all IM scans
+
+          # TODO:  Add your App name and optional project type.
+          # Required Format: IndividualMarketplace.[projectName].[optional-project-type]
+          # Examples: (IndividualMarketplace.1UP or IndividualMarketplace.Shopping.Mfe)
+          project: ''
+
+          # TODO:  Replace with any files or folders that need to be excluded from the scan.
+          # Default list and format at https://github.com/im-open/checkmarx-cli-sast-scan/tree/main#excluding-files-and-folders
+          exclude-paths: ''
+
+          # TODO:  Review default values and update/delete as applicable
+          # report-name: 'CheckmarxSASTResults.pdf'
+          # sast-high: 0    # This cannot exceed 0 according to our standards
+          # sast-medium: 4  # This cannot exceed 4 according to our standards
+          # sast-low: 11    # This cannot exceed 11 according to our standards
+          # break-build: true
+          # comment: '${{github.workflow}} run #${{ github.run_number }} on branch ${{ github.ref }}.'
+          # checkmarx-cli-version: 1.1.5
+
+      - name: Upload the PDF Report
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: Checkmarx Report # TODO:  Verify the name of the section that will show on the workflow summary
+          path: ${{ steps.scan.outputs.report-path }}

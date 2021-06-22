@@ -1,0 +1,5 @@
+{
+  "name": "Test - Checkmarx CLI SAST Scan",
+  "description": "Workflow template for running the Checkmarx CLI SAST Scan",
+  "iconName": "checkmarx"
+}
