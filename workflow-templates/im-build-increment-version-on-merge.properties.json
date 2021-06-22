@@ -1,5 +1,5 @@
 {
   "name": "Build - Increment SemVer on Merge",
   "description": "Workflow template for incrementing the SemVer and pushing the new tag to the repository on merge.",
-  "iconName": "build"
+  "iconName": "im_build"
 }

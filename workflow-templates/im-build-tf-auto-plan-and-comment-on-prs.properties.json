@@ -1,5 +1,5 @@
 {
   "name": "Build - Automatically Plan and Comment on PR",
   "description": "Workflow template for automatically running a terraform plan on push and commenting on a PR.",
-  "iconName": "tf"
+  "iconName": "im_tf"
 }
