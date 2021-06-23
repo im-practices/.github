@@ -1,12 +1,12 @@
 name: Increment the Repository's version
-on: 
+on:
   pull_request:
     types: [closed]
 
 jobs:
   increment-version:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
-    
+
     runs-on: [self-hosted, ubuntu-20.04]
 
     steps:
@@ -25,15 +25,15 @@ jobs:
 
           patch=${majorminorpatch[2]}
           let "patch=patch+1"
-          
+
           newTag="${majorminorpatch[0]}.${majorminorpatch[1]}.$patch"
           echo "The new tag is: $newTag"
           echo "NEW_TAG=$newTag" >> $GITHUB_ENV
-          
+
       - name: Push the tag
         id: setup
         uses: actions/github-script@v4
-        with: 
+        with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             await github.git.createRef({

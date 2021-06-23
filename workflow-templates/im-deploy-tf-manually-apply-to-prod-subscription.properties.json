@@ -1,5 +1,5 @@
 {
-  "name": "Deploy - Apply TF to a Dev Subscription Resource Group",
+  "name": "Deploy - Apply TF to a Prod Subscription Resource Group",
   "description": "Workflow template for kicking off a terraform apply to a resource group in the Dev Subscription.",
-  "iconName": "tf"
+  "iconName": "im_tf"
 }
