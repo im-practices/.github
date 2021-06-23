@@ -1,19 +1,19 @@
 name: Manually apply terraform at tag to Prod environment
-on: 
+on:
   workflow_dispatch:
     inputs:
       tag:
-        description:  The tag (which must be reachable by master/main) for the terraform that should be deployed to the Prod environment.
+        description: The tag (which must be reachable by master/main) for the terraform that should be deployed to the Prod environment.
         required: true
       environment:
-        description:  The environment to Deploy To.
+        description: The environment to Deploy To.
         required: true
 
-env: 
-  STORAGE_ACCOUNT: 'bdaimpna26yourappsa'                            # TODO:  Add your STG Account Here
-  RESOURCE_GROUP: 'BDAIM-P-NA26-your-app-here-RGRP'                 # TODO:  Add your RGRP here
-  PAGERDUTY_SERVICE_IDS: '[ "P0XXXXX", "ADD_YOUR_SERVICE_ID(S)" ]'  # TODO:  Add your PD Service IDs here
-  PAGERDUTY_WINDOW_IN_MIN: 30                                       # TODO:  Verify the length of your PD Maintenance Window
+env:
+  STORAGE_ACCOUNT: 'bdaimpna26yourappsa' # TODO:  Add your STG Account Here
+  RESOURCE_GROUP: 'BDAIM-P-NA26-your-app-here-RGRP' # TODO:  Add your RGRP here
+  PAGERDUTY_SERVICE_IDS: '[ "P0XXXXX", "ADD_YOUR_SERVICE_ID(S)" ]' # TODO:  Add your PD Service IDs here
+  PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
   PLAN_STORAGE_CONTAINER: 'tfstate'
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
@@ -25,7 +25,6 @@ env:
   SSH_KEY_STORAGE_ACCOUNT: ${{secrets.SSH_STORAGE_ACCOUNT}}
   SSH_KEY_ON_PREM_EGRESS: ${{secrets.SSH_ON_PREM_EGRESS}}
 
-
 jobs:
   stakeholder-approval:
     runs-on: [ubuntu-20.04]
@@ -33,28 +32,28 @@ jobs:
     steps:
       - name: Approval Received
         run: echo "Stakeholder approval was received"
-  
+
   validate-input:
     needs: stakeholder-approval
     runs-on: [ubuntu-20.04]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
-      
+
       - name: Clean Environment Input
         id: clean-env
         uses: im-open/map-input-action@v1
         with:
           input: ${{ github.event.inputs.environment }}
-          input_map: "{ \"Stage\": [\"stg\", \"s\", \"stage\"], \"Prod\": [\"prod\", \"production\", \"p\"] }"
+          input_map: '{ "Stage": ["stg", "s", "stage"], "Prod": ["prod", "production", "p"] }'
 
       # TODO:  Update if you don't use all these environments in the Production subscription
       - name: Check if environment is Stage or Prod
         if: ${{ steps.clean-env.outputs.mapped_input != 'Stage' &&  steps.clean-env.outputs.mapped_input != 'Prod'}}
         run: |
-            echo "::error::The environment must be Stage or Prod";
-            exit 1
-          
+          echo "::error::The environment must be Stage or Prod";
+          exit 1
+
       - name: Check if tag is on master
         run: |
           mergedTags=$(git tag --merged)
@@ -72,7 +71,7 @@ jobs:
             echo "::error::The tag does not appear to be reachable by master.  Only tags on merged code can be deployed to Production environments."
             exit 1
           fi
-    
+
   tf-plan:
     needs: validate-input
     runs-on: [self-hosted, ubuntu-20.04]
@@ -82,10 +81,10 @@ jobs:
       run:
         shell: bash
         working-directory: ${{ github.events.inputs.environment }} # TODO:  Verify this is correct for your repository
-    
+
     outputs:
       tf_plan_name: ${{steps.upload.outputs.tf_plan_name}}
-      maintenance_window_id: ${{ steps.open-window.outputs.maintenance-window-id }} 
+      maintenance_window_id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
     steps:
       - name: Checkout Repository
@@ -122,11 +121,11 @@ jobs:
         uses: hashicorp/setup-terraform@v1.2.1
         with:
           terraform_version: ~>0.15.5 # TODO:  Verify the tf version
-      
+
       - name: Terraform Init
         id: init
         run: terraform init
-      
+
       - name: Terraform Plan
         id: plan
         run: |
@@ -134,7 +133,7 @@ jobs:
           terraform plan -no-color \
             -var="pagerduty_token=${{secrets.PAGERDUTY_TOKEN}}" \
             -out=./plans/tfplan
-        
+
       - name: Upload plan to blob storage
         id: upload
         shell: pwsh
@@ -154,9 +153,9 @@ jobs:
           $key = az storage account keys list --account-name ${{env.STORAGE_ACCOUNT}} --resource-group ${{env.RESOURCE_GROUP}} --query [0].value -o tsv
           az storage blob upload --no-progress --auth-mode key --account-key $key --account-name ${{env.STORAGE_ACCOUNT}} --container-name ${{env.PLAN_STORAGE_CONTAINER}} --file $terraformPlanName --name $terraformBlobName
           echo "The plan was successfully uploaded"
-          
+
           echo "::set-output name=tf_plan_name::$terraformPlanName"
-      
+
   technical-approval:
     needs: tf-plan
     runs-on: [ubuntu-20.04]
@@ -175,7 +174,7 @@ jobs:
       run:
         shell: bash
         working-directory: ${{ github.events.inputs.environment }} # TODO:  Verify this is correct for your repository
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -202,7 +201,7 @@ jobs:
         uses: hashicorp/setup-terraform@v1.2.1
         with:
           terraform_version: ~>0.15.5 # TODO:  Verify the tf version
-      
+
       - name: Download blob
         shell: pwsh
         run: |
@@ -210,11 +209,11 @@ jobs:
           echo "Current working directory: $pwd"
           $terraformBlobName = "plans/${{needs.tf-plan.outputs.tf_plan_name}}"
           echo "The blob name is: $terraformBlobName"
-          
+
           Write-Host "Download blob to ./plans"
           $key = az storage account keys list --account-name ${{env.STORAGE_ACCOUNT}} --resource-group ${{env.RESOURCE_GROUP}} --query [0].value -o tsv
           az storage blob download --no-progress --auth-mode key --account-key $key --account-name ${{env.STORAGE_ACCOUNT}} --container-name ${{env.PLAN_STORAGE_CONTAINER}} --file $pwd/$terraformBlobName --name $terraformBlobName
-          
+
           try {
             [System.IO.Compression.ZipFile]::ExtractToDirectory("$pwd/$terraformBlobName", "$pwd/plans")    
           }
@@ -235,4 +234,4 @@ jobs:
         uses: im-open/close-pagerduty-maintenance-window@v1.0.0
         with:
           pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
-          maintenance-window-id: ${{needs.tf-plan.outputs.maintenance_window_id}} 
+          maintenance-window-id: ${{needs.tf-plan.outputs.maintenance_window_id}}

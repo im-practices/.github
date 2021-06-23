@@ -1,11 +1,11 @@
 name: Auto Apply main branch to Dev on PR Merge
-on: 
+on:
   pull_request:
     types: [closed]
 
 env:
-  PAGERDUTY_SERVICE_IDS: '[ "P0XXXXX", "ADD_YOUR_SERVICE_ID(S)" ]'  # TODO:  Add your PD Service IDs here
-  PAGERDUTY_WINDOW_IN_MIN: 10                                       # TODO:  Verify the length of your PD Maintenance Window
+  PAGERDUTY_SERVICE_IDS: '[ "P0XXXXX", "ADD_YOUR_SERVICE_ID(S)" ]' # TODO:  Add your PD Service IDs here
+  PAGERDUTY_WINDOW_IN_MIN: 10 # TODO:  Verify the length of your PD Maintenance Window
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
@@ -19,11 +19,11 @@ env:
 jobs:
   auto-apply-tf:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
-    
+
     runs-on: [self-hosted, ubuntu-20.04]
 
     environment: 'Dev'
-    
+
     defaults:
       run:
         shell: bash
@@ -48,11 +48,11 @@ jobs:
         uses: hashicorp/setup-terraform@v1.2.1
         with:
           terraform_version: ~>0.15.5 # TODO:  Verify the tf version
-      
+
       - name: Terraform Init
         id: init
         run: terraform init
-      
+
       - name: Open a PagerDuty Maintenance Window
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.0.0
@@ -71,4 +71,4 @@ jobs:
         uses: im-open/close-pagerduty-maintenance-window@v1.0.0
         with:
           pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
-          maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}        
+          maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}

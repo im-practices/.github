@@ -1,5 +1,5 @@
 name: Automatically run tf plan and comment on PR
-on: 
+on:
   pull_request:
     types: [opened, reopened, synchronize]
 
@@ -19,11 +19,11 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
 
     environment: 'Dev'
-    
+
     defaults:
       run:
         shell: bash
-        working-directory: ./dev  # TODO:  Verify this is correct for your repository
+        working-directory: ./dev # TODO:  Verify this is correct for your repository
 
     steps:
       - name: Checkout Repository
@@ -44,11 +44,11 @@ jobs:
               { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
               { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
             ]
-      
+
       - name: Terraform Init
         id: init
         run: terraform init
-      
+
       - name: Terraform Format
         id: fmt
         run: terraform fmt -check
@@ -57,9 +57,9 @@ jobs:
         id: plan
         run: |
           terraform plan -no-color \
-          -var="pagerduty_token=${{secrets.PAGERDUTY_TOKEN}}" 
+          -var="pagerduty_token=${{secrets.PAGERDUTY_TOKEN}}"
         continue-on-error: true
-      
+
       - name: 'Terraform Comment'
         uses: actions/github-script@v4
         env:
@@ -80,7 +80,7 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
-      
+
       - name: Terraform Plan Status
         if: steps.plan.outcome == 'failure'
         run: exit 1
