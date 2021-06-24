@@ -10,6 +10,8 @@ env:
   ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
+  TF_VERSION: '~>0.15.5' #TODO:  Verify your version of terraform.
+  TF_WORKING_DIR: './dev' # TODO:  Verify this directory is correct for your repository
   SSH_KEY_CENTRAL_LOGGING: ${{secrets.SSH_CENTRAL_LOGGING}}
   SSH_KEY_STORAGE_ACCOUNT: ${{secrets.SSH_STORAGE_ACCOUNT}}
   SSH_KEY_ON_PREM_EGRESS: ${{secrets.SSH_ON_PREM_EGRESS}}
@@ -23,7 +25,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ./dev # TODO:  Verify this is correct for your repository
+        working-directory: '${{ env.TF_WORKING_DIR }}'
 
     steps:
       - name: Checkout Repository
@@ -33,7 +35,7 @@ jobs:
         id: setup
         uses: hashicorp/setup-terraform@v1.2.1
         with:
-          terraform_version: ~>0.15.5 # TODO:  Verify the tf version
+          terraform_version: '${{ env.TF_VERSION }}'
 
       - name: Setup SSH Keys and known_hosts
         uses: im-open/setup-deploy-keys@1.0.1
@@ -53,6 +55,7 @@ jobs:
         id: fmt
         run: terraform fmt -check
 
+      # TODO:  Remove the pagerduty token if not configuring pagerduty
       - name: Terraform Plan
         id: plan
         run: |

@@ -10,10 +10,11 @@ on:
         required: true
 
 env:
-  STORAGE_ACCOUNT: 'bdaimpna26yourappsa' # TODO:  Add your STG Account Here
-  RESOURCE_GROUP: 'BDAIM-P-NA26-your-app-here-RGRP' # TODO:  Add your RGRP here
-  PAGERDUTY_SERVICE_IDS: '[ "P0XXXXX", "ADD_YOUR_SERVICE_ID(S)" ]' # TODO:  Add your PD Service IDs here
+  STORAGE_ACCOUNT: '' # TODO:  Add your STG Account Here
+  RESOURCE_GROUP: '' # TODO:  Add your RGRP here
+  PAGERDUTY_SERVICE_IDS: '[ "" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
   PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
+  PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ github.event.inputs.environment }} environment from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
   PLAN_STORAGE_CONTAINER: 'tfstate'
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
@@ -21,6 +22,8 @@ env:
   ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
+  TF_VERSION: '~>0.15.5' #TODO:  Verify your version of terraform.
+  TF_WORKING_DIR: './${{ github.events.inputs.environment }}' # TODO:  Verify this directory is correct for your repository
   SSH_KEY_CENTRAL_LOGGING: ${{secrets.SSH_CENTRAL_LOGGING}}
   SSH_KEY_STORAGE_ACCOUNT: ${{secrets.SSH_STORAGE_ACCOUNT}}
   SSH_KEY_ON_PREM_EGRESS: ${{secrets.SSH_ON_PREM_EGRESS}}
@@ -80,7 +83,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ${{ github.events.inputs.environment }} # TODO:  Verify this is correct for your repository
+        working-directory: '${{ env.TF_WORKING_DIR }}'
 
     outputs:
       tf_plan_name: ${{steps.upload.outputs.tf_plan_name}}
@@ -107,7 +110,7 @@ jobs:
         uses: im-open/open-pagerduty-maintenance-window@v1.0.0
         with:
           pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
-          description: 'Deploying Infrastructure to the ${{ github.event.inputs.environment }} environment from GitHub Actions' # TODO:  Verify this description
+          description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
 
@@ -120,12 +123,13 @@ jobs:
         id: setup
         uses: hashicorp/setup-terraform@v1.2.1
         with:
-          terraform_version: ~>0.15.5 # TODO:  Verify the tf version
+          terraform_version: '${{ env.TF_VERSION }}'
 
       - name: Terraform Init
         id: init
         run: terraform init
 
+      # TODO:  Remove the pagerduty token if not configuring pagerduty
       - name: Terraform Plan
         id: plan
         run: |
@@ -173,7 +177,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ${{ github.events.inputs.environment }} # TODO:  Verify this is correct for your repository
+        working-directory: '${{ env.TF_WORKING_DIR }}'
 
     steps:
       - name: Checkout Repository
@@ -200,7 +204,7 @@ jobs:
         id: setup
         uses: hashicorp/setup-terraform@v1.2.1
         with:
-          terraform_version: ~>0.15.5 # TODO:  Verify the tf version
+          terraform_version: '${{ env.TF_VERSION }}'
 
       - name: Download blob
         shell: pwsh
