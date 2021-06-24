@@ -1,0 +1,49 @@
+name: Deploy Files to Azure Storage
+
+# TODO:  Evaluate the appropriate triggers
+on:
+  workflow_dispatch:
+    inputs:
+      branch-tag-sha:
+        description: The branch, tag or sha of the terraform that should be deployed to the Dev environment.
+        required: true
+      environment:
+        description: The environment to Deploy To.
+        required: true
+
+env:
+  STORAGE_ACCOUNT_NAME: '' # TODO:  Add the appropriate storage account name
+  TARGET_CONTAINER: '' # TODO:  Add the appropriate target container in the stg account
+  SOURCE_DIRECTORY: '' # TODO:  Add the appropriate source directory
+
+jobs:
+  deploy-to-azure:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+
+    runs-on: [self-hosted, ubuntu-20.04]
+
+    environment: Dev #TODO:
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.branch-tag-sha }}
+
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO: Ensure this secret has been populated
+
+      # This call uses RBAC (--auth-mode login) to upload files to the azure storage account.
+      # No other key or connection string is needed. In order to push files to a stg account
+      # the SP that authenticates in the step above needs an additional permission (Storage
+      # Blob Data Contributor).  Without that permission, this call will not succeed.
+      # https://docs.microsoft.com/en-us/azure/storage/blobs/assign-azure-role-data-access?tabs=portal
+      - name: Upload Files
+        run: |
+          az storage blob upload-batch \
+            --auth-mode login \
+            --account-name '${{env.STORAGE_ACCOUNT_NAME}}' \
+            -d '${{env.TARGET_CONTAINER}}' \
+            -s '${{env.SOURCE_DIRECTORY}}'

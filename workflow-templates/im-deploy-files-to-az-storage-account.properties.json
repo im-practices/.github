@@ -1,0 +1,5 @@
+{
+    "name": "Deploy - Deploy Files to AZ Storage Account",
+    "description": "Template that can be used to deploy files to an Azure Storage Account",
+    "iconName": "im_azure"
+}
