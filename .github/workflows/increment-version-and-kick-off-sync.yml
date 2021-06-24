@@ -53,7 +53,7 @@ jobs:
           github-token: ${{secrets.PIPELINE_BOT_PAT}}
           script: |
             github.repos.createDispatchEvent({
-              owner: bdaim-bc-swat,
-              repo: github-management,
+              owner: 'bdaim-bc-swat',
+              repo: 'github-management',
               event_type: 'sync_workflows'
             });
