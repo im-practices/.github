@@ -1,0 +1,36 @@
+name: Cleanup Automated Deployment Board
+
+# TODO:  Evaluate the appropriate triggers
+on:
+  schedule:
+    - cron: '30 6 * * 0' # Every Sunday at 06:30
+  workflow_dispatch:
+
+jobs:
+  cleanup-board:
+    runs-on: [self-hosted, ubuntu-20.04]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cleanup
+        uses: im-open/cleanup-deployment-board@v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN}}
+          board-number: 1
+
+          # Inactive cards are cards that are not currently deployed and do not have an open branch associated with them.
+          # The threshold is a positive whole number value and it means different things depending on the strategy.
+          # The cleanup strategy is applied only to the inactive cards.  Accepted values: age|number
+          #  - age: This strategy uses the corresponding threshold to determine the max age in days that an inactive card can be.
+          #  - number: This strategy uses the corresponding threshold to determin the max number of inactive cards to keep.
+          # See https://github.com/im-open/cleanup-deployment-board/ for more information
+
+          # TODO:  Supply the strategy and threshold for each deploy type
+          branch-cleanup-strategy: ''
+          branch-threshold: ''
+
+          tag-cleanup-strategy: ''
+          tag-threshold: ''
+
+          sha-cleanup-strategy: ''
+          sha-threshold: ''

@@ -1,0 +1,5 @@
+{
+    "name": "Deploy - Cleanup Automated Deployment Board",
+    "description": "Template that can be used to cleanup an Automated Deployment Board",
+    "iconName": "im_deploy"
+}
