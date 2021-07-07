@@ -15,6 +15,7 @@ env:
   STORAGE_ACCOUNT_NAME: '' # TODO:  Add the appropriate storage account name
   TARGET_CONTAINER: '' # TODO:  Add the appropriate target container in the stg account
   SOURCE_DIRECTORY: '' # TODO:  Add the appropriate source directory
+  DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
 
 jobs:
   deploy-to-azure:
@@ -22,7 +23,7 @@ jobs:
 
     runs-on: [self-hosted, ubuntu-20.04]
 
-    environment: Dev #TODO:
+    environment: ${{ github.event.inputs.environment }} #TODO:  Verify the environment
 
     steps:
       - name: Checkout Repository
@@ -47,3 +48,15 @@ jobs:
             --account-name '${{env.STORAGE_ACCOUNT_NAME}}' \
             -d '${{env.TARGET_CONTAINER}}' \
             -s '${{env.SOURCE_DIRECTORY}}'
+
+      # TODO: Remove if not using an automated deployment project board
+      - name: Update Deployment Board
+        if: always()
+        uses: im-open/update-deployment-board@v1.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN}}
+          environment: ${{ github.event.inputs.environment }}
+          board-number: ${{ env.DEPLOY_BOARD_NUM}}
+          ref: ${{ github.event.inputs.branch-tag-sha }}
+          deploy-status: ${{ job.status }}
+          timezone: 'america/denver'
