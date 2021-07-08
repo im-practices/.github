@@ -1,9 +1,9 @@
-name: Manually apply terraform at tag to Prod environment
+name: Manually apply terraform at tag to Prod subscription
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: The tag (which must be reachable by master/main) for the terraform that should be deployed to the Prod environment.
+        description: Tag for the tf that should be deployed to the Prod subscription.  It must be reachable from the default branch.
         required: true
       environment:
         description: The environment to Deploy To.
@@ -23,11 +23,12 @@ env:
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>0.15.5' #TODO:  Verify your version of terraform.
-  TF_WORKING_DIR: './${{ github.events.inputs.environment }}' # TODO:  Verify this directory is correct for your repository
+  TF_WORKING_DIR: './${{ github.event.inputs.environment }}' # TODO:  Verify this directory is correct for your repository
   SSH_KEY_CENTRAL_LOGGING: ${{secrets.SSH_CENTRAL_LOGGING}}
   SSH_KEY_STORAGE_ACCOUNT: ${{secrets.SSH_STORAGE_ACCOUNT}}
   SSH_KEY_ON_PREM_EGRESS: ${{secrets.SSH_ON_PREM_EGRESS}}
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
+  DEFAULT_BRANCH: 'main' # TODO:  Verify this is correct
 
 jobs:
   stakeholder-approval:
@@ -41,9 +42,6 @@ jobs:
     needs: stakeholder-approval
     runs-on: [ubuntu-20.04]
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
       - name: Clean Environment Input
         id: clean-env
         uses: im-open/map-input-action@v1
@@ -58,28 +56,22 @@ jobs:
           echo "::error::The environment must be Stage or Prod";
           exit 1
 
-      - name: Check if tag is on master
-        run: |
-          mergedTags=$(git tag --merged)
-          tag=${{github.event.inputs.tag}}
+      # In this job, always checkout the default branch and get all history/tags with
+      # the fetch-depth so we can check if a tag is reachable from the default branch
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ env.DEFAULT_BRANCH }}
+          fetch-depth: 0
 
-          echo "Requesting to deploy tag: $tag"
-          echo "::group::The repository contains the following tags on the master branch"
-          printf '%s\n' "${mergedTags[@]}"
-          echo "::endgroup::"
-
-          if printf '%s\n' "${mergedTags[@]}" | grep -q -w $tag ; 
-          then
-            echo "The tag appears in the list of master tags"
-          else
-            echo "::error::The tag does not appear to be reachable by master.  Only tags on merged code can be deployed to Production environments."
-            exit 1
-          fi
+      - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
+        with:
+          tag: ${{github.event.inputs.tag}}
 
   tf-plan:
     needs: validate-input
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{github.events.inputs.environment}}
+    environment: ${{github.event.inputs.environment}}
 
     defaults:
       run:
@@ -161,6 +153,12 @@ jobs:
 
           echo "::set-output name=tf_plan_name::$terraformPlanName"
 
+      - name: Azure logout
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
   technical-approval:
     needs: tf-plan
     runs-on: [ubuntu-20.04]
@@ -173,7 +171,7 @@ jobs:
   tf-apply:
     needs: [technical-approval, tf-plan]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{github.events.inputs.environment}}
+    environment: ${{github.event.inputs.environment}}
 
     defaults:
       run:
@@ -235,6 +233,12 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color -input=false ./plans/tfplan
 
+      - name: Azure logout
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
       - name: Close the PagerDuty Maintenance Window
         uses: im-open/close-pagerduty-maintenance-window@v1.0.0
         with:
@@ -243,6 +247,7 @@ jobs:
 
   # TODO: Remove if not using an automated deployment project board
   update-deployment-board:
+    runs-on: [ubuntu-20.04]
     needs:
       [
         stakeholder-approval,
