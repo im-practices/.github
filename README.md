@@ -6,7 +6,7 @@ Each repository within this organization will inherit these default files unless
 ## Workflow Templates
 The templates defined in this repository have been customized for our build processes and standards.  By including them in this repository, users can [add a workflow] to their repo by clicking a button.
 
-The templates defined in this repository are also the source of truth for the `im-` templates in each of the Enterprise Org `.github` repos.  When a merge to master happens, the template files in this repo will be copied to the other `.github` repositories in the Enterprise.  If changes have been made to any of the `im-` template files in those organizations' `.github` repos they will be overwritten by these changes.
+The templates defined in this repository are also the source of truth for the `im-` templates in each of the Enterprise Org `.github` repos.  When a merge to main happens, the template files in this repo will be copied to the other `.github` repositories in the Enterprise.  If changes have been made to any of the `im-` template files in those organizations' `.github` repos they will be overwritten by these changes.
 
 ## Adding new Templates
 If there are new templates that can be used across many organizations, please make a PR to this repository so they can be shared with each organization in the Enterprise.  
