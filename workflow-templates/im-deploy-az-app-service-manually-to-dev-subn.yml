@@ -1,0 +1,164 @@
+name: Manually deploy AZ App Service by ref in Dev subscription
+on:
+  workflow_dispatch:
+    inputs:
+      branch-tag-sha:
+        description: The branch, tag or sha of the code that should be deployed to the Dev subscription.
+        required: true
+      environment:
+        description: The environment to Deploy To.
+        required: true
+
+env:
+  PAGERDUTY_SERVICE_IDS: '[ ${{secrets.PAGERDUTY_SERVICE_ID}} ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+  PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
+  PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
+  DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
+  AZ_APP_NAME: '' # TODO:  set this to your application's app service name
+  AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure slot
+  DOTNET_VERSION: '' # TODO:  Set the .net core version of your project
+  PROJECT_ROOT: '' # TODO:  set this to the folder of your web app project. For most projects this will be ./src/ProjectName
+  ARTIFACT_NAME: 'Published App' #TODO:  Set this to the name of the artifact that shows in the workflow's summary section
+  ARTIFACT_ZIP: 'artifacts.zip'
+  DEPLOY_ZIP: 'published_app.zip'
+
+jobs:
+  validate-input:
+    runs-on: [ubuntu-20.04]
+    steps:
+      - name: Clean Environment Input
+        id: clean-env
+        uses: im-open/map-input-action@v1.0.0
+        with:
+          input: ${{ github.event.inputs.environment }}
+          input_map: '{ "Dev": ["dev", "d", "development"], "QA": ["qa", "q"], "Stage": ["stg", "s", "stage"]  }'
+
+      # TODO:  Update if you don't use all these environments in the Development Subscription
+      - name: Check if environment is Dev, QA or Stage
+        if: ${{ steps.clean-env.outputs.mapped_input != 'Dev' &&  steps.clean-env.outputs.mapped_input != 'QA' &&  steps.clean-env.outputs.mapped_input != 'Stage'}}
+        run: |
+          echo "::error::The environment must be Dev, QA or Stage";
+          exit 1
+
+  deploy-code:
+    needs: validate-input
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{github.event.inputs.environment}}
+
+    outputs:
+      maintenance_window_id: ${{ steps.open-window.outputs.maintenance-window-id }}
+
+    steps:
+      - name: Open a PagerDuty Maintenance Window
+        id: open-window
+        uses: im-open/open-pagerduty-maintenance-window@v1.0.0
+        with:
+          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
+          description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
+          minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
+          service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
+
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.branch-tag-sha }}
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Do NOT upload the DEPLOY_ZIP as an artifact after you've done this!
+      # DEPLOY_ZIP will contain all of your sensitive values!
+      # If an artifact is uploaded, only upload ARTIFACT_ZIP
+      - name: Update appsettings.json with Environment Specific Values
+        uses: im-open/add-or-update-json-properties@v1.0.0
+        with:
+          path-to-json-file: '${{ env.PROJECT_ROOT }}/appsettings.json'
+          # TODO:  add any appsettings.json items that need to be updated for the environment.  Format:
+          # {"SecretName": "SecretValues"},
+          # {"Nested.SecretName": "${{secrets.NESTED_SECRET}}"},
+          # {"Auth0.ClientId": "${{ secrets.AUTH0_CLIENT_ID }}"}
+          properties-to-update-or-add: |
+            [
+            ]
+
+      # TODO:  If config transformation is needed for different environments include environment name
+      # For example to perform transformations on a web.config using the web.production.config file:
+      # dotnet publish --configuration Release /p:EnvironmentName=Production
+      - name: Build and Publish
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: |
+          dotnet build --configuration Release
+          dotnet publish -c Release -o ./published_app --no-restore
+
+      - name: Zip the published app for faster deployment and uploads
+        working-directory: ${{ env.PROJECT_ROOT }}
+        # TODO:  If you plan on uploading artifacts, add this line to the run:
+        # (cd published_app && zip -r ../${{env.ARTIFACT_ZIP}} . -x */appsettings*.json appsettings*.json)
+        run: |
+          (cd published_app && zip -r ../${{env.DEPLOY_ZIP}} .)
+
+      # TODO:  You do not need to upload artifacts for this workflow.  Some teams may wish to keep artifacts
+      # for other reasons though.  If needed, uncomment this step to upload the artifacts.zip.
+      # This step uploads the safe artifacts.zip file that does not contain any appsettings.json files.
+      # - name: Upload artifact for deployment job
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: ${{env.ARTIFACT_NAME}}
+      #     path: ${{env.PROJECT_ROOT}}/${{env.ARTIFACT_ZIP}} # DANGER! Do not upload this zip, it has sensitive info in the appsettings
+
+      - name: AZ Login
+        id: login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{env.AZ_APP_NAME}}
+          # slot-name: ${{env.AZ_SLOT_NAME}}  # TODO:  Uncomment if using slots, delete if not
+          package: ${{ env.PROJECT_ROOT }}/${{env.DEPLOY_ZIP}}
+
+      - name: Azure logout
+        if: always() && steps.login.outcome == 'success'
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
+      - name: Close the PagerDuty Maintenance Window
+        if: always() && steps.open-window.outcome == 'success'
+        uses: im-open/close-pagerduty-maintenance-window@v1.0.0
+        with:
+          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
+          maintenance-window-id: ${{steps.open-window.outputs.maintenance-window-id}}
+
+      - name: Delete .zip and appsettings file that contains sensitive info
+        continue-on-error: true
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: |
+          rm ${{env.DEPLOY_ZIP}}
+          rm ${{ env.PROJECT_ROOT }}/appsettings.json
+
+  # TODO: Remove if not using an automated deployment project board
+  update-deployment-board:
+    runs-on: [ubuntu-20.04]
+    needs: [deploy-code]
+    if: always()
+    steps:
+      - uses: im-open/workflow-conclusion@v1.0.0
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Deployment Board
+        if: always()
+        uses: im-open/update-deployment-board@v1.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN}}
+          environment: ${{ github.event.inputs.environment }}
+          board-number: ${{ env.DEPLOY_BOARD_NUM}}
+          ref: ${{ github.event.inputs.branch-tag-sha }}
+          deploy-status: ${{ steps.conclusion.conclusion }}
+          timezone: 'america/denver'
