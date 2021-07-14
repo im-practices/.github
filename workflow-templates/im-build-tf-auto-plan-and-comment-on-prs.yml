@@ -2,6 +2,12 @@ name: Automatically run tf plan and comment on PR
 on:
   pull_request:
     types: [opened, reopened, synchronize]
+    paths:
+      - 'common/**'
+      - 'dev/**'
+      - 'qa/**'
+      - 'stage/**'
+      - 'prod/**'
 
 env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
