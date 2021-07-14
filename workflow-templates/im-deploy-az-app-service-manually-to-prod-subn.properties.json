@@ -1,5 +1,5 @@
 {
   "name": "Deploy - Prod Subscription AZ App Service Code Deploy",
-  "description": "Template that can be used to deploy code to an Azure App Service or slot in the the Prod Subscription",
+  "description": "Template that can be used to deploy code to an Azure App Service or slot in the Prod Subscription",
   "iconName": "im_azure"
 }

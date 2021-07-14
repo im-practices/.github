@@ -1,0 +1,5 @@
+{
+  "name": "Deploy - Prod Subscription AZ Function Code Deploy",
+  "description": "Template that can be used to deploy code to an Azure Function in the Prod Subscription",
+  "iconName": "im_azure"
+}
