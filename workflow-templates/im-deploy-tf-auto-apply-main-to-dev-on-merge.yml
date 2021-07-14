@@ -2,9 +2,15 @@ name: Auto Apply main branch to Dev on PR Merge
 on:
   pull_request:
     types: [closed]
+    paths:
+      - 'common/**'
+      - 'dev/**'
+      - 'qa/**'
+      - 'stage/**'
+      - 'prod/**'
 
 env:
-  PAGERDUTY_SERVICE_IDS: '[ ${{secrets.PAGERDUTY_SERVICE_ID}} ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+  PAGERDUTY_SERVICE_IDS: '[ "${{secrets.PAGERDUTY_SERVICE_ID}}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
   PAGERDUTY_WINDOW_IN_MIN: 10 # TODO:  Verify the length of your PD Maintenance Window
   PAGERDUTY_WINDOW_DESC: 'Auto apply main branch to Dev environment from GitHub Actions' # TODO:  Verify this description
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}

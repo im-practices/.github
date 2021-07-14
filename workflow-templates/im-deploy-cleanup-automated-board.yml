@@ -16,7 +16,7 @@ jobs:
         uses: im-open/cleanup-deployment-board@v1.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN}}
-          board-number: 1
+          board-number: # TODO:  Add the project board number
 
           # Inactive cards are cards that are not currently deployed and do not have an open branch associated with them.
           # The threshold is a positive whole number value and it means different things depending on the strategy.
