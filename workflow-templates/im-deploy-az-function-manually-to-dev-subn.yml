@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       branch-tag-sha:
-        description: Ref (branch/tag/sha) for the code that should be deployed to the Prod subscription.
+        description: Ref (branch/tag/sha) for the code that should be deployed to the Dev subscription.
         required: true
       environment:
         description: The environment to Deploy To.
