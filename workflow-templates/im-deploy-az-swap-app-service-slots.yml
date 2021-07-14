@@ -1,4 +1,4 @@
-name: Swap Azure Slots
+name: Swap Azure App Service Slots
 
 # This workflow can be kicked off manually and it can also be kicked off automatically from
 # another workflow by using the repository_dispatch event trigger.  This workflow is designed
