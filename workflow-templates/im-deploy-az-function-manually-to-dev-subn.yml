@@ -2,12 +2,12 @@
 # 1 - Make sure the az secrets have been added to the environment
 # 2 - Make sure the scm restrictions include the prod github runners (previously it had just octopus)
 
-name: Manually deploy AZ App Service by tag in Prod subscription
+name: Manually deploy AZ Function by ref in Dev subscription
 on:
   workflow_dispatch:
     inputs:
-      tag:
-        description: Tag for the code that should be deployed to the Prod subscription.  It must be reachable from the default branch.
+      branch-tag-sha:
+        description: Ref (branch/tag/sha) for the code that should be deployed to the Dev subscription.
         required: true
       environment:
         description: The environment to Deploy To.
@@ -18,51 +18,29 @@ env:
   PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
   PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
-  AZ_APP_NAME: '' # TODO:  set this to your application's app service name
-  AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure slot
+  AZ_FUNC_NAME: '' # TODO:  set this to your azure function's name
+  AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot
   DOTNET_VERSION: '' # TODO:  Set the .net core version of your project
-  PROJECT_ROOT: '' # TODO:  set this to the folder of your web app project. For most projects this will be ./src/ProjectName
-  ARTIFACT_NAME: 'Published App' #TODO:  Set this to the name of the artifact that shows in the workflow's summary section
-  ARTIFACT_ZIP: 'artifacts.zip'
-  DEPLOY_ZIP: 'published_app.zip'
+  PROJECT_ROOT: '' # TODO:  set this to the folder of your function. For most projects this will be ./src/ProjectName
+  ARTIFACT_NAME: 'Published Function' #TODO:  Set this to the name of the artifact that shows in the workflow's summary section
 
 jobs:
-  stakeholder-approval:
-    runs-on: [ubuntu-20.04]
-    environment: 'Stakeholder Approval'
-    steps:
-      - name: Approval Received
-        run: echo "Stakeholder approval was received"
-
   validate-input:
-    needs: stakeholder-approval
     runs-on: [ubuntu-20.04]
     steps:
+      # TODO:  Update these steps if you don't use all these environments in the Development Subscription
       - name: Clean Environment Input
         id: clean-env
         uses: im-open/map-input-action@v1.0.0
         with:
           input: ${{ github.event.inputs.environment }}
-          input_map: '{ "Stage": ["stg", "s", "stage"], "Prod": ["prod", "production", "p"] }'
+          input_map: '{ "Dev": ["dev", "d", "development"], "QA": ["qa", "q"], "Stage": ["stg", "s", "stage"]  }'
 
-      # TODO:  Update if you don't use all these environments in the Production subscription
-      - name: Check if environment is Stage or Prod
-        if: ${{ steps.clean-env.outputs.mapped_input != 'Stage' &&  steps.clean-env.outputs.mapped_input != 'Prod'}}
+      - name: Check if environment is Dev, QA or Stage
+        if: ${{ steps.clean-env.outputs.mapped_input != 'Dev' &&  steps.clean-env.outputs.mapped_input != 'QA' &&  steps.clean-env.outputs.mapped_input != 'Stage'}}
         run: |
-          echo "::error::The environment must be Stage or Prod";
+          echo "::error::The environment must be Dev, QA or Stage";
           exit 1
-
-      # In this validate-input job, always checkout the default branch.  Also use fetch-depth: 0 to
-      # retrieve the history and tags so we can check if a tag is reachable from the default branch
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ env.DEFAULT_BRANCH }}
-          fetch-depth: 0
-
-      - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
-        with:
-          tag: ${{github.event.inputs.tag}}
 
   deploy-code:
     needs: validate-input
@@ -84,52 +62,26 @@ jobs:
 
       - uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.inputs.tag }}
+          ref: ${{ github.event.inputs.branch-tag-sha }}
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # Do NOT upload the DEPLOY_ZIP as an artifact after you've done this!
-      # DEPLOY_ZIP will contain all of your sensitive values!
-      # If an artifact is uploaded, only upload ARTIFACT_ZIP
-      - name: Update appsettings.json with Environment Specific Values
-        uses: im-open/add-or-update-json-properties@v1.0.1
-        with:
-          path-to-json-file: '${{ env.PROJECT_ROOT }}/appsettings.json'
-          # TODO:  add any appsettings.json items that need to be updated for the environment.  Format:
-          # {"SecretName": "SecretValues"},
-          # {"Nested.SecretName": "${{secrets.NESTED_SECRET}}"},
-          # {"Auth0.ClientId": "${{ secrets.AUTH0_CLIENT_ID }}"}
-          properties-to-update-or-add: |
-            [
-            ]
-
-      # TODO:  If config transformation is needed for different environments include environment name
-      # For example to perform transformations on a web.config using the web.production.config file:
-      # dotnet publish --configuration Release /p:EnvironmentName=Production
       - name: Build and Publish
         working-directory: ${{ env.PROJECT_ROOT }}
         run: |
           dotnet build --configuration Release
-          dotnet publish -c Release -o ./published_app --no-restore
-
-      - name: Zip the published app for faster deployment and uploads
-        working-directory: ${{ env.PROJECT_ROOT }}
-        # TODO:  If you plan on uploading artifacts, add this line to the run:
-        # (cd published_app && zip -r ../${{env.ARTIFACT_ZIP}} . -x */appsettings*.json appsettings*.json)
-        run: |
-          (cd published_app && zip -r ../${{env.DEPLOY_ZIP}} .)
+          dotnet publish -c Release -o ./published_func --no-restore
 
       # TODO:  You do not need to upload artifacts for this workflow.  Some teams may wish to keep artifacts
-      # for other reasons though.  If needed, uncomment this step to upload the artifacts.zip.
-      # This step uploads the safe artifacts.zip file that does not contain any appsettings.json files.
+      # for other reasons though.  If needed, uncomment this step to upload the artifacts.  Delete if not needed.
       # - name: Upload artifact for deployment job
       #   uses: actions/upload-artifact@v2
       #   with:
       #     name: ${{env.ARTIFACT_NAME}}
-      #     path: ${{env.PROJECT_ROOT}}/${{env.ARTIFACT_ZIP}} # DANGER! Only ARTIFACT_ZIP is safe to upload.  Do not upload DEPLOY_ZIP, it has sensitive info in the appsettings
+      #     path: ${{env.PROJECT_ROOT}}/published_func
 
       - name: AZ Login
         id: login
@@ -142,40 +94,40 @@ jobs:
       #   with:
       #     variable-name: 'RESOURCE_GROUP'
       #     current-environment: ${{github.event.inputs.environment}}
-      #     stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
+      #     stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist in subscription
       #     prod-value: '' # TODO: Add the prod rgrp name or delete if env does not exist
 
       # - name: Create a deployment slot
       #   run: |
-      #     az webapp deployment slot create \
-      #     --name ${{ env.AZ_APP_NAME }}  \
+      #     az functionapp  deployment slot create \
+      #     --name ${{ env.AZ_FUNC_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --resource-group ${{ env.RESOURCE_GROUP }} \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
-      #     --configuration-source ${{ env.AZ_APP_NAME }}
+      #     --configuration-source ${{ env.AZ_FUNC_NAME }}
 
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
+      - name: Deploy to Azure Function
+        uses: azure/functions-action@v2
         with:
-          app-name: ${{env.AZ_APP_NAME}}
+          app-name: ${{env.AZ_FUNC_NAME}}
+          package: ${{ env.PROJECT_ROOT }}/published_func
           # slot-name: ${{env.AZ_SLOT_NAME}}  # TODO:  Uncomment if using slots, delete if not
-          package: ${{ env.PROJECT_ROOT }}/${{env.DEPLOY_ZIP}}
 
       # TODO:  Uncomment if using slots and you want to swap right away.  Delete this block if you don't.
       # - name: Swap slots
       #   run: |
-      #     az webapp deployment slot swap \
+      #     az functionapp  deployment slot swap \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{env.RESOURCE_GROUP}} \
-      #     --name ${{ env.AZ_APP_NAME }}  \
+      #     --name ${{ env.AZ_FUNC_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --target-slot ${{ env.TARGET_SLOT }}
 
       # TODO:  Uncomment if you want to delete the slot.  Delete this block if you don't.
       # - run: |
-      #     az webapp deployment slot delete \
+      #     az functionapp  deployment slot delete \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
-      #     --name ${{ env.AZ_APP_NAME }}  \
+      #     --name ${{ env.AZ_FUNC_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{env.RESOURCE_GROUP}}
 
@@ -192,29 +144,6 @@ jobs:
         with:
           pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
           maintenance-window-id: ${{steps.open-window.outputs.maintenance-window-id}}
-
-      - name: Delete .zip and appsettings file that contains sensitive info
-        continue-on-error: true
-        working-directory: ${{ env.PROJECT_ROOT }}
-        run: |
-          rm -f ${{env.DEPLOY_ZIP}}
-          rm -f published_app
-          rm -f appsettings*.json
-
-      # TODO:  Uncomment if you have a workflow for swapping slots and you wish to automatically swap after this deploy.  Delete if you don't.
-      # - name: Trigger the Slot Swap
-      #   uses: actions/github-script@v4
-      #   with:
-      #     github-token: ${{secrets.PIPELINE_BOT_PAT}} #TODO:  make sure im-pipeline-bot has at least write access to your repo
-      #     script: |
-      #       github.repos.createDispatchEvent({
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         event_type: "swap_slots",
-      #         client_payload: {
-      #           environment: "${{ github.event.inputs.environment }}"
-      #         }
-      #       });
 
   update-deployment-board-and-send-teams-notification:
     runs-on: [ubuntu-20.04]
@@ -234,7 +163,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN}}
           environment: ${{ github.event.inputs.environment }}
           board-number: ${{ env.DEPLOY_BOARD_NUM}}
-          ref: ${{ github.event.inputs.tag }}
+          ref: ${{ github.event.inputs.branch-tag-sha }}
           deploy-status: ${{ steps.conclusion.conclusion }}
           timezone: 'america/denver'
 
@@ -243,7 +172,7 @@ jobs:
         if: always()
         uses: im-open/microsoft-teams-status-update-action@v1.0.0
         with:
-          title: Deploying ${{env.AZ_APP_NAME}} to Azure # TODO:  Verify title
+          title: Deploying ${{env.AZ_FUNC_NAME}} to Azure # TODO:  Verify title
           workflow-status: ${{ steps.conclusion.conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists
