@@ -31,16 +31,12 @@ jobs:
       # TODO:  Update these steps if you don't use all these environments in the Development Subscription
       - name: Clean Environment Input
         id: clean-env
-        uses: im-open/map-input-action@v1.0.0
+        uses: im-open/map-input-action@v1.0.1
         with:
           input: ${{ github.event.inputs.environment }}
           input_map: '{ "Dev": ["dev", "d", "development"], "QA": ["qa", "q"], "Stage": ["stg", "s", "stage"]  }'
-
-      - name: Check if environment is Dev, QA or Stage
-        if: ${{ steps.clean-env.outputs.mapped_input != 'Dev' &&  steps.clean-env.outputs.mapped_input != 'QA' &&  steps.clean-env.outputs.mapped_input != 'Stage'}}
-        run: |
-          echo "::error::The environment must be Dev, QA or Stage";
-          exit 1
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA or Stage'
 
   deploy-code:
     needs: validate-input

@@ -42,19 +42,15 @@ jobs:
     needs: stakeholder-approval
     runs-on: [ubuntu-20.04]
     steps:
+      # TODO:  Update if you don't use all these environments in the Production subscription
       - name: Clean Environment Input
         id: clean-env
-        uses: im-open/map-input-action@v1.0.0
+        uses: im-open/map-input-action@v1.0.1
         with:
           input: ${{ github.event.inputs.environment }}
           input_map: '{ "Stage": ["stg", "s", "stage"], "Prod": ["prod", "production", "p"] }'
-
-      # TODO:  Update if you don't use all these environments in the Production subscription
-      - name: Check if environment is Stage or Prod
-        if: ${{ steps.clean-env.outputs.mapped_input != 'Stage' &&  steps.clean-env.outputs.mapped_input != 'Prod'}}
-        run: |
-          echo "::error::The environment must be Stage or Prod";
-          exit 1
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Stage or Prod'
 
       # In this job, always checkout the default branch and get all history/tags with
       # the fetch-depth so we can check if a tag is reachable from the default branch
