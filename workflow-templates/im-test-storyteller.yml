@@ -1,0 +1,89 @@
+name: Run StoryTeller
+
+# TODO:  Verify Triggers
+on:
+  pull_request:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [erm_st]
+
+env:
+  SASS_PROJECT_NAME: '' # TODO:  Enter the project name that contains the sass to be compiled or delete if not needed.
+  SOLUTION_FILE: '' # TODO:  Enter location and name of solution file like .\src\EnrollmentStatusConsumers.sln
+  STORYTELLER_PROJECT_PATH: '' # TODO:  Enter path to the storyteller project like .\src\ExceptionsResolutionManager.StoryTeller
+  STORYTELLER_RESULTS_PATH: '.\st-results\index.htm' # TODO:  Verify output location for ST results
+  CHROMEDRIVER_PATH: '.\packages\selenium.webdriver.chromedriver' # TODO:  Verify the location of chromedriver or delete if not needed.
+
+jobs:
+  run-storyteller:
+    runs-on: [self-hosted, windows-2019-dev]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: npm install
+        run: |
+          npm install
+
+      - name: paket restore
+        shell: bash
+        run: |
+          echo "Downloading the paket executable from paket.bootstrapper.exe"
+          ./.paket/paket.bootstrapper.exe
+          echo "Doing paket restore"
+          ./.paket/paket.exe restore
+
+      # TODO:  Uncomment if the project contains this step and adjust anything if necessary
+      # - name: compile-sass
+      #   shell: bash
+      #   run: node-sass ${{ env.SCSS_LOCATION }} -o ${{ env.OUTPUT_LOCATION }} --include-path ${{ env.INCLUDE_PATH }}
+      #   env:
+      #     SCSS_LOCATION: './src/${{ env.SASS_PROJECT_NAME }}/Scss/'
+      #     OUTPUT_LOCATION: './src/${{ env.SASS_PROJECT_NAME }}/Content/styles/'
+      #     INCLUDE_PATH: './src/${{ env.SASS_PROJECT_NAME }}/Scss/imports'
+
+      - name: compile the solution
+        shell: powershell
+        run: |
+          $msBuildPath = vswhere -latest -requires Microsoft.Component.MSBuild -products * -find MSBuild\**\Bin\MSBuild.exe | select-object -first 1
+          if ($msBuildPath) {
+            & "$msBuildPath" -interactive:false -maxCpuCount:1 -nodeReuse:false -restore:false -target:rebuild -v:m /p:Configuration="Debug" ${{ env.SOLUTION_FILE }}
+          }
+          else {
+            Write-Host "::error::MSBuild was not found"
+            exit 1
+          }
+
+      # TODO:  Uncomment if the project needs chromedriver copied over
+      # - name: Copy ChromeDriver
+      #   shell: powershell
+      #   run: |
+      #     Write-Host "Copying chromedriver to ${{ env.STORYTELLER_PROJECT_PATH }}"
+      #     Copy-Item "${{ env.CHROMEDRIVER_PATH }}/driver/win32/chromedriver.exe" -Destination "${{ env.STORYTELLER_PROJECT_PATH }}"
+      #     Write-Host "Finished copying chromedriver"
+
+      #     Write-Host "Locating chromedriver version..."
+      #     $nugets = Get-Childitem ${{ env.CHROMEDRIVER_PATH }} | Where {$_.extension -like ".nupkg"}
+      #     if ($nugets -ne $null -and $nugets.Count -gt 0) {
+      #         $name = $nugets[0].name
+      #         $version = $name.Replace('selenium.webdriver.chromedriver.', '').Replace('.nupkg', '');
+      #         Write-Host "The chromedriver version is: $version"
+      #     }
+      #     else {
+      #         Write-Host "::error::The chrome driver version could not be found."
+      #         exit 1
+      #     }
+
+      # TODO:  Add any additional setup steps that may be required for your project to run, like setting up a db
+
+      # TODO:  If not using chrome driver remove --profile chrome at the end of the command
+      - name: Run Storyteller
+        shell: cmd
+        run: |
+          .\packages\storyteller\tools\ST.exe run .\src\ExceptionsResolutionManager.StoryTeller --results-path .\st-results\index.htm --teamcity --timeout 400  --profile chrome
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: StoryTeller Results
+          path: ${{ env.STORYTELLER_RESULTS_PATH }}
