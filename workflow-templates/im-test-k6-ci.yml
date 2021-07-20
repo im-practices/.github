@@ -1,0 +1,23 @@
+name: K6 Automated Load Tester
+
+on: 
+  push:
+    branches: 
+      - master
+      - main
+
+env:
+  testFile: "tests/k6/check-health-simple.js"
+      
+jobs:
+  k6_test:
+    runs-on: [self-hosted, ubuntu-20.04]
+    container: docker://loadimpact/k6:latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+    
+    - name: Run k6 test - docker
+      run: |
+        k6 run ${{env.testFile}} --vus 1 -i 1 --insecure-skip-tls-verify

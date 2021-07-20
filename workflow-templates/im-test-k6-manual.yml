@@ -1,0 +1,30 @@
+name: Manual trigger K6 test - Advanced
+
+on: 
+  workflow_dispatch:
+    inputs:
+      testFolderRoot:
+        description: 'Test folder root directory from root of repo'
+        required: true
+        default: "tests/k6"
+      testFile:
+        description: 'K6 test file to run'     
+        required: true
+      k6_extra_params:
+        description: 'K6 commandline extra paramaters'
+        required: false
+        default: '' # You can set default paramaters to run on K6 test. Example below:
+      
+jobs:
+  k6_test:
+    runs-on: [self-hosted, ubuntu-20.04]
+    container: docker://loadimpact/k6:latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+    
+    - name: Run local k6 test - docker
+      run: |
+        cd ${{ github.event.inputs.testFolderRoot }}
+        k6 run ${{github.event.inputs.testFile}} ${{github.event.inputs.k6_extra_params}}
