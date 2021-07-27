@@ -1,0 +1,279 @@
+name: .Net Core CI
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+env:
+  DOTNET_VERSION: '' # TODO:  Add the .net version
+  SOLUTION_FILE: '' # TODO:  Fill in the path and name of the solution file
+  CODE_COVERAGE_REPORT_NAME_DOTNET: '' # TODO:  Add a name for the code coverage report like '<project> Code Coverage'
+  CODE_COVERAGE_REPORT_NAME_JEST: '' # TODO:  Add a name for the code coverage report like '<project> Code Coverage'
+  CODE_COVERAGE_CHECK_NAME_DOTNET: 'dotnet code coverage'
+  CODE_COVERAGE_CHECK_NAME_JEST: 'jest code coverage'
+  CODE_COVERAGE_DIR_DOTNET: 'coverage-results/dotnet'
+  CODE_COVERAGE_DIR_JEST: 'coverage-results/jest'
+  JEST_TEST_DIR: '' # TODO: Add the path to dir containing the package.json file that knows how to run the jest tests.  Like ./src/MyApp.Bff/FrontEnd
+  JEST_TEST_RESULTS_FILE: 'jest-results.json'
+  JEST_TEST_REPORT_NAME: 'Jest Tests' # TODO: You may want to give this a more descriptive name like 'Jest Tests (MyApp FrontEnd)'
+
+  # TODO:  Remove the following vars if not setting up a db during ci
+  FLYWAY_VERSION: '' # TODO:  Add the flyway version
+  DB_NAME: '' # TODO: The name of the database
+  INSTALL_MOCK_DB_OBJ: '' # TODO:  [true|false] Indicates whether you want mock objects installed on the db.  Delete if not using.
+  MOCK_DB_OBJ_URL: '' # TODO:  The url to the nuget feed that contains your mock db obs.  Delete if not using mock db objects.
+  DROP_DB_AFTER_STEP: '' # TODO: [true|false] Indicates whether the db should be dropped after the build step
+
+# TODO:  On the process=code-coverage-summary, process-dotnet-test-results and process-jest-test-results actions the
+# create-status-check is set to true and create-pr-comment is set to false but these can be udpated as desired.
+# If this workflow is ran many times for a PR the create-pr-comment may become very chatty.
+
+# TODO:  Check for the latest version of each action used
+
+jobs:
+  dotnet-and-db:
+    runs-on: [self-hosted, ubuntu-20.04] #TODO:  Switch this to [self-hosted, ubuntu-20.04] if building a db
+
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      coverage: ${{ steps.dotnet_coverage_check.outputs.coverage-outcome }}
+      test: ${{ steps.dotnet_test_check.outputs.test-outcome }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      # TODO:  Delete the install flyway and build database steps if not building a database
+      - name: Install Flyway
+        uses: im-open/setup-flyway@v1.0.0
+        with:
+          version: ${{ env.FLYWAY_VERSION }}
+
+      - name: Build Database
+        uses: im-open/build-database-ci-action@v1.0.1
+        with:
+          db-server-name: localhost
+          db-name: ${{ env.DB_NAME }}
+          drop-db-after-build: ${{ env.DROP_DB_AFTER_STEP }}
+          install-mock-db-objects: ${{ env.INSTALL_MOCK_DB_OBJ }} # TODO:  Delete if not using
+          mock-db-object-nuget-feed-url: ${{ env.MOCK_DB_OBJ_URL }} # TODO:  Delete if not using
+
+      # TODO:  Uncomment if any appsettings.json values need to change during CI, delete this step if not needed
+      # - name: Update appsettings.json with Environment Specific Values
+      #   uses: im-open/add-or-update-json-properties@v1.0.1
+      #   with:
+      #     path-to-json-file: '' #TODO:  Add file path and name to json file being updated like './src/myapp/appsettings.json'
+      #     properties-to-update-or-add: |
+      #       [
+      #         {"SecretName": "SecretValues"},
+      #         {"Nested.SecretName": "${{secrets.NESTED_SECRET}}"},
+      #         {"Auth0.ClientId": "${{ secrets.AUTH0_CLIENT_ID }}"}
+      #       ]
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # TODO:  If config transformation is needed for different environments include environment name
+      # For example to perform transformations on a web.config using the web.production.config file:
+      # dotnet publish --configuration Release /p:EnvironmentName=Production
+      - name: dotnet build
+        run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release
+
+      - name: dotnet test with coverage
+        continue-on-error: true
+        run: dotnet test ${{ env.SOLUTION_FILE }} --logger trx --no-restore --configuration Release /property:CollectCoverage=True /property:CoverletOutputFormat=opencover
+
+      - name: Process dotnet test results and create a status check
+        id: dotnet_test_check
+        uses: im-open/process-dotnet-test-results@v1.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          timezone: 'america/denver'
+          create-status-check: true
+          create-pr-comment: false
+
+      - name: Generate dotnet Code Coverage Artifacts and Summary
+        uses: im-open/code-coverage-report-generator@4.8.13
+        with:
+          reports: '*/**/coverage.opencover.xml'
+          targetdir: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
+          title: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
+          tag: 'Workflow: ${{github.workflow}} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}' #TODO;  Verify the tag to add
+          # TODO:  Add the appropriate filters to each type.
+          # The filters are a ; separated list of items to include(+) or exclude(-).  Wildcards are accepted.
+          # For instance: -xunit*;-Dapper;-*.Tests
+          assemblyfilters: ''
+          filefilters: ''
+          classfilters: ''
+
+      - name: Process dotnet code coverage results and create a status check
+        id: dotnet_coverage_check
+        uses: im-open/process-code-coverage-summary@v1.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          summary-file: '${{ env.CODE_COVERAGE_DIR_DOTNET}}/Summary.md'
+          report-name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
+          check-name: ${{ env.CODE_COVERAGE_CHECK_NAME_DOTNET }}
+          create-status-check: true
+          create-pr-comment: false
+          # TODO:  Set the thresholds for branch and line coverage.
+          # When set to 0 the outcome is neutral.  Otherwise line/branch coverage will be a 'failure' if actual coverage < threshold.
+          line-threshold: 0
+          branch-threshold: 0
+
+      - name: Upload dotnet code coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
+          path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
+
+  jest:
+    runs-on: ubuntu-20.04
+
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      coverage: ${{ steps.jest_coverage_check.outputs.coverage-outcome }}
+      test: ${{ steps.jest_test_check.outputs.test-outcome }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: dotnet build
+        run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release
+
+      - name: jest test with Coverage
+        continue-on-error: true
+        working-directory: ${{ env.JEST_TEST_DIR }}
+        # TODO:  If you want to use the npm step (npm run test:coverage), it needs to be updated to output a results file, otherwise use the jest command directly
+        run: jest --config ./jest.config.js --coverage --json --outputFile=${{ env.JEST_TEST_RESULTS_FILE }}
+
+      - name: Process jest test results and create a status check
+        id: jest_test_check
+        uses: im-open/process-jest-test-results@v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          timezone: 'america/denver'
+          results-file: ${{ env.JEST_TEST_DIR }}/${{ env.JEST_TEST_RESULTS_FILE }}
+          report-name: ${{ env.JEST_TEST_REPORT_NAME }}
+          create-status-check: true
+          create-pr-comment: false
+
+      - name: Generate jest code coverage artifacts and summary
+        uses: im-open/code-coverage-report-generator@4.8.13
+        with:
+          reports: '*/**/lcov.info'
+          targetdir: ${{ env.CODE_COVERAGE_DIR_JEST }}
+          title: jest code coverage
+          tag: 'Workflow: ${{github.workflow}} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}' #TODO;  Verify the tag to add
+          # TODO:  Add the appropriate filters to each type.
+          # The filters are a ; separated list of items to include(+) or exclude(-).  Wildcards are accepted.
+          # For instance: -xunit*;-Dapper;-*.Tests
+          assemblyfilters: ''
+          filefilters: ''
+          classfilters: ''
+
+      - name: Process jest code coverage results and create a status check
+        id: jest_coverage_check
+        uses: im-open/process-code-coverage-summary@v1.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          summary-file: '${{ env.CODE_COVERAGE_DIR_JEST}}/Summary.md'
+          report-name: ${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}
+          check-name: ${{ env.CODE_COVERAGE_CHECK_NAME_JEST }}
+          create-status-check: true
+          create-pr-comment: false
+          # TODO:  Set the thresholds for branch and line coverage.
+          # When set to 0 the outcome is neutral.  Otherwise line/branch coverage will be a 'failure' if actual coverage < threshold.
+          line-threshold: 0
+          branch-threshold: 0
+
+      - name: Upload jest code coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}
+          path: ${{ env.CODE_COVERAGE_DIR_JEST }}
+
+  validate-sam-yaml:
+    runs-on: ubuntu-20.04
+
+    outputs:
+      validate: 'Passed'
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Validate SAM.yaml
+        run: echo "TODO - Implement once the action has been created"
+
+  finish-build:
+    if: always()
+    needs: [dotnet-and-db, jest, validate-sam-yaml]
+    runs-on: ubuntu-20.04
+    steps:
+      # TODO: Uncomment if you want to send teams notifications after each push, delete if you don't.
+      # - uses: im-open/workflow-conclusion@v1.0.0
+      #   id: conclusion
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Send Status to Teams
+      #   if: always()
+      #   uses: im-open/microsoft-teams-status-update-action@v1.0.0
+      #   with:
+      #     title: 'CI Build' # TODO:  Verify title
+      #     workflow-status: ${{ steps.conclusion.conclusion }}
+      #     workflow-type: Build
+      #     teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists
+      #     timezone: America/Denver # TODO:  Verify timezone
+      #     # TODO:  Verify the custom facts you want included
+      #     custom-facts: |
+      #       [
+      #         { "name": "Event", "value": "${{github.event_name}}" },
+      #         { "name": "Workflow", "value": "${{github.workflow}}" },
+      #         { "name": "Run", "value": "${{github.run_id}}" }
+      #       ]
+      #     # TODO:  Verify the buttons you want included
+      #     custom-actions: |
+      #       [
+      #         { "name": "View Build Log", "uri": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" }
+      #       ]
+
+      - name: check for failures
+        run: |
+          hasErrors=false
+          if [ "${{needs.dotnet-and-db.outputs.coverage}}" != "Passed" ]; then
+            echo "::error:: The dotnet code coverage did not meet the expected threshold"  
+            hasErrors=true
+          fi
+          if [ "${{ needs.dotnet-and-db.outputs.test }}" != "Passed" ]; then
+            echo "::error:: There were errors in the dotnet tests"  
+            hasErrors=true
+          fi
+          if [ "${{needs.jest.outputs.coverage}}" != "Passed" ]; then
+            echo "::error:: The jest code coverage did not meet the expected threshold"  
+            hasErrors=true
+          fi
+          if [ "${{ needs.jest.outputs.test }}" != "Passed" ]; then
+            echo "::error:: There were errors in the jest tests"  
+            hasErrors=true
+          fi
+          if [ "${{ needs.validate-sam-yaml.outputs.validate }}" != "Passed" ]; then
+            echo "::error:: The sam.yaml is not valid."  
+            hasErrors=true
+          fi
+
+          if [ $hasErrors == 'true' ]; then
+            exit 1
+          fi
