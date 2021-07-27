@@ -1,0 +1,96 @@
+name: Runbook - Start, stop or restart azure function app
+
+#TODO:  You may wish to add the name of the function app to the name above and the file name if there are multiple functions within the repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: The action that should be taken - start|stop|restart.
+        required: true
+        default: restart
+      environment:
+        description: The environment the function is in - dev|qa|stage|prod|demo|uat
+        required: true
+        default: prod
+
+jobs:
+  start-stop-restart:
+    runs-on: [self-hosted, ubuntu-20.04]
+
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Clean action input
+        id: clean-action
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ github.event.inputs.action }}
+          input_map: '{ "start": ["start"], "stop": ["stop"], "restart": ["restart", "r"]}'
+          error_on_no_match: true
+          custom_error_message: 'The action must be start, stop or restart'
+
+      # TODO:  Update for the environments that are supported
+      - name: Clean environment input
+        id: clean-env
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ github.event.inputs.environment }}
+          input_map: '{ "Dev": ["dev", "d", "development"], "QA": ["qa", "q"], "Stage": ["stg", "s", "stage"], "Prod": ["prod", "production", "p"], "UAT" : ["uat", "user acceptance testing", "u"], "Demo": ["demo", "o"] }'
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA, Stage, Demo, UAT or Prod'
+
+      - uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'RESOURCE_GROUP'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input}}
+          dev-value: '' # TODO: Add the dev rgrp name or delete if env does not exist
+          qa-value: '' # TODO: Add the qa rgrp name or delete if env does not exist
+          stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
+          prod-value: '' # TODO: Add the prod rgrp name or delete if env does not exist
+          demo-value: '' # TODO: Add the demo rgrp name or delete if env does not exist
+          uat-value: '' # TODO: Add the uat rgrp name or delete if env does not exist
+
+      - uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'FUNCTION_APP_NAME'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input}}
+          dev-value: '' # TODO: Add the dev function app name or delete if env does not exist
+          qa-value: '' # TODO: Add the qa function app name or delete if env does not exist
+          stage-value: '' # TODO: Add the stage function app name or delete if env does not exist
+          prod-value: '' # TODO: Add the prod function app name or delete if env does not exist
+          demo-value: '' # TODO: Add the demo function app name or delete if env does not exist
+          uat-value: '' # TODO: Add the uat function app name or delete if env does not exist
+
+      # TODO:  If using this workflow for a slot update these values, otherwise delete this section
+      - uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'SLOT_NAME'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input}}
+          dev-value: '' # TODO: Add the dev slot name or delete if env does not exist
+          qa-value: '' # TODO: Add the qa slot name or delete if env does not exist
+          stage-value: '' # TODO: Add the slot rgrp name or delete if env does not exist
+          prod-value: '' # TODO: Add the slot rgrp name or delete if env does not exist
+          demo-value: '' # TODO: Add the slot rgrp name or delete if env does not exist
+          uat-value: '' # TODO: Add the slot rgrp name or delete if env does not exist
+
+      - run: echo "'${{ steps.clean-action.outputs.mapped_input }}' will be peformed on ${{ steps.clean-env.outputs.mapped_input }} ${{ env.FUNCTION_APP_NAME }}"
+
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO: Ensure this secret has been populated in your repo
+
+      # TODO:  if you wish to perform any of the following actions on a slot, append the following to each of the commands: --slot ${{ env.SLOT_NAME }}
+
+      - name: start
+        if: steps.clean-action.outputs.mapped_input == 'start'
+        run: az functionapp start --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: stop
+        if: steps.clean-action.outputs.mapped_input == 'stop'
+        run: az functionapp stop --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: restart
+        if: steps.clean-action.outputs.mapped_input == 'restart'
+        run: az functionapp restart --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
