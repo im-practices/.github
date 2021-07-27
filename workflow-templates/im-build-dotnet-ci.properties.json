@@ -1,0 +1,5 @@
+{
+  "name": "Build - .NET Core CI",
+  "description": "Workflow template for continuous integration of a .NET Core application",
+  "iconName": "im_build"
+}
