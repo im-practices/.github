@@ -93,3 +93,10 @@ jobs:
       - name: restart
         if: steps.clean-action.outputs.mapped_input == 'restart'
         run: az webapp restart --name ${{ env.APP_SERVICE_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Azure logout
+        if: always() && steps.login.outcome == 'success'
+        run: |
+          az logout
+          az cache purge
+          az account clear
