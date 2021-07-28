@@ -20,6 +20,7 @@ env:
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
   AZ_FUNC_NAME: '' # TODO:  set this to your azure function's name
   AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot
+  AZ_INSIGHTS_NAME: '' # TODO:  If using app insights, set the name for annotations, otherwise delete
   DOTNET_VERSION: '' # TODO:  Set the .net core version of your project
   PROJECT_ROOT: '' # TODO:  set this to the folder of your function. For most projects this will be ./src/ProjectName
   ARTIFACT_NAME: 'Published Function' #TODO:  Set this to the name of the artifact that shows in the workflow's summary section
@@ -85,14 +86,15 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # TODO:  Uncomment the following steps if you want to create a slot to deploy to.  Delete if you have a permanent slot or do not wish to use slots.
-      # - uses: im-open/set-variable-based-on-environment@v1.0.0
-      #   with:
-      #     variable-name: 'RESOURCE_GROUP'
-      #     current-environment: ${{github.event.inputs.environment}}
-      #     stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist in subscription
-      #     prod-value: '' # TODO: Add the prod rgrp name or delete if env does not exist
+      - uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'RESOURCE_GROUP'
+          current-environment: ${{github.event.inputs.environment}}
+          dev-value: '' # TODO: Add the dev rgrp name or delete if env does not exist in subscription
+          qa-value: '' # TODO: Add the qa rgrp name or delete if env does not exist
+          stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
 
+      # TODO:  Uncomment if you want to create a slot to deploy to.  Delete if you have a permanent slot or do not wish to use slots.
       # - name: Create a deployment slot
       #   run: |
       #     az functionapp  deployment slot create \
@@ -126,6 +128,17 @@ jobs:
       #     --name ${{ env.AZ_FUNC_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{env.RESOURCE_GROUP}}
+
+      # TODO: Delete if not using app insights
+      - name: Annotate App Insights
+        uses: im-open/create-app-insights-annotation@v1.0.0
+        with:
+          subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ env.AZ_INSIGHTS_NAME }}'
+          releaseName: ${{ github.run_id }} # TODO:  Verify release name
+          category: 'Deployment'
+          customMetadata: 'ProjectName=${{env.AZ_FUNC_NAME}},DeployedBy=${{github.actor}}'
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'
