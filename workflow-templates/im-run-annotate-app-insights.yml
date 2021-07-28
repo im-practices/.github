@@ -12,6 +12,11 @@ on:
         description: The category of the annotation
         required: false
         default: 'Deployment'
+      customMetadata:
+        description: 'The comma separated custom metadata pairs.  Format: name1=value1,name2=value2'
+        required: false
+        default: ''
+
 env:
   PROJECT_NAME: '' # TODO:  Add a project name
 
@@ -65,8 +70,7 @@ jobs:
           appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
           releaseName: ${{ github.run_id }} #TODO:  Verify this is the correct
           category: ${{ github.event.inputs.category }}
-          # TODO: if the custom metadata changes from run to run, this can be moved to an input
-          customMetadata: 'ProjectName=${{env.PROJECT_NAME}},DeployedBy=${{github.actor}}'
+          customMetadata: ${{ github.event.inputs.customMetadata }}
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'
