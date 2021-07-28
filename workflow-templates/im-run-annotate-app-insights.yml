@@ -1,0 +1,80 @@
+name: Runbook - Annotate App Insights
+# TODO:  You may wish to update the name and filename with the project this is for
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: The environment the service is in - dev|qa|stage|prod|demo|uat
+        required: true
+        default: prod
+      category:
+        description: The category of the annotation
+        required: false
+        default: 'Deployment'
+      customMetadata:
+        description: 'The comma separated custom metadata pairs.  Format: name1=value1,name2=value2'
+        required: false
+        default: ''
+
+env:
+  PROJECT_NAME: '' # TODO:  Add a project name
+
+jobs:
+  create-annotatation:
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      # TODO:  Update for the environments that are supported
+      - name: Clean environment input
+        id: clean-env
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ github.event.inputs.environment }}
+          input_map: '{ "Dev": ["dev", "d", "development"], "QA": ["qa", "q"], "Stage": ["stg", "s", "stage"], "Prod": ["prod", "production", "p"], "UAT" : ["uat", "user acceptance testing", "u"], "Demo": ["demo", "o"] }'
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA, Stage, Demo, UAT or Prod'
+
+      - uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'RESOURCE_GROUP'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input}}
+          dev-value: '' # TODO: Add the dev rgrp name or delete if env does not exist
+          qa-value: '' # TODO: Add the qa rgrp name or delete if env does not exist
+          stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
+          prod-value: '' # TODO: Add the prod rgrp name or delete if env does not exist
+          demo-value: '' # TODO: Add the demo rgrp name or delete if env does not exist
+          uat-value: '' # TODO: Add the uat rgrp name or delete if env does not exist
+
+      - uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'APP_INSIGHTS_NAME'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input}}
+          dev-value: '' # TODO: Add the dev app insights name or delete if env does not exist
+          qa-value: '' # TODO: Add the qa app insights name or delete if env does not exist
+          stage-value: '' # TODO: Add the stage app insights name or delete if env does not exist
+          prod-value: '' # TODO: Add the prod app insights name or delete if env does not exist
+          demo-value: '' # TODO: Add the demo app insights name or delete if env does not exist
+          uat-value: '' # TODO: Add the uat app insights name or delete if env does not exist
+
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO: Ensure this secret has been populated in your repo
+
+      - name: annotate
+        uses: im-open/create-app-insights-annotation@v1.0.0
+        with:
+          subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
+          releaseName: ${{ github.run_id }} #TODO:  Verify this is the correct
+          category: ${{ github.event.inputs.category }}
+          customMetadata: ${{ github.event.inputs.customMetadata }}
+
+      - name: Azure logout
+        if: always() && steps.login.outcome == 'success'
+        run: |
+          az logout
+          az cache purge
+          az account clear
