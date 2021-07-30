@@ -1,0 +1,101 @@
+name: Run Cypress Tests
+
+# TODO:  In order to use this workflow a few changes need to be made to the cypress test configuration:
+# 1. Make the following npm package changes
+#    npm uninstall mocha-teamcity-reporter
+#    npm install --save-dev mochawesome mochawesome-merge mochawesome-report-generator
+# 2. Modify the cypress run section of the ci script by replacing the '--reporter ./mocha-teamcity-reporter' with '--reporter mochawesome --reporter-options overwrite=false,html=false,json=true'. For instance:
+#    old: "cy:ci" : "....&& cypress run --project ./ --reporter ./mocha-teamcity-reporter \"",
+#    new: "cy:ci" : "....&& cypress run --project ./ --reporter mochawesome --reporter-options overwrite=false,html=false,json=true \"",
+# 3. Add the following pre-ci script.  Your name will vary based on your cypress ci script name.  This removes results between test runs.
+#    "precy:ci": "rm -rf mochawesome-report/",
+# 4. Add the following script that merges all test json files and generates an html report.  Your name may vary based on your project conventions.  If the output file or results dir are changed, update the env values in the workflow.
+#    "cy:report": "mochawesome-merge mochawesome-report/*.json > merged-results.json && marge --reportDir cypress-results merged-results.json",
+
+# TODO:  Verify Triggers
+on:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  JS_APP_DIR: '' # TODO:  Set to the directory containing the js app and tests like src/MyApp.Bff/FrontEnd.
+  SOLUTION_FILE: '' # TODO:  Set to name (not including path) of solution file.
+  DOTNET_VERSION: '' # TODO:  Add the .net version
+  # TODO: Add cypress script name, common ones: cypress-ci, cy:ci, cypress-ci-headless, cy:react-mfe:ci, cypress-ci-firefox, cypress-ci-edge, cy:smoke-dev
+  CYPRESS_CI_SCRIPT: ''
+  CYPRESS_REPORT_SCRIPT: '' #TODO:  Add the name of the npm script that merges the files and creates an html report
+  CYPRESS_RESULTS_FILE: 'merged-results.json' # TODO:  Update this value if it was added as something different in the npm report script
+  CYPRESS_REPORT_DIR: 'cypress-results' # TODO:  Update this value if it was added as something different in the npm report script
+
+jobs:
+  run-cypress:
+    runs-on: [self-hosted, windows-2019]
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.JS_APP_DIR }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Restore npm packages
+        run: npm install
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: dotnet build
+        working-directory: ./ # TODO:  verify the root is the correct location for the solution file
+        run: dotnet build ${{ env.SOLUTION_FILE }}
+
+      # TODO:  Add any additional setup that might be needed like the following.  Delete if not needed
+      # - name: Additional Setup
+      #   run: |
+      #     set ConsentStorageSettings:ConnectionString=Server=localhost;....
+      #     set PERCY_TOKEN=45a1a9c86482ce1108f79....
+      #     npm run ntlm-proxy
+
+      - name: Run cypress
+        id: cypress
+        continue-on-error: true
+        run: npm run ${{ env.CYPRESS_CI_SCRIPT_NAME }}
+
+      - name: Merge json files and create html report
+        run: npm run ${{ env.CYPRESS_REPORT_SCRIPT_NAME }}
+
+      - name: Create Status check based on merged cypress results
+        id: process-cypress
+        uses: im-open/process-cypress-test-results@v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          results-file: '${{ env.JS_APP_DIR }}/${{ env.CYPRESS_RESULTS_FILE }}'
+          report-name: 'Cypress ${{ github.run_number }}'
+          # TODO:  Verify whether you want status checks or pr comments with the results.
+          create-status-check: true
+          create-pr-comment: false
+          ignore-test-failures: true
+          timezone: 'america/denver' # TODO:  Verify timezone
+
+      - name: Upload cypress screenshots if there are test failures
+        if: steps.cypress.outcome == 'failure'
+        uses: actions/upload-artifact@v2
+        with:
+          name: Failed Cypress Test Screenshots
+          path: ${{ env.JS_APP_DIR }}/cypress/screenshots/
+
+      - name: Upload Cypress Results Report
+        uses: actions/upload-artifact@v2
+        with:
+          name: Cypress Results ${{ github.run_number }}
+          path: |
+            ${{ env.JS_APP_DIR }}/${{ env.CYPRESS_REPORT_DIR }}/
+            ${{ env.JS_APP_DIR }}/${{ env.CYPRESS_RESULTS_FILE }}
+
+      - name: Fail if cypress errors
+        if: steps.cypress.outcome == 'failure'
+        run: |
+          echo "The cypress tests have failures"
+          exit 1

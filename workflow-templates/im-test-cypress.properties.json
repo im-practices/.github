@@ -1,0 +1,5 @@
+{
+  "name": "Test - Cypress",
+  "description": "Workflow template for running Cypress Tests",
+  "iconName": "im_test"
+}
