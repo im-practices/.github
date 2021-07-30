@@ -5,7 +5,7 @@ on:
   pull_request:
   workflow_dispatch:
   repository_dispatch:
-    types: [erm_st]
+    types: [storyteller]
 
 env:
   SASS_PROJECT_NAME: '' # TODO:  Enter the project name that contains the sass to be compiled or delete if not needed.
