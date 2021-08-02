@@ -1,0 +1,5 @@
+{
+  "name": "Test - Postman",
+  "description": "Workflow template for running Postman Tests",
+  "iconName": "im_test"
+}
