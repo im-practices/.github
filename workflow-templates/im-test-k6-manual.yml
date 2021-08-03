@@ -22,7 +22,7 @@ on:
       k6_version:
         description: 'K6 version'
         required: true
-        default: '0.33.0' # TODO: Set default verion of k6
+        default: '' # TODO: Set default version of k6
 
 jobs:
   k6_test:
