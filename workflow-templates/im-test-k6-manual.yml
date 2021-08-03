@@ -10,7 +10,7 @@ on:
       testFolderRoot:
         description: 'Test folder root directory from root of repo'
         required: true
-        default: "" # TODO: Verify this is the correct location of your tests.  IE: tests/k6
+        default: "" # TODO: Add the location of your tests.  IE: tests/k6
       testFile:
         description: 'K6 test file to run'     
         required: true
