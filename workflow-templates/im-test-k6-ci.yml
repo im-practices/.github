@@ -19,5 +19,6 @@ jobs:
       uses: actions/checkout@v1
     
     - name: Run k6 test - docker
+      working-directory: tests/k6
       run: |
-        k6 run ${{env.testFile}} --vus 1 -i 1 --insecure-skip-tls-verify
+        k6 run ${{env.testFile}} --vus 1 -i 1 --insecure-skip-tls-verify -out JSON="./k6-output.json"
