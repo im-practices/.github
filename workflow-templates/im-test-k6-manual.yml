@@ -37,12 +37,12 @@ jobs:
       with:
         version: ${{ github.event.inputs.k6_version }}
 
-    - name: Validate Env Input
+    - name: Validate Environment Input
       id: validate-env-input
       uses: im-open/map-input-action@v1.0.1
       with:
         input: ${{ github.event.inputs.envToTest }}
-        input_map: "{ \"dev\": [\"dev\", \"Dev\", \"DEV\"], \"qa\": [\"qa\", \"QA\"], \stage\": [\"stage\", \"Stage\", \"STAGE\"] }"
+        input_map: "{ \"dev\": [\"dev\", \"Dev\", \"DEV\"], \"qa\": [\"qa\", \"QA\"], \"stage\": [\"stage\", \"Stage\", \"STAGE\"] }"
         error_on_no_match: true
         custom_error_message: "Please input a valid environment: dev,qa,stage..."
 
