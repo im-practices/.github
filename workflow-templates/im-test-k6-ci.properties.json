@@ -1,0 +1,5 @@
+{
+    "name": "Test - K6 Workflow for daily CI",
+    "description": "Workflow template for running K6 performance tests with every merge to main",
+    "iconName": "im_test"
+}

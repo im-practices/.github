@@ -1,0 +1,23 @@
+name: K6 Automated Load Tester
+
+on: 
+  push:
+    branches: 
+      - main
+
+env:
+  testFile: "" # TODO:  Add the name of the test file, like tests/k6/check-health-simple.js
+      
+jobs:
+  k6_test:
+    runs-on: [self-hosted, ubuntu-20.04]
+    container: docker://loadimpact/k6:latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+    
+    - name: Run k6 test - docker
+      working-directory: tests/k6 # TODO:  Verify working directory of k6 tests
+      run: |
+        k6 run ${{env.testFile}} --vus 1 -i 1 --insecure-skip-tls-verify -out JSON="./k6-output.json"
