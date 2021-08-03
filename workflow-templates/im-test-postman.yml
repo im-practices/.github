@@ -1,0 +1,59 @@
+name: Run Postman Tests
+
+# TODO:  In order to use this workflow a few changes need to be made to the postman test configuration:
+# 1. Make the following npm package changes
+#    npm uninstall newman-reporter-teamcity
+
+# 2. The reporters and options need to be updated. For instance:
+#    old: "newman run tests/postman-tests/ParticipantGuidance.postman_collection.json -e tests/postman-tests/participant-guidance-prod.postman_environment.json -r cli,teamcity",
+#    new: "newman run tests/postman-tests/ParticipantGuidance.postman_collection.json -e tests/postman-tests/participant-guidance-prod.postman_environment.json -r cli,json --reporter-json-export postman-results.json",
+
+# TODO:  Verify Triggers
+on:
+  # For manually kicking off the tests
+  workflow_dispatch:
+  # For programatically kicking off tests, like when a deploy finishes
+  repository_dispatch:
+    types: [postman]
+
+env:
+  PACKAGE_JSON_DIR: '' # TODO:  Add the directory containing package.json
+  POSTMAN_NPM_SCRIPT_NAME: '' # TODO: Add postman npm script name
+  POSTMAN_RESULTS_NAME: '' # TODO:  Add the name of the results file, set in npm script
+
+jobs:
+  run-postman:
+    runs-on: [self-hosted, ubuntu-20.04]
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.PACKAGE_JSON_DIR }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Restore npm packages
+        run: npm install
+
+      - name: Run Postman Tests
+        id: postman
+        continue-on-error: true
+        run: npm run ${{ env.POSTMAN_NPM_SCRIPT_NAME }}
+
+      - name: Create Status check based on postman results
+        id: process-postman
+        uses: im-open/process-postman-test-results@v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          results-file: ${{env.PACKAGE_JSON_DIR }}/${{ env.POSTMAN_RESULTS_NAME }}
+          timezone: 'america/denver' # TODO:  Verify timezone
+          # TODO:  Verify whether you want status checks, pr comments or both with the results of the tests.
+          create-status-check: true
+          create-pr-comment: true
+
+      - name: Fail if postman errors
+        if: steps.postman.outcome == 'failure'
+        run: |
+          echo "The postman tests have failures"
+          exit 1
