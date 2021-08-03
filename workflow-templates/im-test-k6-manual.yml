@@ -46,7 +46,7 @@ jobs:
       uses: im-open/map-input-action@v1.0.1
       with:
         input: ${{ github.event.inputs.env-to-test }}
-        input_map: "{ \"dev\": [\"dev\", \"Dev\", \"DEV\"], \"qa\": [\"qa\", \"QA\"], \"stage\": [\"stage\", \"Stage\", \"STAGE\"] }"
+        input_map: '{ "dev": ["dev", "d", "development"], "qa": ["qa", "q"], "stage": ["stg", "s", "stage"]  }'
         error_on_no_match: true
         custom_error_message: "Please input a valid environment: dev,qa,stage..."
 
