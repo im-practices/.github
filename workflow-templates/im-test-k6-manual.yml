@@ -14,7 +14,7 @@ on:
       testFile:
         description: 'K6 test file to run'     
         required: true
-        default: '' # TODO: Default test file  IE: check-health-simple.js
+        default: '' # TODO: Add default test file  IE: check-health-simple.js
       k6_extra_params:
         description: 'K6 command extra paramaters'
         required: false
