@@ -6,7 +6,7 @@ name: Run Postman Tests
 
 # 2. The reporters and options need to be updated. For instance:
 #    old: "newman run tests/postman-tests/ParticipantGuidance.postman_collection.json -e tests/postman-tests/participant-guidance-prod.postman_environment.json -r cli,teamcity",
-#    old: "newman run tests/postman-tests/ParticipantGuidance.postman_collection.json -e tests/postman-tests/participant-guidance-prod.postman_environment.json -r cli,json --reporter-json-export postman-results.json",
+#    new: "newman run tests/postman-tests/ParticipantGuidance.postman_collection.json -e tests/postman-tests/participant-guidance-prod.postman_environment.json -r cli,json --reporter-json-export postman-results.json",
 
 # TODO:  Verify Triggers
 on:
