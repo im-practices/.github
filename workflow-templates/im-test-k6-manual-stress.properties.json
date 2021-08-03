@@ -1,0 +1,5 @@
+{
+    "name": "Test - K6 Manual Stress Workflow",
+    "description": "Workflow template for running K6 performance stress tests manually",
+    "iconName": "im_test"
+}

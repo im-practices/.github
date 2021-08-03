@@ -25,6 +25,6 @@ jobs:
       uses: actions/checkout@v1
     
     - name: Run local k6 test - docker
+      working-directory: ${{ github.event.inputs.testFolderRoot }}
       run: |
-        cd ${{ github.event.inputs.testFolderRoot }}
         k6 run ${{github.event.inputs.testFile}} ${{github.event.inputs.k6_extra_params}}
