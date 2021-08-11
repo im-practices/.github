@@ -39,6 +39,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
+      # - name: Authenticate with GitHub Packages
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
+      #   with:
+      #     github-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
+
       - name: Restore npm packages
         run: npm install
 

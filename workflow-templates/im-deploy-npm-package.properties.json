@@ -1,0 +1,5 @@
+{
+  "name": "Deploy - Deploy npm Package to GitHub Packages",
+  "description": "Template that can be used to build and publish an npm package to GitHub's npm Package Registry",
+  "iconName": "im_deploy"
+}
