@@ -1,0 +1,183 @@
+name: Build Database CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+env:
+  DB_NAME: '' # TODO: Fill in your repo's database name
+  DB_SERVER_NAME: 'localhost,1433'
+  DEFAULT_BRANCH: 'main'
+
+  # The following are all for the snapshot step below and can be removed if it's not used
+  SNAPSHOT_PATH: './snapshot' # TODO: Verify this path is correct
+  EXCLUDED_DB_SNAPSHOT_OBJECTS: '' # TODO: Add some comma separated values to this
+
+  # These next variables are for backing up the database. Remove if not needed.
+  BACKUP_PATH: '' # TODO: Update or remove this
+  BACKUP_FILENAME: '' # TODO: Update or remove this
+
+jobs:
+  # TODO: Remove this and it's usages below if no snapshots are created for your database
+  check-for-snapshot-commit:
+    runs-on: ubuntu-latest
+    outputs:
+      should-skip-remaining-workflow-jobs: ${{ steps.check.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Check for snapshot commit
+        id: check
+        shell: pwsh
+        run: |
+          $CurrentBranch = git rev-parse --abbrev-ref HEAD
+          $LastCommitBy = git --no-pager show -s --format="%aN"
+
+          if ($LastCommitBy -eq "github-actions" -and $CurrentBranch -ne "${{ env.DEFAULT_BRANCH }}")
+          {
+            Write-Host "Snapshot was last commit, skipping the other jobs"
+            echo "::set-output name=skip::true"
+          }
+          else
+          {
+            Write-Host "Snapshot was not the last commit, continuing with the other jobs"
+            echo "::set-output name=skip::false"
+          }
+
+  # TODO: Remove this linting job if your project doesn't need/want it
+  lint-migration-files:
+    runs-on: ubuntu-latest
+    needs: check-for-snapshot-commit
+    if: ${{ needs.check-for-snapshot-commit.outputs.should-skip-remaining-workflow-jobs == 'false' }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14' # TODO: Update this if necessary
+
+      - id: migration-folder
+        shell: pwsh
+        run: echo "::set-output name=folder::$($(Get-Date).Year).$($(Get-Date).Month.ToString("00"))"
+      - name: SQL Lint
+        uses: im-open/tsql-lint-action@v1.0.0
+        with:
+          tsqllint-version: 1.11.0
+          path-to-sql-files: 'Database/src/SqlDatabase/Migrations/${{ steps.migration-folder.outputs.folder }}' # TODO: Update this path to wherever the files to lint live
+          file-name-filter: 'V9*.sql' # TODO: Update this if necessary
+          path-to-lint-config: ./.tsqllintrc # TODO: Update this with the path to your project's .tsllintrc file
+
+  build-database:
+    runs-on: [self-hosted, windows-2019-dev]
+    needs: [check-for-snapshot-commit, lint-migration-files]
+    if: ${{ needs.check-for-snapshot-commit.outputs.should-skip-remaining-workflow-jobs == 'false' }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Flyway
+        uses: im-open/setup-flyway@v1.0.0
+        with:
+          version: 7.2.0 # This version works with the current version of build-database-ci-action. Newer versions might, but they should be tested.
+
+      - name: Build Database
+        uses: im-open/build-database-ci-action@v1.0.1
+        with:
+          db-server-name: ${{ env.DB_SERVER_NAME }}
+          db-name: ${{ env.DB_NAME }}
+          install-mock-db-objects: true # TODO: Verify this is needed
+          mock-db-object-nuget-feed-url: https://artifacts.mktp.io/artifactory/api/nuget/nuget-all # TODO: Verify this is needed and correct
+          drop-db-after-build: false
+          run-tests: true # TODO: Remove this if your database doesn't have tests.
+
+      #########################################################################################################################
+      # The previous three steps are all that most builds will need.
+      # They will build your database on the Action Runner and run any tests you have.
+      # The steps that come next aren't going to be needed by every repo, so feel free to remove what is unnecessary for yours.
+      #########################################################################################################################
+
+      # The next four steps can be removed if your build doesn't need to create snapshots of database objects.
+      # Otherwise they can be uncommented and the TODO's addressed.
+
+      # TODO: Replace what is in this step with what your build needs in order to determine what database objects have changed
+      # - name: Get db objects that have changed
+      #   id: changed-objects
+      #   shell: pwsh
+      #   run: |
+      #     $changedObjectsQuery =
+      #       "SELECT
+      #           objectId,
+      #           schemaName,
+      #           objectName,
+      #           CASE objectType
+      #             WHEN 'U' THEN 'Tables'
+      #             WHEN 'V' THEN 'Views'
+      #             WHEN 'P' THEN 'StoredProcedures'
+      #             WHEN 'SO' THEN 'Sequences'
+      #             WHEN 'TF' THEN 'UserDefinedFunctions'
+      #             WHEN 'FN' THEN 'UserDefinedFunctions'
+      #             WHEN 'IF' THEN 'UserDefinedFunctions'
+      #             WHEN 'SN' THEN 'Synonyms'
+      #             ELSE objectType
+      #           END AS objectType,
+      #           operationType
+      #         FROM DBA.V_ChangedObjectsForSnapshot"
+
+      #     $changedObjects = Invoke-Sqlcmd -ServerInstance $instanceName -Database $dbName -Query $changedObjectsQuery
+      #     $mappedObjects = $changedObjects | foreach-object { @{ schemaName=$_.schemaName; objectName=$_.objectName; objectType=$_.objectType; operationType=$_.operationType } }
+      #     $objectsAsJson = $mappedObjects | ConvertTo-Json -Compress
+
+      #     echo "::set-output name=json::$objectsAsJson"
+
+      # - name: Increment snapshots
+      #   uses: im-open/increment-database-object-snapshots@v1.0.0
+      #   with:
+      #     db-name: ${{ env.DB_NAME }}
+      #     instance-name: ${{ env.DB_SERVER_NAME }}
+      #     snapshot-path: ${{ env.SNAPSHOT_PATH }}
+      #     objects-to-increment: '${{ steps.changed-objects.outputs.json }}'
+      #     excluded-db-objects: ${{ env.EXCLUDED_DB_SNAPSHOT_OBJECTS }}
+
+      # - name: Setup git for snapshot commit
+      #   run: |
+      #     git config user.name github-actions
+      #     git config user.email github-actions@github.com
+
+      # TODO: Update the commit message if desired
+      # - name: Commit the snapshots
+      #   run: |
+      #     git add ${{ env.SNAPSHOT_PATH }}
+      #     git commit -m "Automated Snapshot Commit"
+      #     git push -f origin HEAD
+
+      # Remove this if your build doesn't have need of publishing views for tables inside certain schemas
+      # - name: Create and publish views from tables
+      #   uses: im-open/sql-view-to-table-generator@v1.0.0
+      #   with:
+      #     schema-names: 'dbo,CustomSchema' # TODO: Replace this with an actual list
+      #     db-name: ${{ env.DB_NAME }}
+      #     db-server: ${{ env.DB_SERVER_NAME }}
+      #     default-branch: ${{ env.DEFAULT_BRANCH }}
+      #     nuget-retrieval-url: '' # TODO: Replace this with the url for retrieving packages
+      #     publish-packages: true
+      #     nuget-publish-url: '' # TODO: Add the url for publishing packages
+      #     nuget-api-key: '' # TODO: Update this with a real PAT
+
+      # Remove or update this depending on your build's needs
+      # - name: Update database object versions
+      #   shell: pwsh
+      #   run: |
+      #     $updateObjectVersionsSQL = "EXEC DBA.usp_UpdateCheckSumForChangedObjectDefinitions;"
+      #     Invoke-Sqlcmd -ServerInstance "${{ env.DB_SERVER_NAME }}" -Database "${{ env.DB_NAME }}" $updateObjectVersionsSQL
+
+      # Remove this if your build doesn't need to create/publish backup files
+      # - name: Create and publish backup files
+      #   uses: im-open/create-and-publish-db-backup-file@v1.0.0
+      #   with:
+      #     db-server: ${{ env.DB_SERVER_NAME }}
+      #     db-name: ${{ env.DB_NAME }}
+      #     backup-path: '${{ env.BACKUP_PATH }}' # This can be changed if needed
+      #     backup-name: '${{ env.BACKUP_FILENAME }}'
+      #     version: '1.1.${{ github.run_number }}' # TODO: Update this if need be
+      #     nuget-source-url: '' # TODO: Add the url to publish the backup file package to
+      #     nuget-api-key: '${{ secrets.MY_GH_PACKAGES_ACCESS_TOKEN }}' # TODO: Update to use a real secret
+      #     authors: 'My-Team' # TODO: This will get put in the .nuspec file. It should be updated with your team name or something similar.

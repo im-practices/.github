@@ -1,0 +1,6 @@
+{
+    "name": "Build - Build Database CI",
+    "description": "Workflow template for continuous integration of a MSSQL Database project",
+    "iconName": "im_build"
+  }
+  
