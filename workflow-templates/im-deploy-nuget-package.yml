@@ -21,7 +21,6 @@ on:
 
 jobs:
   env:
-    NUGET_PROJECT_DIR: '' # TODO:  Add the path to the project that generates a nuget package
     #CSPROJ_NAME: '' # TODO:  If you have an older project, add the name of your csproj file so it can be built with the nuget command directly.
 
   publish-to-gpr:
@@ -30,7 +29,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ${{ env.NUGET_PROJECT_DIR }}
+        working-directory: '' # TODO:  Add the path to the project that generates a nuget package
 
     steps:
       - uses: actions/checkout@v2

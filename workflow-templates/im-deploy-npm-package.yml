@@ -20,17 +20,13 @@ on:
 # https://github.com/im-practices/git-er-done/blob/main/packages/publish-npm.md
 
 jobs:
-  env:
-    NPM_PROJECT_DIR: '' # TODO:  Add the path to the project that generates an npm package
-
   publish-to-gpr:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  Update if using a different trigger
     runs-on: [self-hosted, ubuntu-20.04]
     defaults:
       run:
         shell: bash
-        working-directory: ${{ env.NPM_PROJECT_DIR }}
-
+        working-directory: '' # TODO:  Add the path to the project that generates an npm package
     steps:
       - uses: actions/checkout@v2
 
