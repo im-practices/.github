@@ -1,0 +1,5 @@
+{
+    "name": "Deploy - On Prem Web App",
+    "description": "Template that can be used to deploy an On Prem Web App",
+    "iconName": "im_deploy"
+}
