@@ -139,7 +139,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # TODO:  If there is only one environment in the prod subscription, the following steps can be removed and a single
-      # environment variable can be added at the workflow level above for RESOURCE_GROUP, AZ_FUNC_NAME
+      # environment variable can be added at the workflow level above for RESOURCE_GROUP, AZ_APP_NAME
       - uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'RESOURCE_GROUP'
@@ -147,7 +147,7 @@ jobs:
           stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
           prod-value: '' # TODO: Add the prod rgrp name
 
-      - name: Set the Azure Function Name
+      - name: Set the Azure App Service Name
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'AZ_APP_NAME'
@@ -272,14 +272,14 @@ jobs:
 
       # TODO: Remove the following two steps if not sending Teams notifications
       # TODO:  If there is only one environment in the prod subscription, the following step can be removed and a single
-      # environment variable can be added at the workflow level above for AZ_FUNC_NAME
-      - name: Set the Azure Function Name
+      # environment variable can be added at the workflow level above for AZ_APP_NAME
+      - name: Set the Azure App Service Name
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
-          variable-name: 'AZ_FUNC_NAME'
+          variable-name: 'AZ_APP_NAME'
           current-environment: ${{ github.event.inputs.environment }}
-          stage-value: '' # TODO: Add the stage azure func name or delete if env does not exist
-          prod-value: '' # TODO: Add the prod azure func name or delete if env does not exist
+          stage-value: '' # TODO: Add the stage azure app service name or delete if env does not exist
+          prod-value: '' # TODO: Add the prod azure app service name or delete if env does not exist
       - name: Send Status to Teams
         if: always()
         uses: im-open/microsoft-teams-status-update-action@v1.0.0
