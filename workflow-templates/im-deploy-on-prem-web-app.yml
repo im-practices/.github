@@ -135,17 +135,17 @@ jobs:
         run: |
           (cd published_app && zip -r ../${{env.DEPLOY_ZIP}} .)
 
-      - name: Stop IIS App Pool
-        id: iis-stop
+      - name: Stop App Pool
+        id: app-pool-stop
         if: always()
         runs-on: [self-hosted, windows-2019]
-        uses: im-open/iis-service-action@v1.0.1
+        uses: im-open/app-pool-action@v1.0.0
         with:
-          action: 'app-pool-stop'
+          action: 'stop'
           server: ${{ secrets.iis_server }}
+          app-pool-name: ${{ secrets.pool-name }}
           service-account-id: ${{secrets.iis_admin_user}}
           service-account-password: ${{secrets.iis_admin_password}}
-          app-pool-name: ${{ secrets.pool-name }}
           server-public-key: ${{ env.IIS_SERVER_CERT_PATH}}
 
       - name: Deploy deployment package
@@ -160,16 +160,16 @@ jobs:
           clean-deployment-folder: 'true'
           server-public-key: ${{ env.cert-path }}
 
-      - name: Start IIS App Pool
-        if: always() && steps.iis-stop.outcome == 'success'
+      - name: Start App Pool
+        if: always() && steps.app-pool-stop.outcome == 'success'
         runs-on: [self-hosted, windows-2019]
-        uses: im-open/iis-service-action@v1.0.1
+        uses: im-open/app-pool-action@v1.0.0
         with:
-          action: 'app-pool-start'
+          action: 'start'
           server: ${{ secrets.iis_server }}
+          app-pool-name: ${{ secrets.pool-name }}
           service-account-id: ${{secrets.iis_admin_user}}
           service-account-password: ${{secrets.iis_admin_password}}
-          app-pool-name: ${{ secrets.pool-name }}
           server-public-key: ${{ env.IIS_SERVER_CERT_PATH}}
 
       - name: Close the PagerDuty Maintenance Window
