@@ -50,6 +50,7 @@ jobs:
             -s '${{env.SOURCE_DIRECTORY}}'
 
       # TODO: Remove if not using an automated deployment project board
+      # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
       - name: Update Deployment Board
         if: always()
         uses: im-open/update-deployment-board@v1.0.1
