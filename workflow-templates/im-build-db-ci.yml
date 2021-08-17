@@ -68,7 +68,7 @@ jobs:
           path-to-lint-config: ./.tsqllintrc # TODO: Update this with the path to your project's .tsllintrc file
 
   build-database:
-    runs-on: [self-hosted, windows-2019-dev]
+    runs-on: [self-hosted, windows-2019]
     needs: [check-for-snapshot-commit, lint-migration-files]
     if: ${{ needs.check-for-snapshot-commit.outputs.should-skip-remaining-workflow-jobs == 'false' }}
     steps:
@@ -94,10 +94,8 @@ jobs:
       # They will build your database on the Action Runner and run any tests you have.
       # The steps that come next aren't going to be needed by every repo, so feel free to remove what is unnecessary for yours.
       #########################################################################################################################
-
       # The next four steps can be removed if your build doesn't need to create snapshots of database objects.
       # Otherwise they can be uncommented and the TODO's addressed.
-
       # TODO: Replace what is in this step with what your build needs in order to determine what database objects have changed
       # - name: Get db objects that have changed
       #   id: changed-objects
@@ -121,13 +119,10 @@ jobs:
       #           END AS objectType,
       #           operationType
       #         FROM DBA.V_ChangedObjectsForSnapshot"
-
       #     $changedObjects = Invoke-Sqlcmd -ServerInstance $instanceName -Database $dbName -Query $changedObjectsQuery
       #     $mappedObjects = $changedObjects | foreach-object { @{ schemaName=$_.schemaName; objectName=$_.objectName; objectType=$_.objectType; operationType=$_.operationType } }
       #     $objectsAsJson = $mappedObjects | ConvertTo-Json -Compress
-
       #     echo "::set-output name=json::$objectsAsJson"
-
       # - name: Increment snapshots
       #   uses: im-open/increment-database-object-snapshots@v1.0.0
       #   with:
@@ -136,19 +131,16 @@ jobs:
       #     snapshot-path: ${{ env.SNAPSHOT_PATH }}
       #     objects-to-increment: '${{ steps.changed-objects.outputs.json }}'
       #     excluded-db-objects: ${{ env.EXCLUDED_DB_SNAPSHOT_OBJECTS }}
-
       # - name: Setup git for snapshot commit
       #   run: |
       #     git config user.name github-actions
       #     git config user.email github-actions@github.com
-
       # TODO: Update the commit message if desired
       # - name: Commit the snapshots
       #   run: |
       #     git add ${{ env.SNAPSHOT_PATH }}
       #     git commit -m "Automated Snapshot Commit"
       #     git push -f origin HEAD
-
       # Remove this if your build doesn't have need of publishing views for tables inside certain schemas
       # - name: Create and publish views from tables
       #   uses: im-open/sql-view-to-table-generator@v1.0.0
@@ -161,14 +153,12 @@ jobs:
       #     publish-packages: true
       #     nuget-publish-url: '' # TODO: Add the url for publishing packages
       #     nuget-api-key: '' # TODO: Update this with a real PAT
-
       # Remove or update this depending on your build's needs
       # - name: Update database object versions
       #   shell: pwsh
       #   run: |
       #     $updateObjectVersionsSQL = "EXEC DBA.usp_UpdateCheckSumForChangedObjectDefinitions;"
       #     Invoke-Sqlcmd -ServerInstance "${{ env.DB_SERVER_NAME }}" -Database "${{ env.DB_NAME }}" $updateObjectVersionsSQL
-
       # Remove this if your build doesn't need to create/publish backup files
       # - name: Create and publish backup files
       #   uses: im-open/create-and-publish-db-backup-file@v1.0.0

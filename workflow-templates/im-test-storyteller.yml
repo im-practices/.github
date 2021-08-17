@@ -16,7 +16,7 @@ env:
 
 jobs:
   run-storyteller:
-    runs-on: [self-hosted, windows-2019-dev]
+    runs-on: [self-hosted, windows-2019]
     steps:
       - uses: actions/checkout@v2
 
