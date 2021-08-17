@@ -9,6 +9,8 @@ on:
         description: The environment to Deploy To.
         required: true
 
+# TODO:  The terraform needs to be switched from on-prem-egress-ips to network-information.
+
 env:
   STORAGE_ACCOUNT: '' # TODO:  Add your STG Account Here
   RESOURCE_GROUP: '' # TODO:  Add your RGRP here
@@ -26,7 +28,7 @@ env:
   TF_WORKING_DIR: './${{ github.event.inputs.environment }}' # TODO:  Verify this directory is correct for your repository
   SSH_KEY_CENTRAL_LOGGING: ${{secrets.SSH_CENTRAL_LOGGING}}
   SSH_KEY_STORAGE_ACCOUNT: ${{secrets.SSH_STORAGE_ACCOUNT}}
-  SSH_KEY_ON_PREM_EGRESS: ${{secrets.SSH_ON_PREM_EGRESS}}
+  SSH_KEY_NETWORK_INFO: ${{secrets.SSH_NETWORK_INFO}}
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
   DEFAULT_BRANCH: 'main' # TODO:  Verify this is correct
 
@@ -91,7 +93,7 @@ jobs:
             [
               { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
               { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
             ]
 
       - name: Open a PagerDuty Maintenance Window
@@ -102,6 +104,26 @@ jobs:
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
+
+      # TODO:  Set the resource group values for each environment supported in the prod subscription.  Delete any environments you aren't using.
+      # If prod is the only value used here, a single global environment variable can be set for the workflow and this action can be deleted.
+      - name: Set the Resource Group
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'RESOURCE_GROUP'
+          current-environment: ${{ github.event.inputs.environment }}
+          stage-value: ''
+          prod-value: ''
+
+      # TODO:  Set the storage account name for each environment supported in the prod subscription.  Delete any environments you aren't using.
+      # If prod is the only value used here, a single global environment variable can be set for the workflow and this action can be deleted.
+      - name: Set the Storage Account
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'STORAGE_ACCOUNT'
+          current-environment: ${{ github.event.inputs.environment }}
+          stage-value: ''
+          prod-value: ''
 
       - name: AZ Login
         uses: azure/login@v1
@@ -187,8 +209,28 @@ jobs:
             [
               { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
               { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
             ]
+
+      # TODO:  Set the resource group values for each environment supported in the prod subscription.  Delete any environments you aren't using.
+      # If prod is the only value used here, a single global environment variable can be set for the workflow and this action can be deleted.
+      - name: Set the Resource Group
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'RESOURCE_GROUP'
+          current-environment: ${{ github.event.inputs.environment }}
+          stage-value: ''
+          prod-value: ''
+
+      # TODO:  Set the storage account name for each environment supported in the prod subscription.  Delete any environments you aren't using.
+      # If prod is the only value used here, a single global environment variable can be set for the workflow and this action can be deleted.
+      - name: Set the Storage Account
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'STORAGE_ACCOUNT'
+          current-environment: ${{ github.event.inputs.environment }}
+          stage-value: ''
+          prod-value: ''
 
       - name: AZ Login
         uses: azure/login@v1
@@ -242,6 +284,7 @@ jobs:
           maintenance-window-id: ${{needs.tf-plan.outputs.maintenance_window_id}}
 
   # TODO: Remove if not using an automated deployment project board
+  # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
   update-deployment-board:
     runs-on: [ubuntu-20.04]
     needs:

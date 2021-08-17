@@ -18,9 +18,7 @@ env:
   PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
   PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
-  AZ_FUNC_NAME: '' # TODO:  set this to your azure function's name
-  AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot
-  AZ_INSIGHTS_NAME: '' # TODO:  If using app insights, set the name for annotations, otherwise delete
+  AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot.  If this is different per environment use the 'set-variable-based-on-environment' action to provide different values like AZ_FUNC_NAME below.
   DOTNET_VERSION: '' # TODO:  Set the .net core version of your project
   PROJECT_ROOT: '' # TODO:  set this to the folder of your function. For most projects this will be ./src/ProjectName
   ARTIFACT_NAME: 'Published Function' #TODO:  Set this to the name of the artifact that shows in the workflow's summary section
@@ -100,6 +98,15 @@ jobs:
           qa-value: '' # TODO: Add the qa rgrp name or delete if env does not exist
           stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
 
+      - name: Set the Azure Function Name
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'AZ_FUNC_NAME'
+          current-environment: ${{ github.event.inputs.environment }}
+          dev-value: '' # TODO: Add the dev azure func name or delete if env does not exist in subscription
+          qa-value: '' # TODO: Add the qa azure func name or delete if env does not exist
+          stage-value: '' # TODO: Add the stage azure func name or delete if env does not exist
+
       # TODO:  Uncomment if you want to create a slot to deploy to.  Delete if you have a permanent slot or do not wish to use slots.
       # - name: Create a deployment slot
       #   run: |
@@ -135,7 +142,16 @@ jobs:
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{env.RESOURCE_GROUP}}
 
-      # TODO: Delete if not using app insights
+      # TODO: Delete the following two steps if not using app insights
+      - name: Set the Azure Insights Resource Name
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'AZ_INSIGHTS_NAME'
+          current-environment: ${{ github.event.inputs.environment }}
+          dev-value: '' # TODO: Add the dev azure app insights resource name or delete if env does not exist in subscription
+          qa-value: '' # TODO: Add the qa azure app insights resource name or delete if env does not exist
+          stage-value: '' # TODO: Add the stage azure app insights resource name or delete if env does not exist
+
       - name: Annotate App Insights
         uses: im-open/create-app-insights-annotation@v1.0.0
         with:
@@ -171,6 +187,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # TODO: Remove if not using an automated deployment project board
+      # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
       - name: Update Deployment Board
         if: always()
         uses: im-open/update-deployment-board@v1.0.1
@@ -182,7 +199,16 @@ jobs:
           deploy-status: ${{ steps.conclusion.conclusion }}
           timezone: 'america/denver'
 
-      # TODO: Remove if not sending Teams notifications
+      # TODO: Remove the following two steps if not sending Teams notifications
+      - name: Set the Azure Function Name
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'AZ_FUNC_NAME'
+          current-environment: ${{ github.event.inputs.environment }}
+          dev-value: '' # TODO: Add the dev azure func name or delete if env does not exist in subscription
+          qa-value: '' # TODO: Add the qa azure func name or delete if env does not exist
+          stage-value: '' # TODO: Add the stage azure func name or delete if env does not exist
+
       - name: Send Status to Teams
         if: always()
         uses: im-open/microsoft-teams-status-update-action@v1.0.0

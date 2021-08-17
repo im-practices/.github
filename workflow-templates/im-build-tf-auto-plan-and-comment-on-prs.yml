@@ -9,6 +9,8 @@ on:
       - 'stage/**'
       - 'prod/**'
 
+# TODO:  The terraform needs to be switched from on-prem-egress-ips to network-information.
+
 env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
@@ -20,7 +22,7 @@ env:
   TF_WORKING_DIR: './dev' # TODO:  Verify this directory is correct for your repository
   SSH_KEY_CENTRAL_LOGGING: ${{secrets.SSH_CENTRAL_LOGGING}}
   SSH_KEY_STORAGE_ACCOUNT: ${{secrets.SSH_STORAGE_ACCOUNT}}
-  SSH_KEY_ON_PREM_EGRESS: ${{secrets.SSH_ON_PREM_EGRESS}}
+  SSH_KEY_NETWORK_INFO: ${{secrets.SSH_NETWORK_INFO}}
 
 jobs:
   auto-plan-the-tf:
@@ -50,7 +52,7 @@ jobs:
             [
               { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
               { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
             ]
 
       - name: Terraform Init
