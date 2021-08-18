@@ -56,7 +56,7 @@ jobs:
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
-      #     github-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
 
       - name: Build Database
         uses: im-open/build-database-ci-action@v1.0.1
@@ -161,7 +161,7 @@ jobs:
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
-      #     github-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
 
       - name: dotnet build
         run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release

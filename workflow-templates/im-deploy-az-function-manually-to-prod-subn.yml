@@ -88,7 +88,7 @@ jobs:
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
-      #     github-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
 
       - name: Build and Publish
         working-directory: ${{ env.PROJECT_ROOT }}

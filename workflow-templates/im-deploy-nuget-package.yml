@@ -38,7 +38,7 @@ jobs:
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
-      #     github-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
 
       # TODO:  This can be used if you want this workflow to get the current git tag to use as the package version.  Delete if you are using another version method.
       # - name: Set Tag to current git tag
