@@ -20,13 +20,10 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            const util = require('util');
-            const exec = util.promisify(require('child_process').exec);
-
             let newTag;
             try {
-              ({ stdout: tag } = await exec(`git describe --tags --abbrev=0`));
-
+              let tag = '';
+              await exec.exec(`git describe --tags --abbrev=0`, [], { listeners: { stdout: (data) => { tag += data.toString(); } } });
               tag = tag.replace('\n', '').trim();
               core.info(`The latest tag is: ${tag}`);
               const majorMinorPatch = tag.split('.');
@@ -39,7 +36,6 @@ jobs:
               core.info('An error occurred getting the tags for the repo.  It most likely does not have any tags to use. Defaulting to v1.0.0.');
               core.info(error);
             }
-
             core.info(`Pushing tag '${newTag}' to the repository...`)
             await github.git.createRef({
               owner: context.repo.owner,
