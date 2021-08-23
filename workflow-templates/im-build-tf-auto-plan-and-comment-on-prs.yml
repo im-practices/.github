@@ -60,8 +60,9 @@ jobs:
         run: terraform init
 
       - name: Terraform Format
+        working-directory: .
         id: fmt
-        run: terraform fmt -check
+        run: terraform fmt -check -recursive
 
       # TODO:  Remove the pagerduty token if not configuring pagerduty
       - name: Terraform Plan
