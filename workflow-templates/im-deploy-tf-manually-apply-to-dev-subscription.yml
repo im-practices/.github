@@ -31,7 +31,7 @@ env:
 
 jobs:
   validate-input:
-    runs-on: [ubuntu-20.04]
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     steps:
       # TODO:  Update if you don't use all these environments in the Dev subscription
       - name: Clean Environment Input
@@ -156,7 +156,7 @@ jobs:
 
   technical-approval:
     needs: tf-plan
-    runs-on: [ubuntu-20.04]
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     environment: 'Technical Approval'
     steps:
       - name: Technical Approval Received
@@ -263,7 +263,7 @@ jobs:
   # TODO: Remove if not using an automated deployment project board
   # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
   update-deployment-board:
-    runs-on: [ubuntu-20.04]
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     needs: [validate-input, tf-plan, technical-approval, tf-apply]
     if: always()
     steps:

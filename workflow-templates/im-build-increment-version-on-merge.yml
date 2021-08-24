@@ -7,7 +7,7 @@ jobs:
   increment-version:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
 
-    runs-on: [ubuntu-20.04]
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
 
     steps:
       - name: Checkout Repository

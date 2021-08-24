@@ -219,7 +219,7 @@ jobs:
           path: ${{ env.CODE_COVERAGE_DIR_JEST }}
 
   validate-sam-yaml:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
 
     outputs:
       validate: 'Passed'
@@ -233,7 +233,7 @@ jobs:
   finish-build:
     if: always()
     needs: [dotnet-and-db, jest, validate-sam-yaml]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     steps:
       # TODO: Uncomment if you want to send teams notifications after each push, delete if you don't.
       # - uses: im-open/workflow-conclusion@v1.0.0
