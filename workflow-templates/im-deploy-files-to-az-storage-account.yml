@@ -45,9 +45,9 @@ jobs:
         run: |
           az storage blob upload-batch \
             --auth-mode login \
-            --account-name '${{env.STORAGE_ACCOUNT_NAME}}' \
-            -d '${{env.TARGET_CONTAINER}}' \
-            -s '${{env.SOURCE_DIRECTORY}}'
+            --account-name '${{ env.STORAGE_ACCOUNT_NAME }}' \
+            -d '${{ env.TARGET_CONTAINER }}' \
+            -s '${{ env.SOURCE_DIRECTORY }}'
 
       # TODO: Remove if not using an automated deployment project board
       # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
@@ -55,9 +55,9 @@ jobs:
         if: always()
         uses: im-open/update-deployment-board@v1.0.1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ github.event.inputs.environment }}
-          board-number: ${{ env.DEPLOY_BOARD_NUM}}
+          board-number: ${{ env.DEPLOY_BOARD_NUM }}
           ref: ${{ github.event.inputs.branch-tag-sha }}
           deploy-status: ${{ job.status }}
           timezone: 'america/denver'

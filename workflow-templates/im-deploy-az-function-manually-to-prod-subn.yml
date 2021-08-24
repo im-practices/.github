@@ -14,7 +14,7 @@ on:
         required: true
 
 env:
-  PAGERDUTY_SERVICE_IDS: '[ "${{secrets.PAGERDUTY_SERVICE_ID}}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+  PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
   PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
   PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
@@ -55,12 +55,12 @@ jobs:
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
         with:
-          tag: ${{github.event.inputs.tag}}
+          tag: ${{ github.event.inputs.tag }}
 
   deploy-code:
     needs: validate-input
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{github.event.inputs.environment}}
+    environment: ${{ github.event.inputs.environment }}
 
     outputs:
       maintenance_window_id: ${{ steps.open-window.outputs.maintenance-window-id }}
@@ -70,7 +70,7 @@ jobs:
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
@@ -101,8 +101,8 @@ jobs:
       # - name: Upload artifact for deployment job
       #   uses: actions/upload-artifact@v2
       #   with:
-      #     name: ${{env.ARTIFACT_NAME}}
-      #     path: ${{env.PROJECT_ROOT}}/published_func
+      #     name: ${{ env.ARTIFACT_NAME }}
+      #     path: ${{ env.PROJECT_ROOT }}/published_func
 
       - name: AZ Login
         id: login
@@ -115,7 +115,7 @@ jobs:
       - uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'RESOURCE_GROUP'
-          current-environment: ${{github.event.inputs.environment}}
+          current-environment: ${{ github.event.inputs.environment }}
           stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist in subscription
           prod-value: '' # TODO: Add the prod rgrp name
 
@@ -140,16 +140,16 @@ jobs:
       - name: Deploy to Azure Function
         uses: azure/functions-action@v2
         with:
-          app-name: ${{env.AZ_FUNC_NAME}}
+          app-name: ${{ env.AZ_FUNC_NAME }}
           package: ${{ env.PROJECT_ROOT }}/published_func
-          # slot-name: ${{env.AZ_SLOT_NAME}}  # TODO:  Uncomment if using slots, delete if not
+          # slot-name: ${{ env.AZ_SLOT_NAME }}  # TODO:  Uncomment if using slots, delete if not
 
       # TODO:  Uncomment if using slots and you want to swap right away.  Delete this block if you don't.
       # - name: Swap slots
       #   run: |
       #     az functionapp  deployment slot swap \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
-      #     --resource-group ${{env.RESOURCE_GROUP}} \
+      #     --resource-group ${{ env.RESOURCE_GROUP }} \
       #     --name ${{ env.AZ_FUNC_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --target-slot ${{ env.TARGET_SLOT }}
@@ -160,7 +160,7 @@ jobs:
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --name ${{ env.AZ_FUNC_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
-      #     --resource-group ${{env.RESOURCE_GROUP}}
+      #     --resource-group ${{ env.RESOURCE_GROUP }}
 
       # TODO: Delete the following two steps if not using app insights
       # TODO:  If there's only one environment in the prod subn, this can be converted to a single env variable declared at the top of the workflow.
@@ -180,7 +180,7 @@ jobs:
           appInsightsResourceName: '${{ env.AZ_INSIGHTS_NAME }}'
           releaseName: ${{ github.run_id }} # TODO:  Verify release name
           category: 'Deployment'
-          customMetadata: 'ProjectName=${{env.AZ_FUNC_NAME}},DeployedBy=${{github.actor}}'
+          customMetadata: 'ProjectName=${{ env.AZ_FUNC_NAME }},DeployedBy=${{ github.actor }}'
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'
@@ -193,8 +193,8 @@ jobs:
         if: always() && steps.open-window.outcome == 'success'
         uses: im-open/close-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
-          maintenance-window-id: ${{steps.open-window.outputs.maintenance-window-id}}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
+          maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
   update-deployment-board-and-send-teams-notification:
     runs-on: [ubuntu-20.04]
@@ -212,9 +212,9 @@ jobs:
         if: always()
         uses: im-open/update-deployment-board@v1.0.1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ github.event.inputs.environment }}
-          board-number: ${{ env.DEPLOY_BOARD_NUM}}
+          board-number: ${{ env.DEPLOY_BOARD_NUM }}
           ref: ${{ github.event.inputs.tag }}
           deploy-status: ${{ steps.conclusion.conclusion }}
           timezone: 'america/denver'
@@ -234,7 +234,7 @@ jobs:
         if: always()
         uses: im-open/microsoft-teams-status-update-action@v1.0.0
         with:
-          title: Deploying ${{env.AZ_FUNC_NAME}} to Azure # TODO:  Verify title
+          title: Deploying ${{ env.AZ_FUNC_NAME }} to Azure # TODO:  Verify title
           workflow-status: ${{ steps.conclusion.conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists
@@ -242,9 +242,9 @@ jobs:
           # TODO:  Verify the custom facts you want included
           custom-facts: |
             [
-              { "name": "Event", "value": "${{github.event_name}}" },
-              { "name": "Workflow", "value": "${{github.workflow}}" },
-              { "name": "Run", "value": "${{github.run_id}}" }
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" }
             ]
           # TODO:  Verify the buttons you want included
           custom-actions: |

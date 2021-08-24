@@ -23,16 +23,16 @@ on:
 env:
   TARGET_SLOT: 'Production'
   SOURCE_SLOT: '' # TODO:  Add the name of the source slot
-  PAGERDUTY_SERVICE_IDS: '[ "${{secrets.PAGERDUTY_SERVICE_ID}}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+  PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
   PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
   PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
 
 jobs:
   get-inputs-from-event:
-    runs-on: ubuntu-20.04
+    runs-on: [ubuntu-20.04]
     outputs:
-      environment: ${{steps.get-inputs.outputs.environment}}
-      open-window: ${{steps.get-inputs.outputs.openWindow}}
+      environment: ${{ steps.get-inputs.outputs.environment }}
+      open-window: ${{ steps.get-inputs.outputs.openWindow }}
     steps:
       - id: get-inputs
         run: |
@@ -59,7 +59,7 @@ jobs:
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
@@ -96,7 +96,7 @@ jobs:
         run: |
           az webapp deployment slot swap \
           --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
-          --resource-group ${{env.RESOURCE_GROUP}} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
           --name ${{ env.AZ_APP_NAME }}  \
           --slot ${{ env.SOURCE_SLOT }} \
           --target-slot ${{ env.TARGET_SLOT }}
@@ -107,7 +107,7 @@ jobs:
       #     --slot ${{ env.SOURCE_SLOT }} \
       #     --name ${{ env.AZ_APP_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
-      #     --resource-group ${{env.RESOURCE_GROUP}}
+      #     --resource-group ${{ env.RESOURCE_GROUP }}
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'
@@ -120,5 +120,5 @@ jobs:
         if: always() && needs.get-inputs-from-event.outputs.open-window == 'true' && steps.open-window.outcome == 'success'
         uses: im-open/close-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
-          maintenance-window-id: ${{steps.open-window.outputs.maintenance-window-id}}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
+          maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}

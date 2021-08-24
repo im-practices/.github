@@ -18,7 +18,7 @@ jobs:
       - name: Increment the version
         uses: actions/github-script@v4
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             let newTag;
             try {
@@ -49,7 +49,7 @@ jobs:
         with:
           # You have to use something with write access to the repo. GITHUB_TOKEN
           # doesn't work because it doesn't have access to another repo.
-          github-token: ${{secrets.PIPELINE_BOT_PAT}}
+          github-token: ${{ secrets.PIPELINE_BOT_PAT }}
           script: |
             github.repos.createDispatchEvent({
               owner: 'bc-swat',
