@@ -25,7 +25,7 @@ env:
 
 jobs:
   stakeholder-approval:
-    runs-on: [ubuntu-20.04]
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     environment: 'Stakeholder Approval'
     steps:
       - name: Approval Received
@@ -33,7 +33,7 @@ jobs:
 
   validate-input:
     needs: stakeholder-approval
-    runs-on: [ubuntu-20.04]
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     steps:
       # TODO:  Update the following two steps if you don't use all these environments in the Production subscription
       - name: Clean Environment Input
@@ -197,7 +197,7 @@ jobs:
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
   update-deployment-board-and-send-teams-notification:
-    runs-on: [ubuntu-20.04]
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     needs: [deploy-code]
     if: always()
     steps:

@@ -25,7 +25,7 @@ env:
 
 jobs:
   validate-input:
-    runs-on: [ubuntu-20.04]
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     steps:
       # TODO:  Update these steps if you don't use all these environments in the Development Subscription
       - name: Clean Environment Input
@@ -177,7 +177,7 @@ jobs:
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
   update-deployment-board-and-send-teams-notification:
-    runs-on: [ubuntu-20.04]
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     needs: [deploy-code]
     if: always()
     steps:

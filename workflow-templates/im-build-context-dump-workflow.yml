@@ -2,7 +2,7 @@ on: push
 
 jobs:
   one:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     steps:
       - name: Dump GitHub context
         env:
