@@ -15,7 +15,7 @@ jobs:
       - name: Cleanup
         uses: im-open/cleanup-deployment-board@v1.0.0
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           board-number: # TODO:  Add the project board number
 
           # Inactive cards are cards that are not currently deployed and do not have an open branch associated with them.

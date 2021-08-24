@@ -20,9 +20,9 @@ env:
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>0.15.5' #TODO:  Verify your version of terraform.
   TF_WORKING_DIR: './dev' # TODO:  Verify this directory is correct for your repository
-  SSH_KEY_CENTRAL_LOGGING: ${{secrets.SSH_CENTRAL_LOGGING}}
-  SSH_KEY_STORAGE_ACCOUNT: ${{secrets.SSH_STORAGE_ACCOUNT}}
-  SSH_KEY_NETWORK_INFO: ${{secrets.SSH_NETWORK_INFO}}
+  SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }}
+  SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
+  SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
 
 jobs:
   auto-plan-the-tf:
@@ -69,7 +69,7 @@ jobs:
         id: plan
         run: |
           terraform plan -no-color \
-          -var="pagerduty_token=${{secrets.PAGERDUTY_TOKEN}}"
+          -var="pagerduty_token=${{ secrets.PAGERDUTY_TOKEN }}"
         continue-on-error: true
 
       - name: 'Terraform Comment'

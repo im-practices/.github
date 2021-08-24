@@ -42,7 +42,7 @@ jobs:
       - uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'RESOURCE_GROUP'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input}}
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
           dev-value: '' # TODO: Add the dev rgrp name or delete if env does not exist
           qa-value: '' # TODO: Add the qa rgrp name or delete if env does not exist
           stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
@@ -53,7 +53,7 @@ jobs:
       - uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'APP_SERVICE_NAME'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input}}
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
           dev-value: '' # TODO: Add the dev app service name or delete if env does not exist
           qa-value: '' # TODO: Add the qa app service name or delete if env does not exist
           stage-value: '' # TODO: Add the stage app service name or delete if env does not exist
@@ -65,7 +65,7 @@ jobs:
       - uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'SLOT_NAME'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input}}
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
           dev-value: '' # TODO: Add the dev slot name or delete if env does not exist
           qa-value: '' # TODO: Add the qa slot name or delete if env does not exist
           stage-value: '' # TODO: Add the slot rgrp name or delete if env does not exist

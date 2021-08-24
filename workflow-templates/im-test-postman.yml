@@ -52,7 +52,7 @@ jobs:
         uses: im-open/process-postman-test-results@v1.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          results-file: ${{env.PACKAGE_JSON_DIR }}/${{ env.POSTMAN_RESULTS_NAME }}
+          results-file: ${{ env.PACKAGE_JSON_DIR }}/${{ env.POSTMAN_RESULTS_NAME }}
           timezone: 'america/denver' # TODO:  Verify timezone
           # TODO:  Verify whether you want status checks, pr comments or both with the results of the tests.
           create-status-check: true

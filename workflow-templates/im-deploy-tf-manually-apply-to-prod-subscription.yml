@@ -14,7 +14,7 @@ on:
 env:
   STORAGE_ACCOUNT: '' # TODO:  Add your STG Account Here
   RESOURCE_GROUP: '' # TODO:  Add your RGRP here
-  PAGERDUTY_SERVICE_IDS: '[ "${{secrets.PAGERDUTY_SERVICE_ID}}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+  PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
   PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
   PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ github.event.inputs.environment }} environment from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
   PLAN_STORAGE_CONTAINER: 'tfstate'
@@ -26,9 +26,9 @@ env:
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>0.15.5' #TODO:  Verify your version of terraform.
   TF_WORKING_DIR: './${{ github.event.inputs.environment }}' # TODO:  Verify this directory is correct for your repository
-  SSH_KEY_CENTRAL_LOGGING: ${{secrets.SSH_CENTRAL_LOGGING}}
-  SSH_KEY_STORAGE_ACCOUNT: ${{secrets.SSH_STORAGE_ACCOUNT}}
-  SSH_KEY_NETWORK_INFO: ${{secrets.SSH_NETWORK_INFO}}
+  SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }}
+  SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
+  SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
   DEFAULT_BRANCH: 'main' # TODO:  Verify this is correct
 
@@ -64,12 +64,12 @@ jobs:
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
         with:
-          tag: ${{github.event.inputs.tag}}
+          tag: ${{ github.event.inputs.tag }}
 
   tf-plan:
     needs: validate-input
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{github.event.inputs.environment}}
+    environment: ${{ github.event.inputs.environment }}
 
     defaults:
       run:
@@ -77,7 +77,7 @@ jobs:
         working-directory: '${{ env.TF_WORKING_DIR }}'
 
     outputs:
-      tf_plan_name: ${{steps.upload.outputs.tf_plan_name}}
+      tf_plan_name: ${{ steps.upload.outputs.tf_plan_name }}
       maintenance_window_id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
     steps:
@@ -100,7 +100,7 @@ jobs:
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
@@ -146,7 +146,7 @@ jobs:
         run: |
           mkdir plans
           terraform plan -no-color \
-            -var="pagerduty_token=${{secrets.PAGERDUTY_TOKEN}}" \
+            -var="pagerduty_token=${{ secrets.PAGERDUTY_TOKEN }}" \
             -out=./plans/tfplan
 
       - name: Upload plan to blob storage
@@ -164,9 +164,9 @@ jobs:
           echo "current directory:"
           ls -R
 
-          echo "Uploading tf plan to azure storage account ${{env.STORAGE_ACCOUNT}}"
-          $key = az storage account keys list --account-name ${{env.STORAGE_ACCOUNT}} --resource-group ${{env.RESOURCE_GROUP}} --query [0].value -o tsv
-          az storage blob upload --no-progress --auth-mode key --account-key $key --account-name ${{env.STORAGE_ACCOUNT}} --container-name ${{env.PLAN_STORAGE_CONTAINER}} --file $terraformPlanName --name $terraformBlobName
+          echo "Uploading tf plan to azure storage account ${{ env.STORAGE_ACCOUNT }}"
+          $key = az storage account keys list --account-name ${{ env.STORAGE_ACCOUNT }} --resource-group ${{ env.RESOURCE_GROUP }} --query [0].value -o tsv
+          az storage blob upload --no-progress --auth-mode key --account-key $key --account-name ${{ env.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $terraformPlanName --name $terraformBlobName
           echo "The plan was successfully uploaded"
 
           echo "::set-output name=tf_plan_name::$terraformPlanName"
@@ -189,7 +189,7 @@ jobs:
   tf-apply:
     needs: [technical-approval, tf-plan]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{github.event.inputs.environment}}
+    environment: ${{ github.event.inputs.environment }}
 
     defaults:
       run:
@@ -248,12 +248,12 @@ jobs:
         run: |
           mkdir plans
           echo "Current working directory: $pwd"
-          $terraformBlobName = "plans/${{needs.tf-plan.outputs.tf_plan_name}}"
+          $terraformBlobName = "plans/${{ needs.tf-plan.outputs.tf_plan_name }}"
           echo "The blob name is: $terraformBlobName"
 
           Write-Host "Download blob to ./plans"
-          $key = az storage account keys list --account-name ${{env.STORAGE_ACCOUNT}} --resource-group ${{env.RESOURCE_GROUP}} --query [0].value -o tsv
-          az storage blob download --no-progress --auth-mode key --account-key $key --account-name ${{env.STORAGE_ACCOUNT}} --container-name ${{env.PLAN_STORAGE_CONTAINER}} --file $pwd/$terraformBlobName --name $terraformBlobName
+          $key = az storage account keys list --account-name ${{ env.STORAGE_ACCOUNT }} --resource-group ${{ env.RESOURCE_GROUP }} --query [0].value -o tsv
+          az storage blob download --no-progress --auth-mode key --account-key $key --account-name ${{ env.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $pwd/$terraformBlobName --name $terraformBlobName
 
           try {
             [System.IO.Compression.ZipFile]::ExtractToDirectory("$pwd/$terraformBlobName", "$pwd/plans")    
@@ -280,8 +280,8 @@ jobs:
       - name: Close the PagerDuty Maintenance Window
         uses: im-open/close-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
-          maintenance-window-id: ${{needs.tf-plan.outputs.maintenance_window_id}}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
+          maintenance-window-id: ${{ needs.tf-plan.outputs.maintenance_window_id }}
 
   # TODO: Remove if not using an automated deployment project board
   # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
@@ -306,9 +306,9 @@ jobs:
         if: always()
         uses: im-open/update-deployment-board@v1.0.1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ github.event.inputs.environment }}
-          board-number: ${{ env.DEPLOY_BOARD_NUM}}
+          board-number: ${{ env.DEPLOY_BOARD_NUM }}
           ref: ${{ github.event.inputs.tag }}
           deploy-status: ${{ steps.conclusion.conclusion }}
           timezone: 'america/denver'
