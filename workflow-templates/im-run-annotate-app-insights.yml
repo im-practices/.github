@@ -38,7 +38,7 @@ jobs:
       - uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'RESOURCE_GROUP'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input}}
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
           dev-value: '' # TODO: Add the dev rgrp name or delete if env does not exist
           qa-value: '' # TODO: Add the qa rgrp name or delete if env does not exist
           stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
@@ -49,7 +49,7 @@ jobs:
       - uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'APP_INSIGHTS_NAME'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input}}
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
           dev-value: '' # TODO: Add the dev app insights name or delete if env does not exist
           qa-value: '' # TODO: Add the qa app insights name or delete if env does not exist
           stage-value: '' # TODO: Add the stage app insights name or delete if env does not exist

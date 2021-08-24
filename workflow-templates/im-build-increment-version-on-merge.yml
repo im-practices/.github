@@ -18,7 +18,7 @@ jobs:
       - name: Increment the version
         uses: actions/github-script@v4
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             let newTag;
             try {

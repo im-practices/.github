@@ -44,14 +44,14 @@ jobs:
       # - name: Set Tag to current git tag
       #   uses: im-open/git-tag@v1.0.1
       #   with:
-      #     github-token: ${{secrets.GITHUB_TOKEN}}
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
       #     prefix: '' # TODO:  Add the prefix value if you are using it.  Some projects include db- or bff- as the prefix on their tags.
 
       # TODO:  This can be used if you want to use git tags for the version and you want this workflow to be the one that increments the version.  Delete if you are using another version method.
       # - name: Set Tag to current git tag plus 1 and push tag to repo
       #   uses: im-open/git-tag@v1.0.1
       #   with:
-      #     github-token: ${{secrets.GITHUB_TOKEN}}
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
       #     push-new-tag-to-repo: true
       #     increment-patch: true
       #     prefix: '' # TODO:  Add the prefix value if you are using it.  Some projects include db- or bff- as the prefix on their tags.

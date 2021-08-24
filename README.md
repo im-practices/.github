@@ -40,6 +40,14 @@ The templates in this repository fall into one of the following categories:
   - [ ] Clearly mark what needs to be customized or populated by the user
   - [ ] Avoid using default values that may be overlooked
   - [ ] Clearly state the format if something specific is required
+  - For consistency, 
+    - [ ] Ensure there are spaces between the brackets and the expression when using expression syntax
+      - Expected: ${{ secrets.thing }}
+      - Not expected: ${{secrets.mything}}
+    - [ ] If only one label is included in the `runs-on` property, do not include brackets
+      - Expected: `runs-on: ubuntu-18.04`
+      - Not Expected: `runs-on: [ubuntu-18.04]`
+    - [ ] Outside of script blocks, use single `'` instead of double `"`
   
 
 [add a workflow]: https://docs.github.com/en/actions/guides/setting-up-continuous-integration-using-workflow-templates

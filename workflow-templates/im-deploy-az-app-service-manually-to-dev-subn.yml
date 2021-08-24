@@ -14,7 +14,7 @@ on:
         required: true
 
 env:
-  PAGERDUTY_SERVICE_IDS: '[ "${{secrets.PAGERDUTY_SERVICE_ID}}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+  PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
   PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
   PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
@@ -42,7 +42,7 @@ jobs:
   deploy-code:
     needs: validate-input
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{github.event.inputs.environment}}
+    environment: ${{ github.event.inputs.environment }}
 
     outputs:
       maintenance_window_id: ${{ steps.open-window.outputs.maintenance-window-id }}
@@ -52,7 +52,7 @@ jobs:
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
@@ -75,7 +75,7 @@ jobs:
           path-to-json-file: '${{ env.PROJECT_ROOT }}/appsettings.json'
           # TODO:  add any appsettings.json items that need to be updated for the environment.  Format:
           # {"SecretName": "SecretValues"},
-          # {"Nested.SecretName": "${{secrets.NESTED_SECRET}}"},
+          # {"Nested.SecretName": "${{ secrets.NESTED_SECRET }}"},
           # {"Auth0.ClientId": "${{ secrets.AUTH0_CLIENT_ID }}"}
           properties-to-update-or-add: |
             [
@@ -99,9 +99,9 @@ jobs:
       - name: Zip the published app for faster deployment and uploads
         working-directory: ${{ env.PROJECT_ROOT }}
         # TODO:  If you plan on uploading artifacts, add this line to the run:
-        # (cd published_app && zip -r ../${{env.ARTIFACT_ZIP}} . -x */appsettings*.json appsettings*.json)
+        # (cd published_app && zip -r ../${{ env.ARTIFACT_ZIP }} . -x */appsettings*.json appsettings*.json)
         run: |
-          (cd published_app && zip -r ../${{env.DEPLOY_ZIP}} .)
+          (cd published_app && zip -r ../${{ env.DEPLOY_ZIP }} .)
 
       # TODO:  You do not need to upload artifacts for this workflow.  Some teams may wish to keep artifacts
       # for other reasons though.  If needed, uncomment this step to upload the artifacts.zip.
@@ -109,8 +109,8 @@ jobs:
       # - name: Upload artifact for deployment job
       #   uses: actions/upload-artifact@v2
       #   with:
-      #     name: ${{env.ARTIFACT_NAME}}
-      #     path: ${{env.PROJECT_ROOT}}/${{env.ARTIFACT_ZIP}} # DANGER! Only ARTIFACT_ZIP is safe to upload.  Do not upload DEPLOY_ZIP, it has sensitive info in the appsettings
+      #     name: ${{ env.ARTIFACT_NAME }}
+      #     path: ${{ env.PROJECT_ROOT }}/${{ env.ARTIFACT_ZIP }} # DANGER! Only ARTIFACT_ZIP is safe to upload.  Do not upload DEPLOY_ZIP, it has sensitive info in the appsettings
 
       - name: AZ Login
         id: login
@@ -121,7 +121,7 @@ jobs:
       - uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'RESOURCE_GROUP'
-          current-environment: ${{github.event.inputs.environment}}
+          current-environment: ${{ github.event.inputs.environment }}
           dev-value: '' # TODO: Add the dev rgrp name or delete if env does not exist
           qa-value: '' # TODO: Add the qa rgrp name or delete if env does not exist
           stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
@@ -148,16 +148,16 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{env.AZ_APP_NAME}}
-          # slot-name: ${{env.AZ_SLOT_NAME}}  # TODO:  Uncomment if using slots, delete if not
-          package: ${{ env.PROJECT_ROOT }}/${{env.DEPLOY_ZIP}}
+          app-name: ${{ env.AZ_APP_NAME }}
+          # slot-name: ${{ env.AZ_SLOT_NAME }}  # TODO:  Uncomment if using slots, delete if not
+          package: ${{ env.PROJECT_ROOT }}/${{ env.DEPLOY_ZIP }}
 
       # TODO:  Uncomment if using slots and you want to swap right away.  Delete this block if you don't.
       # - name: Swap slots
       #   run: |
       #     az webapp deployment slot swap \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
-      #     --resource-group ${{env.RESOURCE_GROUP}} \
+      #     --resource-group ${{ env.RESOURCE_GROUP }} \
       #     --name ${{ env.AZ_APP_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --target-slot ${{ env.TARGET_SLOT }}
@@ -168,7 +168,7 @@ jobs:
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --name ${{ env.AZ_APP_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
-      #     --resource-group ${{env.RESOURCE_GROUP}}
+      #     --resource-group ${{ env.RESOURCE_GROUP }}
 
       # TODO: Delete the following two steps if not using app insights
       - name: Set the Azure Insights Resource Name
@@ -188,7 +188,7 @@ jobs:
           appInsightsResourceName: '${{ env.AZ_INSIGHTS_NAME }}'
           releaseName: ${{ github.run_id }} # TODO:  Verify release name
           category: 'Deployment'
-          customMetadata: 'ProjectName=${{env.AZ_APP_NAME}},DeployedBy=${{github.actor}}'
+          customMetadata: 'ProjectName=${{ env.AZ_APP_NAME }},DeployedBy=${{ github.actor }}'
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'
@@ -201,14 +201,14 @@ jobs:
         if: always() && steps.open-window.outcome == 'success'
         uses: im-open/close-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
-          maintenance-window-id: ${{steps.open-window.outputs.maintenance-window-id}}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
+          maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
       - name: Delete .zip and appsettings file that contains sensitive info
         continue-on-error: true
         working-directory: ${{ env.PROJECT_ROOT }}
         run: |
-          rm -f ${{env.DEPLOY_ZIP}}
+          rm -f ${{ env.DEPLOY_ZIP }}
           rm -f published_app
           rm -f appsettings*.json
 
@@ -216,7 +216,7 @@ jobs:
       # - name: Trigger the Slot Swap
       #   uses: actions/github-script@v4
       #   with:
-      #     github-token: ${{secrets.PIPELINE_BOT_PAT}} #TODO:  make sure im-pipeline-bot has at least write access to your repo
+      #     github-token: ${{ secrets.PIPELINE_BOT_PAT }} #TODO:  make sure im-pipeline-bot has at least write access to your repo
       #     script: |
       #       github.repos.createDispatchEvent({
       #         owner: context.repo.owner,
@@ -243,9 +243,9 @@ jobs:
         if: always()
         uses: im-open/update-deployment-board@v1.0.1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ github.event.inputs.environment }}
-          board-number: ${{ env.DEPLOY_BOARD_NUM}}
+          board-number: ${{ env.DEPLOY_BOARD_NUM }}
           ref: ${{ github.event.inputs.branch-tag-sha }}
           deploy-status: ${{ steps.conclusion.conclusion }}
           timezone: 'america/denver'
@@ -264,7 +264,7 @@ jobs:
         if: always()
         uses: im-open/microsoft-teams-status-update-action@v1.0.0
         with:
-          title: Deploying ${{env.AZ_APP_NAME}} to Azure # TODO:  Verify title
+          title: Deploying ${{ env.AZ_APP_NAME }} to Azure # TODO:  Verify title
           workflow-status: ${{ steps.conclusion.conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists
@@ -272,9 +272,9 @@ jobs:
           # TODO:  Verify the custom facts you want included
           custom-facts: |
             [
-              { "name": "Event", "value": "${{github.event_name}}" },
-              { "name": "Workflow", "value": "${{github.workflow}}" },
-              { "name": "Run", "value": "${{github.run_id}}" }
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" }
             ]
           # TODO:  Verify the buttons you want included
           custom-actions: |

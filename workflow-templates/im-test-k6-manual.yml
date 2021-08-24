@@ -1,10 +1,10 @@
 name: Manual trigger K6 test
 
-on: 
+on:
   workflow_dispatch:
     inputs:
       env-to-test:
-        description: 'Environment to run test against [dev, qa, stage]'   
+        description: 'Environment to run test against [dev, qa, stage]'
         required: true
         default: 'dev'
       test-folder-root:
@@ -12,7 +12,7 @@ on:
         required: true
         default: '' # TODO: Add the location of your tests.  IE: tests/k6
       test-file:
-        description: 'K6 test file to run'     
+        description: 'K6 test file to run'
         required: true
         default: '' # TODO: Add default test file  IE: check-health-simple.js
       k6-extra-params:
@@ -33,48 +33,48 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v1
+      - name: Checkout
+        uses: actions/checkout@v1
 
-    - name: Setup K6
-      uses: im-open/setup-k6-perf-testing@v1.0.0
-      with:
-        version: ${{ github.event.inputs.k6-version }}
+      - name: Setup K6
+        uses: im-open/setup-k6-perf-testing@v1.0.0
+        with:
+          version: ${{ github.event.inputs.k6-version }}
 
-    - name: Validate Environment Input
-      id: validate-env-input
-      uses: im-open/map-input-action@v1.0.1
-      with:
-        input: ${{ github.event.inputs.env-to-test }}
-        input_map: '{ "dev": ["dev", "d", "development"], "qa": ["qa", "q"], "stage": ["stg", "s", "stage"]  }'
-        error_on_no_match: true
-        custom_error_message: "Please input a valid environment: dev,qa,stage..."
+      - name: Validate Environment Input
+        id: validate-env-input
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ github.event.inputs.env-to-test }}
+          input_map: '{ "dev": ["dev", "d", "development"], "qa": ["qa", "q"], "stage": ["stg", "s", "stage"]  }'
+          error_on_no_match: true
+          custom_error_message: 'Please input a valid environment: dev,qa,stage...'
 
-    - name: Validate test file exists
-      run: |
-        echo "Checking if test file exists:" 
-        FILE="./${{ github.event.inputs.test-folder-root }}/${{github.event.inputs.test-file}}"
-        if [[ -f $FILE ]]; then
-          echo "$FILE exists."
-        else
-          echo "Could not find test file. $FILE"
-          exit 1
-        fi
-    
-    - name: Run local k6 test
-      if: ${{ github.event.inputs.run-stress-step != 'true' }}
-      working-directory: ${{ github.event.inputs.test-folder-root }}
-      run: |
-        k6 run ${{github.event.inputs.test-file}} ${{github.event.inputs.k6-extra-params}} -e RUN_ENV=${{steps.validate-env-input.mapped_input}}
+      - name: Validate test file exists
+        run: |
+          echo "Checking if test file exists:" 
+          FILE="./${{ github.event.inputs.test-folder-root }}/${{ github.event.inputs.test-file }}"
+          if [[ -f $FILE ]]; then
+            echo "$FILE exists."
+          else
+            echo "Could not find test file. $FILE"
+            exit 1
+          fi
 
-    - name: Run local k6 stress test
-      if: ${{ github.event.inputs.run-stress-step == 'true' }}
-      working-directory: ${{ github.event.inputs.test-folder-root }}
-      run: |
-        # ulimit must be set in k6 step as it gets reset every session.
-        # The nofile limit cannot exceed the hard limit.  You will get a permission denied if you do.
-        ulimit -n 1048576
-        echo "Open Files, Reuse TCP ports, and Port Range below:"
-        ulimit -Sa | grep 'open files'
-        sudo sysctl -a | grep -E 'net.ipv4.ip_local_port_range|net.ipv4.tcp_tw_reuse|fs.file-max'
-        k6 run ${{github.event.inputs.test-file}} ${{github.event.inputs.k6-extra-params}} -e RUN_ENV=${{steps.validate-env-input.mapped_input}}
+      - name: Run local k6 test
+        if: ${{ github.event.inputs.run-stress-step != 'true' }}
+        working-directory: ${{ github.event.inputs.test-folder-root }}
+        run: |
+          k6 run ${{ github.event.inputs.test-file }} ${{ github.event.inputs.k6-extra-params }} -e RUN_ENV=${{ steps.validate-env-input.mapped_input }}
+
+      - name: Run local k6 stress test
+        if: ${{ github.event.inputs.run-stress-step == 'true' }}
+        working-directory: ${{ github.event.inputs.test-folder-root }}
+        run: |
+          # ulimit must be set in k6 step as it gets reset every session.
+          # The nofile limit cannot exceed the hard limit.  You will get a permission denied if you do.
+          ulimit -n 1048576
+          echo "Open Files, Reuse TCP ports, and Port Range below:"
+          ulimit -Sa | grep 'open files'
+          sudo sysctl -a | grep -E 'net.ipv4.ip_local_port_range|net.ipv4.tcp_tw_reuse|fs.file-max'
+          k6 run ${{ github.event.inputs.test-file }} ${{ github.event.inputs.k6-extra-params }} -e RUN_ENV=${{ steps.validate-env-input.mapped_input }}

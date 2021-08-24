@@ -75,7 +75,7 @@ jobs:
       #     properties-to-update-or-add: |
       #       [
       #         {"SecretName": "SecretValues"},
-      #         {"Nested.SecretName": "${{secrets.NESTED_SECRET}}"},
+      #         {"Nested.SecretName": "${{ secrets.NESTED_SECRET }}"},
       #         {"Auth0.ClientId": "${{ secrets.AUTH0_CLIENT_ID }}"}
       #       ]
 
@@ -109,7 +109,7 @@ jobs:
           reports: '*/**/coverage.opencover.xml'
           targetdir: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
           title: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
-          tag: 'Workflow: ${{github.workflow}} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}' #TODO;  Verify the tag to add
+          tag: 'Workflow: ${{ github.workflow }} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}' #TODO;  Verify the tag to add
           # TODO:  Add the appropriate filters to each type.
           # The filters are a ; separated list of items to include(+) or exclude(-).  Wildcards are accepted.
           # For instance: -xunit*;-Dapper;-*.Tests
@@ -122,7 +122,7 @@ jobs:
         uses: im-open/process-code-coverage-summary@v1.0.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          summary-file: '${{ env.CODE_COVERAGE_DIR_DOTNET}}/Summary.md'
+          summary-file: '${{ env.CODE_COVERAGE_DIR_DOTNET }}/Summary.md'
           report-name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
           check-name: ${{ env.CODE_COVERAGE_CHECK_NAME_DOTNET }}
           create-status-check: true
@@ -139,7 +139,7 @@ jobs:
           path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
 
   jest:
-    runs-on: ubuntu-20.04
+    runs-on: [self-hosted, ubuntu-20.04]
 
     defaults:
       run:
@@ -189,7 +189,7 @@ jobs:
           reports: '*/**/lcov.info'
           targetdir: ${{ env.CODE_COVERAGE_DIR_JEST }}
           title: jest code coverage
-          tag: 'Workflow: ${{github.workflow}} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}' #TODO;  Verify the tag to add
+          tag: 'Workflow: ${{ github.workflow }} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}' #TODO;  Verify the tag to add
           # TODO:  Add the appropriate filters to each type.
           # The filters are a ; separated list of items to include(+) or exclude(-).  Wildcards are accepted.
           # For instance: -xunit*;-Dapper;-*.Tests
@@ -202,7 +202,7 @@ jobs:
         uses: im-open/process-code-coverage-summary@v1.0.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          summary-file: '${{ env.CODE_COVERAGE_DIR_JEST}}/Summary.md'
+          summary-file: '${{ env.CODE_COVERAGE_DIR_JEST }}/Summary.md'
           report-name: ${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}
           check-name: ${{ env.CODE_COVERAGE_CHECK_NAME_JEST }}
           create-status-check: true
@@ -252,9 +252,9 @@ jobs:
       #     # TODO:  Verify the custom facts you want included
       #     custom-facts: |
       #       [
-      #         { "name": "Event", "value": "${{github.event_name}}" },
-      #         { "name": "Workflow", "value": "${{github.workflow}}" },
-      #         { "name": "Run", "value": "${{github.run_id}}" }
+      #         { "name": "Event", "value": "${{ github.event_name }}" },
+      #         { "name": "Workflow", "value": "${{ github.workflow }}" },
+      #         { "name": "Run", "value": "${{ github.run_id }}" }
       #       ]
       #     # TODO:  Verify the buttons you want included
       #     custom-actions: |
@@ -265,7 +265,7 @@ jobs:
       - name: check for failures
         run: |
           hasErrors=false
-          if [ "${{needs.dotnet-and-db.outputs.coverage}}" != "Passed" ]; then
+          if [ "${{ needs.dotnet-and-db.outputs.coverage }}" != "Passed" ]; then
             echo "::error:: The dotnet code coverage did not meet the expected threshold"  
             hasErrors=true
           fi
@@ -273,7 +273,7 @@ jobs:
             echo "::error:: There were errors in the dotnet tests"  
             hasErrors=true
           fi
-          if [ "${{needs.jest.outputs.coverage}}" != "Passed" ]; then
+          if [ "${{ needs.jest.outputs.coverage }}" != "Passed" ]; then
             echo "::error:: The jest code coverage did not meet the expected threshold"  
             hasErrors=true
           fi

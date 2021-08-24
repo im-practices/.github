@@ -39,7 +39,7 @@ jobs:
           # sast-medium: 4  # This cannot exceed 4 according to our standards
           # sast-low: 11    # This cannot exceed 11 according to our standards
           # break-build: true
-          # comment: '${{github.workflow}} run #${{ github.run_number }} on branch ${{ github.ref }}.'
+          # comment: '${{ github.workflow }} run #${{ github.run_number }} on branch ${{ github.ref }}.'
           # checkmarx-cli-version: 1.1.5
 
       - name: Upload the PDF Report
