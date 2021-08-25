@@ -22,6 +22,8 @@ on:
 jobs:
   env:
     #CSPROJ_NAME: '' # TODO:  If you have an older project, add the name of your csproj file so it can be built with the nuget command directly.
+    ORGANIZATION: '' # TODO:  Add the organization of the repo/package
+    PKG_NAME: '' # TODO:  Add the name of the nuget package if pushing to artifactory
 
   publish-to-gpr:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  Update if using a different trigger
@@ -80,4 +82,5 @@ jobs:
       - name: Push
         run: |
           nupkg=$(find . -type f -name "*.nupkg")
-          dotnet nuget push "$nupkg" --source "https://nuget.pkg.github.com/im-practices/index.json" --api-key ${{ secrets.GITHUB_TOKEN }}
+          dotnet nuget push "$nupkg" --source "https://nuget.pkg.github.com/${{ env.ORGANIZATION }}/index.json" --api-key ${{ secrets.GITHUB_TOKEN }}
+          dotnet nuget push "$nupkg" --source "https://artifacts.mktp.io/artifactory/api/nuget/nuget-master/${{ env.PKG_NAME }}" --api-key ${{ secrets.ARTIFACTORY_API_KEY }}
