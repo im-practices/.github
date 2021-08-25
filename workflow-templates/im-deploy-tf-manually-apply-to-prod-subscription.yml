@@ -1,4 +1,4 @@
-name: Manually apply terraform at tag to Prod subscription
+name: Apply terraform to Stage/Prod
 on:
   workflow_dispatch:
     inputs:
@@ -12,11 +12,6 @@ on:
 # TODO:  The terraform needs to be switched from on-prem-egress-ips to network-information.
 
 env:
-  STORAGE_ACCOUNT: '' # TODO:  Add your STG Account Here
-  RESOURCE_GROUP: '' # TODO:  Add your RGRP here
-  PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
-  PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
-  PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ github.event.inputs.environment }} environment from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
   PLAN_STORAGE_CONTAINER: 'tfstate'
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
@@ -24,15 +19,14 @@ env:
   ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
-  TF_VERSION: '~>0.15.5' #TODO:  Verify your version of terraform.
-  TF_WORKING_DIR: './${{ github.event.inputs.environment }}' # TODO:  Verify this directory is correct for your repository
+  TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
   SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }}
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
-  DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
-  DEFAULT_BRANCH: 'main' # TODO:  Verify this is correct
+  SSH_KEY_ON_PREM_EGRESS: ${{ secrets.SSH_ON_PREM_EGRESS }}
 
 jobs:
+  # TODO:  Remove if you do not need stakeholder approve before deploy infrastructure to production subscription
   stakeholder-approval:
     runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     environment: 'Stakeholder Approval'
@@ -43,23 +37,26 @@ jobs:
   validate-input:
     needs: stakeholder-approval
     runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
+    outputs:
+      env: ${{ steps.clean-env.outputs.mapped_input }}
     steps:
-      # TODO:  Update if you don't use all these environments in the Production subscription
+      # TODO:  Update for the environments you use in the Prod subscription
       - name: Clean Environment Input
         id: clean-env
         uses: im-open/map-input-action@v1.0.1
         with:
           input: ${{ github.event.inputs.environment }}
-          input_map: '{ "Stage": ["stg", "s", "stage"], "Prod": ["prod", "production", "p"] }'
+          input_map: '{ "stage": ["stg", "s", "stage"], "prod": ["prod", "production", "p"] }' # TODO: Make sure the outputted value matches the case/name of your environment tf-folder
           error_on_no_match: true
           custom_error_message: 'The environment must be Stage or Prod'
 
       # In this job, always checkout the default branch and get all history/tags with
       # the fetch-depth so we can check if a tag is reachable from the default branch
+      # This ensures only code that has been reviewed and merged into master is deployed to Prod.
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
-          ref: ${{ env.DEFAULT_BRANCH }}
+          ref: 'main' # TODO:  Verify this is the default branch for the repository
           fetch-depth: 0
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
@@ -69,12 +66,16 @@ jobs:
   tf-plan:
     needs: validate-input
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ github.event.inputs.environment }}
+    environment: ${{ needs.validate-input.outputs.env }}
+    env:
+      PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+      PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ needs.validate-input.outputs.env }} environment from GitHub Actions' # TODO:  Verify this description
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
 
     defaults:
       run:
         shell: bash
-        working-directory: '${{ env.TF_WORKING_DIR }}'
+        working-directory: './${{ needs.validate-input.outputs.env }}' # TODO:  Verify this directory is correct for your project
 
     outputs:
       tf_plan_name: ${{ steps.upload.outputs.tf_plan_name }}
@@ -86,6 +87,7 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag }}
 
+      # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
         uses: im-open/setup-deploy-keys@1.0.1
         with:
@@ -93,7 +95,8 @@ jobs:
             [
               { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
               { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
+              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
             ]
 
       - name: Open a PagerDuty Maintenance Window
@@ -105,13 +108,14 @@ jobs:
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
 
+      # Setting the Resource Group and Storage account so the plan can be uploaded to azure storage
       # TODO:  Set the resource group values for each environment supported in the prod subscription.  Delete any environments you aren't using.
       # If prod is the only value used here, a single global environment variable can be set for the workflow and this action can be deleted.
       - name: Set the Resource Group
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'RESOURCE_GROUP'
-          current-environment: ${{ github.event.inputs.environment }}
+          current-environment: ${{ needs.validate-input.outputs.env }}
           stage-value: ''
           prod-value: ''
 
@@ -121,7 +125,7 @@ jobs:
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'STORAGE_ACCOUNT'
-          current-environment: ${{ github.event.inputs.environment }}
+          current-environment: ${{ needs.validate-input.outputs.env }}
           stage-value: ''
           prod-value: ''
 
@@ -141,6 +145,7 @@ jobs:
         run: terraform init
 
       # TODO:  Remove the pagerduty token if not configuring pagerduty
+      # This will run a plan and output it to a file.  The file is then uploaded to azure storage so it can be used later in the apply.
       - name: Terraform Plan
         id: plan
         run: |
@@ -177,24 +182,24 @@ jobs:
           az cache purge
           az account clear
 
-  technical-approval:
+  tf-plan-manual-approval:
     needs: tf-plan
     runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     environment: 'Technical Approval'
     steps:
-      - name: Technical Approval Received
+      - name: Approval Received
         run: |
-          echo "Technical approval on the tf plan was received"
+          echo "Approval on the tf plan was received"
 
   tf-apply:
-    needs: [technical-approval, tf-plan]
+    needs: [tf-plan-manual-approval, tf-plan]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ github.event.inputs.environment }}
+    environment: ${{ needs.validate-input.outputs.env }}
 
     defaults:
       run:
         shell: bash
-        working-directory: '${{ env.TF_WORKING_DIR }}'
+        working-directory: './${{ needs.validate-input.outputs.env }}' # TODO:  Verify this directory is correct for your project
 
     steps:
       - name: Checkout Repository
@@ -202,6 +207,7 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag }}
 
+      # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
         uses: im-open/setup-deploy-keys@1.0.1
         with:
@@ -209,16 +215,18 @@ jobs:
             [
               { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
               { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
+              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
             ]
 
+      # Setting the Resource Group and Storage account so the plan can be downloaded from azure storage
       # TODO:  Set the resource group values for each environment supported in the prod subscription.  Delete any environments you aren't using.
       # If prod is the only value used here, a single global environment variable can be set for the workflow and this action can be deleted.
       - name: Set the Resource Group
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'RESOURCE_GROUP'
-          current-environment: ${{ github.event.inputs.environment }}
+          current-environment: ${{ needs.validate-input.outputs.env }}
           stage-value: ''
           prod-value: ''
 
@@ -228,7 +236,7 @@ jobs:
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'STORAGE_ACCOUNT'
-          current-environment: ${{ github.event.inputs.environment }}
+          current-environment: ${{ needs.validate-input.outputs.env }}
           stage-value: ''
           prod-value: ''
 
@@ -292,7 +300,7 @@ jobs:
         stakeholder-approval,
         validate-input,
         tf-plan,
-        technical-approval,
+        tf-plan-manual-approval,
         tf-apply,
       ]
     if: always()
@@ -307,8 +315,8 @@ jobs:
         uses: im-open/update-deployment-board@v1.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          environment: ${{ github.event.inputs.environment }}
-          board-number: ${{ env.DEPLOY_BOARD_NUM }}
+          environment: ${{ needs.validate-input.outputs.env }}
+          board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ github.event.inputs.tag }}
           deploy-status: ${{ steps.conclusion.conclusion }}
           timezone: 'america/denver'
