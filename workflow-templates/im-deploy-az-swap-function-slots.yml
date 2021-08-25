@@ -59,7 +59,7 @@ jobs:
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
@@ -120,5 +120,5 @@ jobs:
         if: always() && needs.get-inputs-from-event.outputs.open-window == 'true' && steps.open-window.outcome == 'success'
         uses: im-open/close-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}

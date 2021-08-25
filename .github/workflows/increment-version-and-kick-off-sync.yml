@@ -49,7 +49,7 @@ jobs:
         with:
           # You have to use something with write access to the repo. GITHUB_TOKEN
           # doesn't work because it doesn't have access to another repo.
-          github-token: ${{ secrets.PIPELINE_BOT_PAT }}
+          github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org level secret
           script: |
             github.repos.createDispatchEvent({
               owner: 'bc-swat',
