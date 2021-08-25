@@ -40,6 +40,7 @@ jobs:
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
+      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
 
       # TODO:  This can be used if you want this workflow to get the current git tag to use as the package version.  Delete if you are using another version method.
       # - name: Set Tag to current git tag
