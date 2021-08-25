@@ -277,18 +277,18 @@ jobs:
     needs: [validate-input, tf-plan, tf-plan-manual-approval, tf-apply]
     if: always()
     steps:
-      - uses: im-open/workflow-conclusion@v1.0.0
+      - uses: im-open/workflow-conclusion@v1.0.1
         id: conclusion
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Deployment Board
         if: always()
-        uses: im-open/update-deployment-board@v1.0.1
+        uses: im-open/update-deployment-board@v1.0.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ needs.validate-input.outputs.env }}
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ github.event.inputs.branch-tag-sha }}
-          deploy-status: ${{ steps.conclusion.conclusion }}
+          deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           timezone: 'america/denver'

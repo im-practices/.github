@@ -53,7 +53,7 @@ jobs:
       # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
       - name: Update Deployment Board
         if: always()
-        uses: im-open/update-deployment-board@v1.0.1
+        uses: im-open/update-deployment-board@v1.0.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ github.event.inputs.environment }}
