@@ -185,7 +185,7 @@ jobs:
     needs: [deploy-code]
     if: always()
     steps:
-      - uses: im-open/workflow-conclusion@v1.0.0
+      - uses: im-open/workflow-conclusion@v1.0.1
         id: conclusion
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -194,13 +194,13 @@ jobs:
       # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
       - name: Update Deployment Board
         if: always()
-        uses: im-open/update-deployment-board@v1.0.1
+        uses: im-open/update-deployment-board@v1.0.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ github.event.inputs.environment }}
           board-number: ${{ env.DEPLOY_BOARD_NUM }}
           ref: ${{ github.event.inputs.branch-tag-sha }}
-          deploy-status: ${{ steps.conclusion.conclusion }}
+          deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           timezone: 'america/denver'
 
       # TODO: Remove the following two steps if not sending Teams notifications
@@ -218,7 +218,7 @@ jobs:
         uses: im-open/microsoft-teams-status-update-action@v1.0.0
         with:
           title: Deploying ${{ env.AZ_FUNC_NAME }} to Azure # TODO:  Verify title
-          workflow-status: ${{ steps.conclusion.conclusion }}
+          workflow-status: ${{ steps.conclusion.outputs.conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists
           timezone: America/Denver # TODO:  Verify timezone
@@ -227,7 +227,8 @@ jobs:
             [
               { "name": "Event", "value": "${{ github.event_name }}" },
               { "name": "Workflow", "value": "${{ github.workflow }}" },
-              { "name": "Run", "value": "${{ github.run_id }}" }
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" }
             ]
           # TODO:  Verify the buttons you want included
           custom-actions: |

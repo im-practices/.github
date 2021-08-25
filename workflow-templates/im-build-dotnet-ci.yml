@@ -31,7 +31,7 @@ env:
 # TODO:  Check for the latest version of each action used
 
 jobs:
-  dotnet-and-db:
+  dotnet-build-and-test:
     runs-on: [self-hosted, ubuntu-20.04] #TODO:  Switch this to [self-hosted, windows-2019] if building a db
 
     defaults:
@@ -94,6 +94,8 @@ jobs:
       - name: dotnet build
         run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release
 
+      # TODO:  The test projects need a package reference to coverlet.msbuild for this to output the coverage reports correctly:
+      # <PackageReference Include="coverlet.msbuild" Version="3.1.0" />
       - name: dotnet test with coverage
         continue-on-error: true
         run: dotnet test ${{ env.SOLUTION_FILE }} --logger trx --no-restore --configuration Release /property:CollectCoverage=True /property:CoverletOutputFormat=opencover
@@ -240,60 +242,49 @@ jobs:
 
   finish-build:
     if: always()
-    needs: [dotnet-and-db, jest, validate-sam-yaml]
+    needs: [dotnet-build-and-test, jest, validate-sam-yaml]
     runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
     steps:
-      # TODO: Uncomment if you want to send teams notifications after each push, delete if you don't.
-      # - uses: im-open/workflow-conclusion@v1.0.0
-      #   id: conclusion
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      # - name: Send Status to Teams
-      #   if: always()
-      #   uses: im-open/microsoft-teams-status-update-action@v1.0.0
-      #   with:
-      #     title: 'CI Build' # TODO:  Verify title
-      #     workflow-status: ${{ steps.conclusion.conclusion }}
-      #     workflow-type: Build
-      #     teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists
-      #     timezone: America/Denver # TODO:  Verify timezone
-      #     # TODO:  Verify the custom facts you want included
-      #     custom-facts: |
-      #       [
-      #         { "name": "Event", "value": "${{ github.event_name }}" },
-      #         { "name": "Workflow", "value": "${{ github.workflow }}" },
-      #         { "name": "Run", "value": "${{ github.run_id }}" }
-      #       ]
-      #     # TODO:  Verify the buttons you want included
-      #     custom-actions: |
-      #       [
-      #         { "name": "View Build Log", "uri": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" }
-      #       ]
+      - uses: im-open/workflow-conclusion@v1.0.1
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # TODO:  Determine if there are any additional step outcomes/outputs you want considered
+          additional-conclusions: |
+            [
+              { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.test }}" },
+              { "name": "dotnet coverage", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.coverage }}" },
+              { "name": "jest test", "conclusion" : "${{ needs.jest.outputs.test }}" },
+              { "name": "jest coverage", "conclusion" : "${{ needs.jest.outputs.coverage }}" },
+              { "name": "sam.yaml validation", "conclusion" : "${{ needs.validate-sam-yaml.outputs.validate }}" }
+            ]
 
-      - name: check for failures
+      # TODO: Remove if you do not want to send teams notifications after each push
+      - name: Send Status to Teams
+        if: always()
+        uses: im-open/microsoft-teams-status-update-action@v1.0.0
+        with:
+          title: 'CI Build' # TODO:  Verify title
+          workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          workflow-type: Build
+          teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists
+          timezone: America/Denver # TODO:  Verify timezone
+          # TODO:  Verify the custom facts you want included
+          custom-facts: |
+            [
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" }
+            ]
+          # TODO:  Verify the buttons you want included
+          custom-actions: |
+            [
+              { "name": "View Build Log", "uri": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" }
+            ]
+
+      - name: Check for Failures
+        if: steps.conclusion.outputs.workflow_conclusion == 'failure'
         run: |
-          hasErrors=false
-          if [ "${{ needs.dotnet-and-db.outputs.coverage }}" != "Passed" ]; then
-            echo "::error:: The dotnet code coverage did not meet the expected threshold"  
-            hasErrors=true
-          fi
-          if [ "${{ needs.dotnet-and-db.outputs.test }}" != "Passed" ]; then
-            echo "::error:: There were errors in the dotnet tests"  
-            hasErrors=true
-          fi
-          if [ "${{ needs.jest.outputs.coverage }}" != "Passed" ]; then
-            echo "::error:: The jest code coverage did not meet the expected threshold"  
-            hasErrors=true
-          fi
-          if [ "${{ needs.jest.outputs.test }}" != "Passed" ]; then
-            echo "::error:: There were errors in the jest tests"  
-            hasErrors=true
-          fi
-          if [ "${{ needs.validate-sam-yaml.outputs.validate }}" != "Passed" ]; then
-            echo "::error:: The sam.yaml is not valid."  
-            hasErrors=true
-          fi
-
-          if [ $hasErrors == 'true' ]; then
-            exit 1
-          fi
+          echo "There were errors in the workflow.  Check the workflow-conclusion step above for more details on what failed."
+          exit 1
