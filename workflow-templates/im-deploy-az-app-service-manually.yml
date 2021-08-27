@@ -1,0 +1,340 @@
+# Prerequisites
+# 1 - Make sure the az secrets have been added to the environment
+# 2 - Make sure the scm restrictions include the prod github runners (previously it had just octopus)
+# 3 - If you're using a deployment board, create it first: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+
+name: Manually deploy AZ App Service
+on:
+  workflow_dispatch:
+    inputs:
+      branch-tag-sha:
+        description: The branch, tag or sha of the code that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
+        required: true
+      environment:
+        description: The environment to Deploy To.
+        required: true
+
+env:
+  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
+
+jobs:
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+
+    outputs:
+      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
+      RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }}
+      AZ_APP_NAME: ${{ steps.app-name.outputs.AZ_APP_NAME }}
+      AZ_INSIGHTS_NAME: ${{ steps.insights.outputs.AZ_INSIGHTS_NAME }}
+
+    steps:
+      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      - name: Clean Environment Input
+        id: clean-env
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ github.event.inputs.environment }}
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          input_map: |
+            { 
+              "dev": ["dev", "d", "development"], 
+              "qa": ["qa", "q"], 
+              "stage": ["stg", "s", "stage"], 
+              "demo": ["o", "demo"], 
+              "uat": ["u", "uat"], 
+              "prod": ["prod", 
+              "production", "p"] 
+            }
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+
+      - run: echo "The environment is ${{ steps.clean-env.outputs.mapped_input }}"
+
+      # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+      # This variable is used to swap slots and annotate app insights
+      - uses: im-open/set-variable-based-on-environment@v1.0.0
+        id: rgrp
+        with:
+          variable-name: 'RESOURCE_GROUP'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          # TODO: For the following resource group inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
+
+      # To use this value: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+      # This variable is used to deploy the app, swap slots, annotate app insights and send a teams notification
+      - name: Set the Azure App Service Name
+        id: app-name
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'AZ_APP_NAME'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          # TODO: For the following azure app name inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
+
+      # To use this value: ${{ needs.set-vars.outputs.AZ_INSIGHTS_NAME }}
+      # This variable is used to annotate app insights
+      - name: Set the Azure Insights Resource Name
+        id: insights
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'AZ_INSIGHTS_NAME'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          # TODO: For the following azure insights name inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
+
+  stakeholder-approval:
+    needs: [set-vars]
+    if: needs.set-vars.outputs.ENVIRONMENT == 'prod' || needs.set-vars.outputs.ENVIRONMENT == 'stage' # TODO:  Set the environments you want the stakeholder approval job to run on
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    environment: 'Stakeholder Approval'
+    steps:
+      - name: Approval Received
+        run: echo "Stakeholder approval was received"
+
+  validate-tag-for-prod-deploys:
+    needs: [set-vars, stakeholder-approval]
+    if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    steps:
+      # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
+      # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          ref: 'main' # TODO: verify the name of your default branch
+          fetch-depth: 0
+
+      - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
+        with:
+          tag: ${{ env.GITHUB_REF }}
+
+  deploy-code:
+    needs: [set-vars, validate-tag-for-prod-deploys]
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+
+    env:
+      PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Make sure this secret exists.  The PD svc id usually has a format of P0XXXXX
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window.  This is typically set at 30 min in Octopus
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
+      DOTNET_VERSION: '' # TODO:  Set the .net core version of your project
+      PROJECT_ROOT: '' # TODO:  set this to the ./path/and/folder of your web app project. For most projects this will be ./src/ProjectName
+      AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot.  If this differs per environment, add a new section in the set-vars job above where the value can be set per environment
+      TARGET_SLOT: 'Production' # TODO:  Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main site, update it here
+      DEPLOY_ZIP: 'published_app.zip'
+
+    steps:
+      - name: Open a PagerDuty Maintenance Window
+        id: open-window
+        uses: im-open/open-pagerduty-maintenance-window@v1.0.0
+        with:
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
+          description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
+          minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
+          service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
+
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # TODO:  If you need to do replacements in your appsettings.json file you can do it two ways.
+      # 1- Repeat this add-or-update-json-properties action for each environment, and add an 'if: needs.set-vars.outputs.ENVIRONMENT == ""' condition with the appropriate env to each action.
+      # 2- In the set-vars job, add one set-variable-based-on-environment action block per variable then use that variable in the single add-or-update-json-properties action below.
+      # - name: Update appsettings.json with Environment Specific Values
+      #   uses: im-open/add-or-update-json-properties@v1.0.1
+      #   with:
+      #     path-to-json-file: '${{ env.PROJECT_ROOT }}/appsettings.json'
+      #     properties-to-update-or-add: |
+      #       [
+      #         {"SecretName": "SecretValue"},
+      #         {"Nested.Secret.Name": "SecretValue"},
+      #         {"": ""}
+      #       ]
+
+      # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.
+      # - uses: im-open/octostache-action@v1.0.0
+      #   with:
+      #     variablesFile: ./substitution-variables.json                          # Files containing the variable substitutions to make, you will need to create this file
+      #     templateFile: ./src/DemoApp19/Bff/FrontEnd/scripts/build-variables.js # The file to make the substitutions in
+      #     outputFile: ./src/DemoApp19/Bff/FrontEnd/scripts/build-variables.js   # The file to save the substitutions in (generally the same as above)
+
+      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
+      # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
+      #        - Remove the file and use this action or
+      #        - Delete this action and modify the file so it has the appropriate org entries in nuget.config. https://github.com/im-practices/git-er-done/blob/main/packages/connect-nuget.md#script-output
+      # - name: Authenticate with GitHub Packages
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
+      #   with:
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
+      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+
+      # TODO:  If config transformation is needed for different environments include environment name
+      # For example to perform transformations on a web.config using the web.production.config file:
+      # dotnet publish --configuration Release /p:EnvironmentName=Production
+      - name: Build and Publish
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: |
+          dotnet build --configuration Release
+          dotnet publish -c Release -o ./published_app --no-restore
+
+      - name: Zip the published app for faster deployment and uploads
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: |
+          (cd published_app && zip -r ../${{ env.DEPLOY_ZIP }} .)
+
+      - name: AZ Login
+        id: login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # TODO:  Uncomment if you want to create a slot to deploy to.  Delete if you have a permanent slot or do not wish to use slots.
+      # - name: Create a deployment slot
+      #   run: |
+      #     az webapp deployment slot create \
+      #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
+      #     --slot ${{ env.AZ_SLOT_NAME }} \
+      #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
+      #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
+      #     --configuration-source ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+          # slot-name: ${{ env.AZ_SLOT_NAME }}  # TODO:  Uncomment if using slots, delete if not
+          package: ${{ env.PROJECT_ROOT }}/${{ env.DEPLOY_ZIP }}
+
+      # TODO:  Uncomment if using slots and you want to swap them now (as opposed to doing it in another workflow).  Delete this block if you don't.
+      # - name: Swap slots
+      #   run: |
+      #     az webapp deployment slot swap \
+      #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
+      #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
+      #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
+      #     --slot ${{ env.AZ_SLOT_NAME }} \
+      #     --target-slot ${{ env.TARGET_SLOT }}
+
+      # TODO:  Uncomment if you want to delete the slot.  Delete this block if you don't.
+      # - run: |
+      #     az webapp deployment slot delete \
+      #     --slot ${{ env.AZ_SLOT_NAME }} \
+      #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
+      #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
+      #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+
+      # TODO: Delete the following step if not using app insights
+      - name: Annotate App Insights
+        uses: im-open/create-app-insights-annotation@v1.0.0
+        with:
+          subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          resourceGroupName: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ needs.set-vars.outputs.AZ_INSIGHTS_NAME }}'
+          releaseName: ${{ env.GITHUB_REF }} # TODO:  Verify release name (this will be the branch/tag/sha that the user input)
+          category: 'Deployment'
+          customMetadata: 'ProjectName=${{ needs.set-vars.outputs.AZ_APP_NAME }},DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
+
+      - name: Azure logout
+        if: always() && steps.login.outcome == 'success'
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
+      - name: Close the PagerDuty Maintenance Window
+        if: always() && steps.open-window.outcome == 'success'
+        uses: im-open/close-pagerduty-maintenance-window@v1.0.0
+        with:
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
+          maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
+
+      - name: Delete .zip and appsettings file that contains sensitive info
+        continue-on-error: true
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: |
+          rm -f ${{ env.DEPLOY_ZIP }}
+          rm -rf published_app
+          rm -f appsettings*.json
+
+      # TODO:  Uncomment if you have a separate workflow for swapping slots and you want to trigger it now.  Delete if you don't.
+      # - name: Trigger the Slot Swap
+      #   uses: actions/github-script@v4
+      #   with:
+      #     github-token: ${{ secrets.PIPELINE_BOT_PAT }} #TODO:  make sure im-pipeline-bot has at least write access to your repo   # This is an org level secret
+      #     script: |
+      #       github.repos.createDispatchEvent({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         event_type: "swap_slots", # TODO:  verify the other workflow has a repository_dispatch event that accepts the swap_slots type.
+      #         client_payload: {
+      #           environment: "${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      #         }
+      #       });
+
+  update-deployment-board-and-send-teams-notification:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    needs: [set-vars, deploy-code]
+    if: always()
+    steps:
+      - uses: im-open/workflow-conclusion@v1.0.2
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # TODO: Remove if not using an automated deployment project board
+      # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+      - name: Update Deployment Board
+        if: always()
+        uses: im-open/update-deployment-board@v1.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
+          ref: ${{ env.GITHUB_REF }}
+          deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          timezone: 'america/denver'
+
+      - name: Send Status to Teams
+        if: always()
+        uses: im-open/microsoft-teams-status-update-action@v1.0.0
+        with:
+          title: Deploying ${{ needs.set-vars.outputs.AZ_APP_NAME }} to Azure # TODO:  Verify title
+          workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          workflow-type: Deploy
+          teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists
+          timezone: America/Denver # TODO:  Verify timezone
+          # TODO:  Verify the custom facts you want included
+          custom-facts: |
+            [
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" }
+            ]
+          # TODO:  Verify additional buttons you want included.  A View Build Log is included by default.  If no additional actions are needed, delete this arg.
+          custom-actions: |
+            [
+              { "name": "", "uri": "" }
+            ]
