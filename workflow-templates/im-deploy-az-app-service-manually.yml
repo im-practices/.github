@@ -22,14 +22,13 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
 
     outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
-      RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }}
-      AZ_APP_NAME: ${{ steps.app-name.outputs.AZ_APP_NAME }}
-      AZ_INSIGHTS_NAME: ${{ steps.insights.outputs.AZ_INSIGHTS_NAME }}
+      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }} # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+      AZ_APP_NAME: ${{ steps.app-name.outputs.AZ_APP_NAME }} # To use this value: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+      AZ_INSIGHTS_NAME: ${{ steps.insights.outputs.AZ_INSIGHTS_NAME }} # To use this value: ${{ needs.set-vars.outputs.AZ_INSIGHTS_NAME }}
 
     steps:
-      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      - name: Clean Environment Input
+      - name: Set ENVIRONMENT
         id: clean-env
         uses: im-open/map-input-action@v1.0.1
         with:
@@ -44,18 +43,17 @@ jobs:
               "stage": ["stg", "s", "stage"], 
               "demo": ["o", "demo"], 
               "uat": ["u", "uat"], 
-              "prod": ["prod", 
-              "production", "p"] 
+              "prod": ["prod", "production", "p"] 
             }
           error_on_no_match: true
           custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
 
       - run: echo "The environment is ${{ steps.clean-env.outputs.mapped_input }}"
 
-      # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
       # This variable is used to swap slots and annotate app insights
-      - uses: im-open/set-variable-based-on-environment@v1.0.0
+      - name: Set RESOURCE_GROUP
         id: rgrp
+        uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'RESOURCE_GROUP'
           current-environment: ${{ steps.clean-env.outputs.mapped_input }}
@@ -67,9 +65,8 @@ jobs:
           uat-value: ''
           prod-value: ''
 
-      # To use this value: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
       # This variable is used to deploy the app, swap slots, annotate app insights and send a teams notification
-      - name: Set the Azure App Service Name
+      - name: Set AZ_APP_NAME
         id: app-name
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
@@ -83,9 +80,8 @@ jobs:
           uat-value: ''
           prod-value: ''
 
-      # To use this value: ${{ needs.set-vars.outputs.AZ_INSIGHTS_NAME }}
       # This variable is used to annotate app insights
-      - name: Set the Azure Insights Resource Name
+      - name: Set AZ_INSIGHTS_NAME
         id: insights
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
@@ -99,29 +95,33 @@ jobs:
           uat-value: ''
           prod-value: ''
 
+  # Each env has their own stakeholder approval environment.  If no required reviewers are set for
+  # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
     needs: [set-vars]
-    if: needs.set-vars.outputs.ENVIRONMENT == 'prod' || needs.set-vars.outputs.ENVIRONMENT == 'stage' # TODO:  Set the environments you want the stakeholder approval job to run on
     runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
-    environment: 'Stakeholder Approval'
+    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
     steps:
       - name: Approval Received
         run: echo "Stakeholder approval was received"
 
+  # This job needs to run for all environments because tf-plan relies
+  # on it but the steps inside this job will only run for the Prod env.
   validate-tag-for-prod-deploys:
     needs: [set-vars, stakeholder-approval]
-    if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
     runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
     steps:
       # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
+        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
         uses: actions/checkout@v2
         with:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
+        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
         with:
           tag: ${{ env.GITHUB_REF }}
 
