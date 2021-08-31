@@ -1,3 +1,5 @@
+# Workflow Code: DeterminedPorcupine_v1    DO NOT REMOVE
+
 name: Automatically run tf plan and comment on PR
 on:
   pull_request:
@@ -24,6 +26,7 @@ env:
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
   SSH_KEY_ON_PREM_EGRESS: ${{ secrets.SSH_ON_PREM_EGRESS }} # This is an org level secret
+  # TODO: SSH_KEY_ON_PREM_EGRESS & its usages can be removed if you've transitioned to storage-account-network-rules v2.0.3 or higher and to network-information instead of on-prem-egress-ips in your tf.
 
 jobs:
   auto-plan-the-tf:

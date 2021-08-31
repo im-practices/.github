@@ -1,4 +1,7 @@
+# Workflow Code: GiddyBuzzard_v1    DO NOT REMOVE
+
 name: Build Database CI
+# TODO:  Select the appropriate trigger, if push and pull are both included, two builds will be kicked off when a PR exists and a new commit is pushed to the corresponding branch.
 on:
   push:
     branches: [main]

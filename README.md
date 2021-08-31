@@ -41,6 +41,9 @@ The templates in this repository fall into one of the following categories:
   - [ ] Avoid using default values that may be overlooked
   - [ ] Clearly state the format if something specific is required
   - [ ] If you want to use the github hosted runners use the `runs-on: ubuntu-latest` tag
+  - [ ] Add a workflow code as the first line in the workflow: `# Workflow Code: UpsetBass_v1    DO NOT REMOVE`
+    - When changes are made to the workflow the version should be incremented
+    - Replace `UpsetBass` in the example above with your own code.  The [Random Username Generator] site can help.  The current workflows were generated using the emotions/creatures options.
   - For consistency, 
     - [ ] Ensure there are spaces between the brackets and the expression when using expression syntax
       - Expected: ${{ secrets.thing }}
@@ -54,3 +57,4 @@ The templates in this repository fall into one of the following categories:
 
 [add a workflow]: https://docs.github.com/en/actions/guides/setting-up-continuous-integration-using-workflow-templates
 [Sharing workflows with your organization]: https://docs.github.com/en/actions/learn-github-actions/sharing-workflows-with-your-organization
+[Random Username Generator]: https://jimpix.co.uk/words/random-username-generator.asp#results
