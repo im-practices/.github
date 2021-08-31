@@ -229,7 +229,7 @@ jobs:
           path: ${{ env.CODE_COVERAGE_DIR_JEST }}
 
   validate-sam-yaml:
-    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     outputs:
       validate: 'Passed'
@@ -243,7 +243,7 @@ jobs:
   finish-build:
     if: always()
     needs: [dotnet-build-and-test, jest, validate-sam-yaml]
-    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - uses: im-open/workflow-conclusion@v1.0.1
         id: conclusion

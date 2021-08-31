@@ -2,7 +2,7 @@ on: push
 
 jobs:
   one:
-    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - name: Dump GitHub context
         env:
