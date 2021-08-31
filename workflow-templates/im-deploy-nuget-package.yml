@@ -1,3 +1,5 @@
+# Workflow Code: TrustingCockroach_v1    DO NOT REMOVE
+
 name: 'Package Push Nuget Workflow'
 
 # Note: This workflow has a couple of steps that can be used for determining the version:
