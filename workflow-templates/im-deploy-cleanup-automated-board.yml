@@ -1,14 +1,16 @@
 name: Cleanup Automated Deployment Board
 
 # TODO:  Evaluate the appropriate triggers
+# See the following site for help creating the right cron syntax: https://crontab.guru/
+# The cron job is specified in UTC.
 on:
   schedule:
-    - cron: '30 6 * * 0' # Every Sunday at 06:30
+    - cron: '30 6 * * 0' # Every Sunday at 06:30 UTC
   workflow_dispatch:
 
 jobs:
   cleanup-board:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - uses: actions/checkout@v2
 
@@ -18,19 +20,23 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           board-number: # TODO:  Add the project board number
 
-          # Inactive cards are cards that are not currently deployed and do not have an open branch associated with them.
-          # The threshold is a positive whole number value and it means different things depending on the strategy.
-          # The cleanup strategy is applied only to the inactive cards.  Accepted values: age|number
-          #  - age: This strategy uses the corresponding threshold to determine the max age in days that an inactive card can be.
-          #  - number: This strategy uses the corresponding threshold to determin the max number of inactive cards to keep.
+          # Inactive cards are the only thing this workflow will cleanup
+          # Inactive cards are not currently deployed and do not have an open branch associated with them.
+          #
+          # Foreach release type (branch/tag/sha) you need to specify
+          # 1- A strategy for the cleanup.  It can be age or number.
+          #    Age: The max age in days an inactive card can be
+          #    Number: The max number of inactive releases to keep
+          # 2 - Threshold.  This is a positive whole number representing either the max age in days or the number of releases to keep.
+          #     This threshold does not include any of the active cards.  It only applies to the inactive ones.
+          #
           # See https://github.com/im-open/cleanup-deployment-board/ for more information
 
-          # TODO:  Supply the strategy and threshold for each deploy type
-          branch-cleanup-strategy: ''
-          branch-threshold: ''
+          branch-cleanup-strategy: '' # TODO: age|number
+          branch-threshold: '' # TODO: positive whole number representing max age in days or number of inactive releases to keep
 
-          tag-cleanup-strategy: ''
-          tag-threshold: ''
+          tag-cleanup-strategy: '' # TODO: age|number
+          tag-threshold: '' # TODO: positive whole number representing max age in days or number of inactive releases to keep
 
-          sha-cleanup-strategy: ''
-          sha-threshold: ''
+          sha-cleanup-strategy: '' # TODO: age|number
+          sha-threshold: '' # TODO: positive whole number representing max age in days or number of inactive releases to keep
