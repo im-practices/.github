@@ -1,5 +1,0 @@
-{
-  "name": "Deploy - Apply TF to a Dev Subscription Resource Group",
-  "description": "Workflow template for kicking off a terraform apply to a resource group in the Dev Subscription.",
-  "iconName": "im_tf"
-}

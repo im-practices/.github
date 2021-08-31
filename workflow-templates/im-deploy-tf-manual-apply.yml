@@ -1,0 +1,356 @@
+name: Apply Terraform
+on:
+  workflow_dispatch:
+    inputs:
+      branch-tag-sha:
+        description: The branch, tag or sha of the terraform that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
+        required: true
+      environment:
+        description: The environment to Deploy To.
+        required: true
+
+# TODO:  The terraform needs to be switched from on-prem-egress-ips to network-information.
+
+env:
+  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
+  PLAN_STORAGE_CONTAINER: 'tfstate'
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_ENVIRONMENT: 'public'
+  TF_IN_AUTOMATION: 'true'
+  TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
+  SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }} # This is an org level secret
+  SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
+  SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
+  SSH_KEY_ON_PREM_EGRESS: ${{ secrets.SSH_ON_PREM_EGRESS }} # This is an org level secret,
+  # TODO: SSH_KEY_ON_PREM_EGRESS & its usages can be removed if you've transitioned to storage-account-network-rules v2.0.3 or higher and to network-information instead of on-prem-egress-ips in your tf.
+
+jobs:
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+
+    outputs:
+      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }} # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+      STORAGE_ACCOUNT: ${{ steps.stg-acct.outputs.STORAGE_ACCOUNT }} # To use this value: ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}
+
+    steps:
+      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      - name: Set ENVIRONMENT
+        id: clean-env
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ github.event.inputs.environment }}
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          input_map: |
+            { 
+              "dev": ["dev", "d", "development"], 
+              "qa": ["qa", "q"], 
+              "stage": ["stg", "s", "stage"], 
+              "demo": ["o", "demo"], 
+              "uat": ["u", "uat"], 
+              "prod": ["prod", "production", "p"] 
+            }
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+
+      - run: echo "The environment is ${{ steps.clean-env.outputs.mapped_input }}"
+
+      # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+      # This variable is used to upload and download blobs from blob storage
+      - name: Set RESOURCE_GROUP
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        id: rgrp
+        with:
+          variable-name: 'RESOURCE_GROUP'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          # TODO: For the following resource group inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
+
+      # To use this value: ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}
+      # This variable is used to upload and download blobs from blob storage
+      - name: Set STORAGE_ACCOUNT
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        id: stg-acct
+        with:
+          variable-name: 'STORAGE_ACCOUNT'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          # TODO: For the following storage-account inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
+
+  # Each env has their own stakeholder approval environment.  If no required reviewers are set for
+  # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  stakeholder-approval:
+    needs: [set-vars]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
+    steps:
+      - name: Approval Received
+        run: echo "Stakeholder approval was received"
+
+  # This job needs to run for all environments because tf-plan relies
+  # on it but the steps inside this job will only run for the Prod env.
+  validate-tag-for-prod-deploys:
+    needs: [set-vars, stakeholder-approval]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    steps:
+      # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
+      # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
+      - name: Checkout Repository
+        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        uses: actions/checkout@v2
+        with:
+          ref: 'main' # TODO: verify the name of your default branch
+          fetch-depth: 0
+
+      - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
+        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        with:
+          tag: ${{ env.GITHUB_REF }}
+
+  tf-plan:
+    needs: [set-vars, validate-tag-for-prod-deploys]
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    env:
+      PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+      PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ needs.set-vars.outputs.ENVIRONMENT }} environment from GitHub Actions' # TODO:  Verify this description
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO:  Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
+
+    outputs:
+      tf_plan_name: ${{ steps.upload.outputs.tf_plan_name }}
+      maintenance_window_id: ${{ steps.open-window.outputs.maintenance-window-id }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      # Allows pulling modules from the repo instead of artifactory
+      - name: Setup SSH Keys and known_hosts
+        uses: im-open/setup-deploy-keys@1.0.1
+        with:
+          deploy-key-info: |
+            [
+              { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
+              { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
+              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
+            ]
+
+      - name: Open a PagerDuty Maintenance Window
+        id: open-window
+        uses: im-open/open-pagerduty-maintenance-window@v1.0.0
+        with:
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
+          description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
+          minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
+          service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
+
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Terraform
+        id: setup
+        uses: hashicorp/setup-terraform@v1.2.1
+        with:
+          terraform_version: '${{ env.TF_VERSION }}'
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      # TODO:  Remove the pagerduty token if not configuring pagerduty.  If using pagerduty verify 'pagerduty_token' is the name of the variable that tf accepts as the variable
+      # PAGERDUTY_API_KEY is an organization-level secret
+      # This will run a plan and output it to a file.  The file is then uploaded to azure storage so it can be used later in the apply.
+      - name: Terraform Plan
+        id: plan
+        run: |
+          mkdir plans
+          terraform plan -no-color \
+            -var="pagerduty_token=${{ secrets.PAGERDUTY_API_KEY }}" \
+            -out=./plans/tfplan
+
+      - name: Upload plan to blob storage
+        id: upload
+        shell: pwsh
+        run: |
+          $terraformPlanName = "$(Get-Date -Format 'yyyyMMdd-HHmmss').plan.zip"
+          $terraformBlobName = "plans/$terraformPlanName"
+
+          Add-Type -Assembly "System.IO.Compression.FileSystem"
+          [System.IO.Compression.ZipFile]::CreateFromDirectory("plans", $terraformPlanName)
+
+          echo "Terraform Plan Name: $terraformPlanName"
+          echo "current directory:"
+          ls -R
+
+          echo "Uploading tf plan to azure storage account ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}"
+          $key = az storage account keys list --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} --query [0].value -o tsv
+          az storage blob upload --no-progress --auth-mode key --account-key $key --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $terraformPlanName --name $terraformBlobName
+          echo "The plan was successfully uploaded"
+
+          echo "::set-output name=tf_plan_name::$terraformPlanName"
+
+      - name: Azure logout
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
+  # This job targets the Terraform Approval environment.  This will break the workflow and give one of the
+  # required reviewers for this environment a chance to look at the plan in the previous job and approve it.
+  tf-plan-manual-approval:
+    needs: [tf-plan]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    environment: 'Terraform Approval' # TODO:  Add required reviewers to this environment in GitHub.  This should be anyone who can review a terraform plan and proceed with the deployment
+    steps:
+      - name: Approval Received
+        run: echo "Approval on the tf plan was received"
+
+  tf-apply:
+    needs: [set-vars, tf-plan, tf-plan-manual-approval]
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO:  Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      # Allows pulling modules from the repo instead of artifactory
+      - name: Setup SSH Keys and known_hosts
+        uses: im-open/setup-deploy-keys@1.0.1
+        with:
+          deploy-key-info: |
+            [
+              { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
+              { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
+              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
+            ]
+
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Terraform
+        id: setup
+        uses: hashicorp/setup-terraform@v1.2.1
+        with:
+          terraform_version: '${{ env.TF_VERSION }}'
+
+      - name: Download blob
+        shell: pwsh
+        run: |
+          mkdir plans
+          echo "Current working directory: $pwd"
+          $terraformBlobName = "plans/${{ needs.tf-plan.outputs.tf_plan_name }}"
+          echo "The blob name is: $terraformBlobName"
+
+          Write-Host "Download blob to ./plans"
+          $key = az storage account keys list --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} --query [0].value -o tsv
+          az storage blob download --no-progress --auth-mode key --account-key $key --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $pwd/$terraformBlobName --name $terraformBlobName
+
+          try {
+            [System.IO.Compression.ZipFile]::ExtractToDirectory("$pwd/$terraformBlobName", "$pwd/plans")    
+          }
+          catch {
+            # Even though it hits this catch block the archive is extracted as expected.  No good explanation.
+          }
+
+          Write-Host "Zip extracted"
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -no-color -input=false ./plans/tfplan
+
+      - name: Azure logout
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
+      - name: Close the PagerDuty Maintenance Window
+        uses: im-open/close-pagerduty-maintenance-window@v1.0.0
+        with:
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
+          maintenance-window-id: ${{ needs.tf-plan.outputs.maintenance_window_id }}
+
+  update-deployment-board-and-send-teams-notification:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    needs: [set-vars, tf-apply]
+    if: always()
+    steps:
+      - uses: im-open/workflow-conclusion@v1.0.2
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # TODO: Remove if not using an automated deployment project board
+      # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+      - name: Update Deployment Board
+        if: always()
+        uses: im-open/update-deployment-board@v1.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
+          ref: ${{ env.GITHUB_REF }}
+          deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          timezone: 'america/denver'
+
+      - name: Send Status to Teams
+        if: always()
+        uses: im-open/microsoft-teams-status-update-action@v1.0.0
+        with:
+          title: Deploying <project-name> Terraform to Azure # TODO:  Verify title
+          workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          workflow-type: Deploy
+          teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists in GitHub
+          timezone: America/Denver # TODO:  Verify timezone
+          # TODO:  Verify the custom facts you want included
+          custom-facts: |
+            [
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" }
+            ]
+          # TODO:  Verify additional buttons you want included.  A View Build Log is included by default.  If no additional actions are needed, delete this arg.
+          custom-actions: |
+            [
+              { "name": "", "uri": "" }
+            ]
