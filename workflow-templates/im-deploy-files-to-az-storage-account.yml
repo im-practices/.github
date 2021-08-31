@@ -10,28 +10,60 @@ on:
         description: The branch, tag or sha of the terraform that should be deployed to the Dev environment.
         required: true
       environment:
-        description: The environment to Deploy To.
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat
         required: true
 
 env:
+  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha }}
   STORAGE_ACCOUNT_NAME: '' # TODO:  Add the appropriate storage account name
   TARGET_CONTAINER: '' # TODO:  Add the appropriate target container in the stg account
   SOURCE_DIRECTORY: '' # TODO:  Add the appropriate source directory
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
 
 jobs:
-  deploy-to-azure:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
-    runs-on: [self-hosted, ubuntu-20.04]
-
-    environment: ${{ github.event.inputs.environment }} #TODO:  Verify the environment
+    # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    outputs:
+      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
 
     steps:
+      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      - name: Set ENVIRONMENT
+        id: clean-env
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ github.event.inputs.environment }}
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          input_map: |
+            { 
+              "dev": ["dev", "d", "development"], 
+              "qa": ["qa", "q"], 
+              "stage": ["stg", "s", "stage"], 
+              "demo": ["o", "demo"], 
+              "uat": ["u", "uat"], 
+              "prod": ["prod", "production", "p"] 
+            }
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+
+  deploy-to-azure:
+    runs-on: [self-hosted, ubuntu-20.04]
+
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }} # TODO:  Verify the environment
+
+    steps:
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.inputs.branch-tag-sha }}
+          ref: ${{ env.GITHUB_REF }}
 
       - name: AZ Login
         uses: azure/login@v1
@@ -58,8 +90,8 @@ jobs:
         uses: im-open/update-deployment-board@v1.0.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          environment: ${{ github.event.inputs.environment }}
+          environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           board-number: ${{ env.DEPLOY_BOARD_NUM }}
-          ref: ${{ github.event.inputs.branch-tag-sha }}
+          ref: ${{ env.GITHUB_REF }}
           deploy-status: ${{ job.status }}
           timezone: 'america/denver'

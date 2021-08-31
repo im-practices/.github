@@ -14,6 +14,9 @@ on:
         description: The category of the annotation
         required: false
         default: 'Deployment'
+      releaseName:
+        description: The name of the release (generally the tag that will be deployed)
+        required: true
       customMetadata:
         description: 'The comma separated custom metadata pairs.  Format: name1=value1,name2=value2'
         required: false
@@ -23,41 +26,72 @@ env:
   PROJECT_NAME: '' # TODO:  Add a project name
 
 jobs:
-  create-annotatation:
-    runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ github.event.inputs.environment }}
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+    outputs:
+      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
+      RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }}
+      APP_INSIGHTS_NAME: ${{ steps.stg-acct.outputs.APP_INSIGHTS_NAME }}
+
     steps:
-      # TODO:  Update for the environments that are supported
-      - name: Clean environment input
+      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      - name: Set ENVIRONMENT
         id: clean-env
         uses: im-open/map-input-action@v1.0.1
         with:
           input: ${{ github.event.inputs.environment }}
-          input_map: '{ "Dev": ["dev", "d", "development"], "QA": ["qa", "q"], "Stage": ["stg", "s", "stage"], "Prod": ["prod", "production", "p"], "UAT" : ["uat", "user acceptance testing", "u"], "Demo": ["demo", "o"] }'
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          input_map: |
+            { 
+              "dev": ["dev", "d", "development"], 
+              "qa": ["qa", "q"], 
+              "stage": ["stg", "s", "stage"], 
+              "demo": ["o", "demo"], 
+              "uat": ["u", "uat"], 
+              "prod": ["prod", "production", "p"] 
+            }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage, Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
 
-      - uses: im-open/set-variable-based-on-environment@v1.0.0
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+
+      # This variable is used to upload and download blobs from blob storage
+      - name: Set RESOURCE_GROUP
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        id: rgrp
         with:
           variable-name: 'RESOURCE_GROUP'
           current-environment: ${{ steps.clean-env.outputs.mapped_input }}
-          dev-value: '' # TODO: Add the dev rgrp name or delete if env does not exist
-          qa-value: '' # TODO: Add the qa rgrp name or delete if env does not exist
-          stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
-          prod-value: '' # TODO: Add the prod rgrp name or delete if env does not exist
-          demo-value: '' # TODO: Add the demo rgrp name or delete if env does not exist
-          uat-value: '' # TODO: Add the uat rgrp name or delete if env does not exist
+          # TODO: For the following resource group inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
 
       - uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
           variable-name: 'APP_INSIGHTS_NAME'
           current-environment: ${{ steps.clean-env.outputs.mapped_input }}
-          dev-value: '' # TODO: Add the dev app insights name or delete if env does not exist
-          qa-value: '' # TODO: Add the qa app insights name or delete if env does not exist
-          stage-value: '' # TODO: Add the stage app insights name or delete if env does not exist
-          prod-value: '' # TODO: Add the prod app insights name or delete if env does not exist
-          demo-value: '' # TODO: Add the demo app insights name or delete if env does not exist
-          uat-value: '' # TODO: Add the uat app insights name or delete if env does not exist
+          # TODO: For the following app insights name inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
+
+  create-annotatation:
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    needs: [set-vars]
+    steps:
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
 
       - name: AZ Login
         uses: azure/login@v1
@@ -68,9 +102,9 @@ jobs:
         uses: im-open/create-app-insights-annotation@v1.0.0
         with:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-          resourceGroupName: ${{ env.RESOURCE_GROUP }}
-          appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
-          releaseName: ${{ github.run_id }} #TODO:  Verify this is the correct
+          resourceGroupName: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
+          releaseName: ${{ github.event.inputs.releaseName }}
           category: ${{ github.event.inputs.category }}
           customMetadata: ${{ github.event.inputs.customMetadata }}
 

@@ -16,12 +16,93 @@ on:
         default: prod
 
 jobs:
-  start-stop-restart:
-    runs-on: [self-hosted, ubuntu-20.04]
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
-    environment: ${{ github.event.inputs.environment }}
+    # To use any of these outputs in another job use the following syntax: ${{ env.RESOURCE_GROUP }}
+    outputs:
+      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
+      RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }}
+      APP_SERVICE_NAME: ${{ steps.stg-acct.outputs.APP_SERVICE_NAME }}
+      SLOT_NAME: ${{ steps.stg-acct.outputs.SLOT_NAME }}
 
     steps:
+      - name: Set ENVIRONMENT
+        id: clean-env
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ github.event.inputs.environment }}
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          input_map: |
+            { 
+              "dev": ["dev", "d", "development"], 
+              "qa": ["qa", "q"], 
+              "stage": ["stg", "s", "stage"], 
+              "demo": ["o", "demo"], 
+              "uat": ["u", "uat"], 
+              "prod": ["prod", "production", "p"] 
+            }
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+
+      - name: Set RESOURCE_GROUP
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        id: rgrp
+        with:
+          variable-name: 'RESOURCE_GROUP'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          # TODO: For the following resource group inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
+
+      - uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'APP_SERVICE_NAME'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          # TODO: For the following app service name inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
+
+      # TODO:  If this workflow is restarting a slot update these values, otherwise delete this section.
+      # TODO:  If the slot has the same name in all environments, this can be converted into a single environment variable in the start-stop-restart job
+      - uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'SLOT_NAME'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          # TODO: For the following slot name inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
+
+  start-stop-restart:
+    needs: [set-vars]
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+
+    env:
+      ENVIRONMENT: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      APP_SERVICE_NAME: ${{ needs.set-vars.outputs.APP_SERVICE_NAME }}
+      RESOURCE_GROUP: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+      SLOT_NAME: ${{ needs.set-vars.outputs.SLOT_NAME }}
+
+    steps:
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
+
       - name: Clean action input
         id: clean-action
         uses: im-open/map-input-action@v1.0.1
@@ -31,51 +112,7 @@ jobs:
           error_on_no_match: true
           custom_error_message: 'The action must be start, stop or restart'
 
-      # TODO:  Update for the environments that are supported
-      - name: Clean environment input
-        id: clean-env
-        uses: im-open/map-input-action@v1.0.1
-        with:
-          input: ${{ github.event.inputs.environment }}
-          input_map: '{ "Dev": ["dev", "d", "development"], "QA": ["qa", "q"], "Stage": ["stg", "s", "stage"], "Prod": ["prod", "production", "p"], "UAT" : ["uat", "user acceptance testing", "u"], "Demo": ["demo", "o"] }'
-          error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage, Demo, UAT or Prod'
-
-      - uses: im-open/set-variable-based-on-environment@v1.0.0
-        with:
-          variable-name: 'RESOURCE_GROUP'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
-          dev-value: '' # TODO: Add the dev rgrp name or delete if env does not exist
-          qa-value: '' # TODO: Add the qa rgrp name or delete if env does not exist
-          stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
-          prod-value: '' # TODO: Add the prod rgrp name or delete if env does not exist
-          demo-value: '' # TODO: Add the demo rgrp name or delete if env does not exist
-          uat-value: '' # TODO: Add the uat rgrp name or delete if env does not exist
-
-      - uses: im-open/set-variable-based-on-environment@v1.0.0
-        with:
-          variable-name: 'APP_SERVICE_NAME'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
-          dev-value: '' # TODO: Add the dev app service name or delete if env does not exist
-          qa-value: '' # TODO: Add the qa app service name or delete if env does not exist
-          stage-value: '' # TODO: Add the stage app service name or delete if env does not exist
-          prod-value: '' # TODO: Add the prod app service name or delete if env does not exist
-          demo-value: '' # TODO: Add the demo app service name or delete if env does not exist
-          uat-value: '' # TODO: Add the uat app service name or delete if env does not exist
-
-      # TODO:  If using this workflow for a slot update these values, otherwise delete this section
-      - uses: im-open/set-variable-based-on-environment@v1.0.0
-        with:
-          variable-name: 'SLOT_NAME'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
-          dev-value: '' # TODO: Add the dev slot name or delete if env does not exist
-          qa-value: '' # TODO: Add the qa slot name or delete if env does not exist
-          stage-value: '' # TODO: Add the slot rgrp name or delete if env does not exist
-          prod-value: '' # TODO: Add the slot rgrp name or delete if env does not exist
-          demo-value: '' # TODO: Add the slot rgrp name or delete if env does not exist
-          uat-value: '' # TODO: Add the slot rgrp name or delete if env does not exist
-
-      - run: echo "'${{ steps.clean-action.outputs.mapped_input }}' will be peformed on ${{ steps.clean-env.outputs.mapped_input }} ${{ env.APP_SERVICE_NAME }}"
+      - run: echo "'${{ steps.clean-action.outputs.mapped_input }}' will be peformed on ${{ env.ENVIRONMENT }} ${{ env.APP_SERVICE_NAME }}"
 
       - name: AZ Login
         uses: azure/login@v1
