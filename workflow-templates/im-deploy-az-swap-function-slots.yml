@@ -1,63 +1,120 @@
 # Workflow Code: DelightedPug_v1    DO NOT REMOVE
 
+# Prerequisites
+# 1 - Make sure the az secrets have been added to the environments
+
 name: Swap Azure Function Slots
 
 # This workflow can be kicked off manually and it can also be kicked off automatically from
 # another workflow by using the repository_dispatch event trigger.  This workflow is designed
 # to know about each of your environments, so the only thing you need to input is the
 # environment where slots will be toggled.
-
-#TODO: Remove the pagerduty items if you do not want a window to be opened when this workflow is invoked
 on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment where slots are being swapped
+        description: The environment where slots are being swapped - dev|qa|stage|prod|demo|uat
         required: true
       open-pagerduty-window:
         description: Flag indicating whether a pagerduty maintenance window should be opened
         required: true
         default: 'false'
+  # When using repository dispatch, the payload must have an environment property and an open-pagerduty-window property
   repository_dispatch:
     types: [swap_slots]
 
-# TODO:  If any of these env variables change between environments, add a new set-variable-based-on-environment step to set the env var
-env:
-  TARGET_SLOT: 'Production'
-  SOURCE_SLOT: '' # TODO:  Add the name of the source slot
-  PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
-  PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
-  PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
-
 jobs:
-  get-inputs-from-event:
+  set-vars:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
     outputs:
-      environment: ${{ steps.get-inputs.outputs.environment }}
-      open-window: ${{ steps.get-inputs.outputs.openWindow }}
+      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
+      RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }}
+      AZ_FUNC_NAME: ${{ steps.stg-acct.outputs.AZ_FUNC_NAME }}
+      OPEN_WINDOW: ${{ steps.get-inputs-from-trigger.OPEN_WINDOW }}
+
     steps:
-      - id: get-inputs
+      - id: get-inputs-from-trigger
         run: |
           eventName=${{ github.event_name }}
           if [ "$eventName" == "workflow_dispatch" ]; then
-            environment=${{ github.event.inputs.environment }}
-            openWindow=${{ github.event.inputs.open-window }}
+            echo "ENV_INPUT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+            echo "OPEN_WINDOW=${{ github.event.inputs.open-pagerduty-window }}" >> $GITHUB_ENV
           elif [ "$eventName" == "repository_dispatch" ]; then
-            environment=${{ github.event.client_payload.environment }}
-            openWindow=${{ github.event.client_payload.open-window }}
+            echo "ENV_INPUT=${{ github.event.client_payload.environment }}" >> $GITHUB_ENV
+            echo "OPEN_WINDOW=${{ github.event.client_payload.open-pagerduty-window }}" >> $GITHUB_ENV
           fi
-          echo "The environment input is: $environment"
-          echo "::set-output name=environment::$environment"
-          echo "The open-window input is: $openWindow"
-          echo "::set-output name=openWindow::$openWindow"
+
+      - name: Set ENVIRONMENT
+        id: clean-env
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ steps.get-inputs-from-trigger.outputs.ENV_INPUT }}
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          input_map: |
+            { 
+              "dev": ["dev", "d", "development"], 
+              "qa": ["qa", "q"], 
+              "stage": ["stg", "s", "stage"], 
+              "demo": ["o", "demo"], 
+              "uat": ["u", "uat"], 
+              "prod": ["prod", "production", "p"] 
+            }
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+
+      # This variable is used to upload and download blobs from blob storage
+      - name: Set RESOURCE_GROUP
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        id: rgrp
+        with:
+          variable-name: 'RESOURCE_GROUP'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          # TODO: For the following resource group inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
+
+      - uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'AZ_FUNC_NAME'
+          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          # TODO: For the following az func name inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          demo-value: ''
+          uat-value: ''
+          prod-value: ''
 
   swap-slots:
     runs-on: [self-hosted, ubuntu-20.04]
-    needs: [get-inputs-from-event]
-    environment: ${{ needs.get-inputs-from-event.outputs.environment }}
+    needs: [set-vars]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    env:
+      ENVIRONMENT: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      RESOURCE_GROUP: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+      AZ_FUNC_NAME: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+      OPEN_WINDOW: ${{ needs.set-vars.outputs.OPEN_WINDOW }}
+      PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
+      TARGET_SLOT: 'Production' # TODO:  Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main site, update it here
+      SOURCE_SLOT: '' # TODO:  Add the name of the source slot
+
     steps:
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
       - name: Open a PagerDuty Maintenance Window
-        if: needs.get-inputs-from-event.outputs.open-window == 'true'
+        if: env.OPEN_WINDOW == 'true'
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.0.0
         with:
@@ -65,28 +122,6 @@ jobs:
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
-
-      - uses: im-open/set-variable-based-on-environment@v1.0.0
-        with:
-          variable-name: 'RESOURCE_GROUP'
-          current-environment: ${{ needs.get-inputs-from-event.outputs.environment }}
-          dev-value: '' # TODO: Add the dev rgrp name or delete if env does not exist
-          qa-value: '' # TODO: Add the qa rgrp name or delete if env does not exist
-          stage-value: '' # TODO: Add the stage rgrp name or delete if env does not exist
-          prod-value: '' # TODO: Add the prod rgrp name or delete if env does not exist
-          demo-value: '' # TODO: Add the demo rgrp name or delete if env does not exist
-          uat-value: '' # TODO: Add the uat rgrp name or delete if env does not exist
-
-      - uses: im-open/set-variable-based-on-environment@v1.0.0
-        with:
-          variable-name: 'AZ_FUNC_NAME'
-          current-environment: ${{ needs.get-inputs-from-event.outputs.environment }}
-          dev-value: '' # TODO: Add the dev func name or delete if env does not exist
-          qa-value: '' # TODO: Add the qa func name or delete if env does not exist
-          stage-value: '' # TODO: Add the stage func name or delete if env does not exist
-          prod-value: '' # TODO: Add the prod func name or delete if env does not exist
-          demo-value: '' # TODO: Add the demo func name or delete if env does not exist
-          uat-value: '' # TODO: Add the uat func name or delete if env does not exist
 
       - name: AZ Login
         id: login
@@ -119,7 +154,7 @@ jobs:
           az account clear
 
       - name: Close the PagerDuty Maintenance Window
-        if: always() && needs.get-inputs-from-event.outputs.open-window == 'true' && steps.open-window.outcome == 'success'
+        if: always() && env.OPEN_WINDOW == 'true' && steps.open-window.outcome == 'success'
         uses: im-open/close-pagerduty-maintenance-window@v1.0.0
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret

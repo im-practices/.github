@@ -44,6 +44,10 @@ The templates in this repository fall into one of the following categories:
   - [ ] Add a workflow code as the first line in the workflow: `# Workflow Code: UpsetBass_v1    DO NOT REMOVE`
     - When changes are made to the workflow the version should be incremented
     - Replace `UpsetBass` in the example above with your own code.  The [Random Username Generator] site can help.  The current workflows were generated using the emotions/creatures options.
+  - [ ] If the workflow takes in the environment as a parameter, use the `set-vars` job pattern that is implemented in other workflows like [im-deploy-tf-manual-apply.yml]
+    - The `set-vars` job cleans the environment variable input and sets an output
+    - All other jobs that need to use environment should add a `needs: [set-vars]` and use the `ENVIRONMENT` output from the job.
+    - Other variables that vary between environments and make use of the `im-open/set-variable-based-on-environment` action should also be done in the `set-vars` job.  
   - For consistency, 
     - [ ] Ensure there are spaces between the brackets and the expression when using expression syntax
       - Expected: ${{ secrets.thing }}
@@ -58,3 +62,4 @@ The templates in this repository fall into one of the following categories:
 [add a workflow]: https://docs.github.com/en/actions/guides/setting-up-continuous-integration-using-workflow-templates
 [Sharing workflows with your organization]: https://docs.github.com/en/actions/learn-github-actions/sharing-workflows-with-your-organization
 [Random Username Generator]: https://jimpix.co.uk/words/random-username-generator.asp#results
+[im-deploy-tf-manual-apply.yml]: ./workflow-templates/im-deploy-tf-manual-apply.yml
