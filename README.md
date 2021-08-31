@@ -40,14 +40,16 @@ The templates in this repository fall into one of the following categories:
   - [ ] Clearly mark what needs to be customized or populated by the user
   - [ ] Avoid using default values that may be overlooked
   - [ ] Clearly state the format if something specific is required
+  - [ ] If you want to use the github hosted runners use the `runs-on: ubuntu-latest` tag
   - For consistency, 
     - [ ] Ensure there are spaces between the brackets and the expression when using expression syntax
       - Expected: ${{ secrets.thing }}
       - Not expected: ${{secrets.mything}}
     - [ ] If only one label is included in the `runs-on` property, do not include brackets
-      - Expected: `runs-on: ubuntu-18.04`
-      - Not Expected: `runs-on: [ubuntu-18.04]`
+      - Expected: `runs-on: ubuntu-latest`
+      - Not Expected: `runs-on: [ubuntu-latest]`
     - [ ] Outside of script blocks, use single `'` instead of double `"`
+    
   
 
 [add a workflow]: https://docs.github.com/en/actions/guides/setting-up-continuous-integration-using-workflow-templates

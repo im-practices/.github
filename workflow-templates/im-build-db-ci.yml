@@ -20,7 +20,7 @@ env:
 jobs:
   # TODO: Remove this and it's usages below if no snapshots are created for your database
   check-for-snapshot-commit:
-    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     outputs:
       should-skip-remaining-workflow-jobs: ${{ steps.check.outputs.skip }}
     steps:
@@ -46,7 +46,7 @@ jobs:
 
   # TODO: Remove this linting job if your project doesn't need/want it
   lint-migration-files:
-    runs-on: ubuntu-18.04 # Force this to run on github-hosted runner
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     needs: check-for-snapshot-commit
     if: ${{ needs.check-for-snapshot-commit.outputs.should-skip-remaining-workflow-jobs == 'false' }}
     steps:

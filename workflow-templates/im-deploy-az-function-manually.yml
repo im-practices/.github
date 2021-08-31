@@ -19,7 +19,7 @@ env:
 
 jobs:
   set-vars:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     outputs:
       ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
@@ -100,7 +100,7 @@ jobs:
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
     needs: [set-vars]
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
     steps:
       - name: Approval Received
@@ -110,7 +110,7 @@ jobs:
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-for-prod-deploys:
     needs: [set-vars, stakeholder-approval]
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
@@ -278,7 +278,7 @@ jobs:
       #       });
 
   update-deployment-board-and-send-teams-notification:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner (this tag does not exist on our self-hosted runners)
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     needs: [set-vars, deploy-code]
     if: always()
     steps:
