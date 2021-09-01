@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       branch-tag-sha:
-        description: The branch, tag or sha of the terraform that should be deployed.
+        description: The branch, tag or sha of the code that should be deployed.
         required: true
       environment:
         description: The environment to deploy to.
