@@ -1,7 +1,10 @@
+# Workflow Code: FuzzyDragon_v1    DO NOT REMOVE
+
 # Prerequisites
 # 1 - Make sure the az secrets have been added to the environment
 # 2 - Make sure the host IIS server has been prepped to accept incoming WinRM Requests
 #     See the IIS App Pool action README for more details: https://github.com/im-open/iis-service-action/#readme
+# 3 - If you're using a deployment board, create it first: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
 name: Deploy On Prem Website
 on:
