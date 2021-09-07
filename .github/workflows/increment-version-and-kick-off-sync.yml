@@ -15,34 +15,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Increment the version
-        uses: actions/github-script@v4
+      # See https://github.com/im-open/git-version for more details around how to increment major/minor/patch through commit messages
+      - uses: im-open/git-version-lite@v1.0.0
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            let newTag;
-            try {
-              let tag = '';
-              await exec.exec(`git describe --tags --abbrev=0`, [], { listeners: { stdout: (data) => { tag += data.toString(); } } });
-              tag = tag.replace('\n', '').trim();
-              core.info(`The latest tag is: ${tag}`);
-              const majorMinorPatch = tag.split('.');
-              const patch = parseInt(majorMinorPatch[2]) + 1;
-              newTag = `${majorMinorPatch[0]}.${majorMinorPatch[1]}.${patch}`
-              core.info(`The new tag is: ${newTag}`);
-            }
-            catch (error) {
-              newTag = 'v1.0.0';
-              core.info('An error occurred getting the tags for the repo.  It most likely does not have any tags to use. Defaulting to v1.0.0.');
-              core.info(error);
-            }
-            core.info(`Pushing tag '${newTag}' to the repository...`)
-            await github.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: `refs/tags/${newTag}`,
-              sha: context.sha
-            });
+          tag-prefix: 'v'
 
       - name: Tell github-management to sync templates
         uses: actions/github-script@v4
