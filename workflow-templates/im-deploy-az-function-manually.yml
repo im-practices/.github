@@ -182,12 +182,12 @@ jobs:
       #         {"": ""}
       #       ]
 
-      # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.
-      # - uses: im-open/octostache-action@v1.0.0
-      #   with:
-      #     variablesFile: ./substitution-variables.json                          # Files containing the variable substitutions to make, you will need to create this file
-      #     templateFile: ./src/DemoApp19/Bff/FrontEnd/scripts/build-variables.js # The file to make the substitutions in
-      #     outputFile: ./src/DemoApp19/Bff/FrontEnd/scripts/build-variables.js   # The file to save the substitutions in (generally the same as above)
+      #TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.
+      - uses: im-open/octostache-action@v1.0.0
+        with:
+          variablesFile: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
+          templateFile: '' # TODO:  Add the ./path/file to make the substitutions in
+          outputFile: '' # TODO:  Add the ./path/file to save the substitutions in (generally the same as templateFile above)
 
       # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
