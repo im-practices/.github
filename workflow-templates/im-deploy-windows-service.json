@@ -1,0 +1,5 @@
+{
+  "name": "Deploy - Deploy Windows Service",
+  "description": "Template that can be used to build and deploy a windows service",
+  "iconName": "im_deploy"
+}

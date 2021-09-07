@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v7    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v8    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the Service account secrets have been added to the environment
@@ -365,7 +365,7 @@ jobs:
 
       - name: Deploy deployment package
         if: steps.app-pool-stop.outcome == 'success'
-        uses: 'im-open/deploy-on-prem-web-app@v1.0.0'
+        uses: 'im-open/deploy-windows-files@v1.0.2'
         with:
           server: ${{ needs.set-vars.outputs.IIS_SERVER }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
