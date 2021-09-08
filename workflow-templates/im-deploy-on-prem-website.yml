@@ -1,7 +1,7 @@
 # Workflow Code: FuzzyDragon_v1    DO NOT REMOVE
 
 # Prerequisites
-# 1 - Make sure the az secrets have been added to the environment
+# 1 - Make sure the Service account secrets have been added to the environment
 # 2 - Make sure the host IIS server has been prepped to accept incoming WinRM Requests
 #     See the IIS App Pool action README for more details: https://github.com/im-open/iis-service-action/#readme
 # 3 - If you're using a deployment board, create it first: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
@@ -16,6 +16,9 @@ on:
       environment:
         description: The environment to deploy to.
         required: true
+env:
+  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha }}
+  # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
   set-vars:
@@ -56,6 +59,9 @@ jobs:
           custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
 
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
+      # TODO: If any of the following deployment vars do not vary from environment to environment,
+      #       they should be converted to a global
 
       # TODO:  Fill in the iis-server and remove the environments that are not used.
       - name: Set IIS Server
@@ -223,9 +229,9 @@ jobs:
       - name: Approval Received
         run: echo "Stakeholder approval was received"
 
-  # This job needs to run for all environments because tf-plan relies
+  # This job needs to run for all environments because build-deploy relies
   # on it but the steps inside this job will only run for the Prod env.
-  validate-tag-for-prod-deploys:
+  validate-tag-for-deploys:
     needs: [set-vars, stakeholder-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
@@ -246,41 +252,42 @@ jobs:
           tag: ${{ env.GITHUB_REF }}
 
   build-deploy:
-    needs: [tech-approval, qa-approval, stakeholder-approval] # TODO: Update for the approval environments used
+    needs: [set-vars, stakeholder-approval, validate-tag-for-prod-deploys]
     runs-on: [self-hosted, windows-2019]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     env:
-      PAGERDUTY_SERVICE_IDS: '[ "${{secrets.PAGERDUTY_SERVICE_ID}}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+      PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
-      DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
       DOTNET_VERSION: '' # TODO:  Set the .net core version of your project
       PROJECT_ROOT: '' # TODO:  set this to the folder of your web site project. For most projects this will be ./src/ProjectName
-      ARTIFACT_NAME: 'Published Site' # TODO:  Set this to the name of the artifact that shows in the workflow's summary section
-      ARTIFACT_ZIP: 'artifacts.zip'
       DEPLOY_ZIP: 'published_site.zip'
 
     steps:
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
       - name: Open a PagerDuty Maintenance Window
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{secrets.PAGERDUTY_API_KEY}}
-          description: '${{env.PAGERDUTY_WINDOW_DESC}}'
-          minutes: ${{env.PAGERDUTY_WINDOW_IN_MIN}}
-          service-ids: ${{env.PAGERDUTY_SERVICE_IDS}}
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
+          description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
+          minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
+          service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
 
       - run: |
-          echo "The maintenance window ID is: ${{steps.open-window.outputs.maintenance-window-id}}"
+          echo "The maintenance window ID is: ${{ steps.open-window.outputs.maintenance-window-id }}"
 
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          ref: ${{ env.GITHUB_REF }}
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: ${{env.DOTNET_VERSION}}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       # TODO:  If you need to do replacements in your appsettings.json file you can do it two ways.
       # 1- Repeat this add-or-update-json-properties action for each environment, and add an 'if: needs.set-vars.outputs.ENVIRONMENT == ""' condition with the appropriate env to each action.
@@ -299,9 +306,9 @@ jobs:
       # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.
       # - uses: im-open/octostache-action@v1.0.0
       #   with:
-      #     variablesFile: ./substitution-variables.json                          # Files containing the variable substitutions to make, you will need to create this file
-      #     templateFile: ./src/DemoApp19/Bff/FrontEnd/scripts/build-variables.js # The file to make the substitutions in
-      #     outputFile: ./src/DemoApp19/Bff/FrontEnd/scripts/build-variables.js   # The file to save the substitutions in (generally the same as above)
+      #     variablesFile: '' # Files containing the variable substitutions to make, you will need to create this file
+      #     templateFile: ''  # The file to make the substitutions in
+      #     outputFile: ''    # The file to save the substitutions in (generally the same as above)
 
       # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
@@ -347,22 +354,19 @@ jobs:
       # For example to perform transformations on a web.config using the web.production.config file:
       # dotnet publish --configuration Release /p:EnvironmentName=Production
       - name: Build and Publish
-        working-directory: ${{env.PROJECT_ROOT}}
+        working-directory: ${{ env.PROJECT_ROOT }}
         run: |
           dotnet build --configuration Release
           dotnet publish -c Release -o ./published_app --no-restore
 
       - name: Zip the published site for faster deployment and uploads
-        working-directory: ${{env.PROJECT_ROOT}}
-        # TODO:  If you plan on uploading artifacts, add this line to the run:
-        # (cd published_app && zip -r ../${{env.ARTIFACT_ZIP}} . -x */appsettings*.json appsettings*.json)
+        working-directory: ${{ env.PROJECT_ROOT }}
         run: |
-          (cd published_app && zip -r ../${{env.DEPLOY_ZIP}} .)
+          (cd published_app && zip -r ../${{ env.DEPLOY_ZIP }} .)
 
       - name: Stop App Pool
         id: app-pool-stop
         if: always()
-        runs-on: [self-hosted, windows-2019]
         uses: im-open/app-pool-action@v1.0.0
         with:
           action: 'stop'
@@ -373,11 +377,11 @@ jobs:
           server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
 
       - name: Deploy deployment package
-        if: always() && steps.iis-stop.outcome == 'success'
+        if: steps.app-pool-stop.outcome == 'success'
         uses: 'im-open/deploy-on-prem-web-app@v1.0.0'
         with:
           server: ${{ needs.set-vars.outputs.IIS_SERVER }}
-          source-zip-file-path: ../${{env.DEPLOY_ZIP }}
+          source-zip-file-path: ../${{ env.DEPLOY_ZIP }}
           deployment-folder-path: ${{ needs.set-vars.outputs.WEBSITE_PATH }}
           clean-deployment-folder: 'true'
           service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
@@ -385,8 +389,6 @@ jobs:
           server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
 
       - name: Start App Pool
-        if: always() && steps.app-pool-stop.outcome == 'success'
-        runs-on: [self-hosted, windows-2019]
         uses: im-open/app-pool-action@v1.0.0
         with:
           action: 'start'
@@ -407,8 +409,8 @@ jobs:
         continue-on-error: true
         working-directory: ${{ env.PROJECT_ROOT }}
         run: |
-          rm -f ${{env.DEPLOY_ZIP}}
-          rm -f published_app
+          rm -f ${{ env.DEPLOY_ZIP }}
+          rm -rf published_app
           rm -f appsettings*.json
 
   update-deployment-board-and-send-teams-notification:
@@ -440,7 +442,7 @@ jobs:
         if: always()
         uses: im-open/microsoft-teams-status-update-action@v1.0.0
         with:
-          title: Deploying ${{ needs.set-vars.outputs.AZ_APP_NAME }} to Azure # TODO:  Verify title
+          title: Deploying ${{ needs.set-vars.outputs.WEBSITE_NAME }} to ${{ needs.set-vars.outputs.IIS_SERVER }} # TODO:  Verify title
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists
