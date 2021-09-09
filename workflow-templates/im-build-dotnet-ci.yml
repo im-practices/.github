@@ -3,8 +3,12 @@
 name: .Net Core CI
 
 on:
+  # This workflow will run for the PR events:
+  # opened/reopened: A PR is opened/re-opened,
+  # synchronize: The PR's head branch is updated (commits pushed, the base branch changed or the head is updated from the base branch)
+  # closed: A PR is merged or closed (The triggers job makes sure we only run if a merge happened, not when a close happens)
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, closed]
 
 env:
   DOTNET_VERSION: '' # TODO:  Add the .net version
@@ -36,8 +40,26 @@ env:
 # TODO:  Check for the latest version of each action used
 
 jobs:
+  triggers:
+    runs-on: ubuntu-latest
+    outputs:
+      CONTINUE_WORKFLOW: ${{ env.CONTINUE_WORKFLOW }}
+      IS_MERGE_TO_MAIN: ${{ env.IS_MERGE_TO_MAIN}}
+    steps:
+      - run: echo "CONTINUE_WORKFLOW=true" >> $GITHUB_ENV
+      - run: echo "IS_MERGE_TO_MAIN=false" >> $GITHUB_ENV
+
+      - if: github.event.action == 'closed' && github.event.pull_request.merged == false
+        run: echo "CONTINUE_WORKFLOW=false" >> $GITHUB_ENV
+
+      - if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  verify default branch name
+        run: echo "IS_MERGE_TO_MAIN=true" >> $GITHUB_ENV
+
   dotnet-build-and-test:
     runs-on: [self-hosted, ubuntu-20.04] #TODO:  Switch this to [self-hosted, windows-2019] if building a db
+
+    needs: [triggers]
+    if: needs.triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
       run:
@@ -152,6 +174,9 @@ jobs:
   jest:
     runs-on: [self-hosted, ubuntu-20.04]
 
+    needs: [triggers]
+    if: needs.triggers.outputs.CONTINUE_WORKFLOW == 'true'
+
     defaults:
       run:
         shell: bash
@@ -236,6 +261,9 @@ jobs:
   validate-sam-yaml:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
+    needs: [triggers]
+    if: needs.triggers.outputs.CONTINUE_WORKFLOW == 'true'
+
     outputs:
       validate: 'Passed'
 
@@ -247,16 +275,18 @@ jobs:
 
   build-deployment-artifacts:
     runs-on: ubuntu-latest
-    # TODO:  Right now a pre-release will always be created with the published app as an asset and it happens
-    # in parallel with the jobs above.  If you only want the release to be created if the tests have passed,
-    # uncomment 'needs:'' below then this job will run after each of the jobs listed in 'needs:' have completed.
-    #needs: [ dotnet-build-and-test, jest, validate-sam-yaml ]
+    needs: [triggers, dotnet-build-and-test, jest, validate-sam-yaml]
+    if: needs.triggers.outputs.CONTINUE_WORKFLOW == 'true'
+
     defaults:
       run:
         shell: bash
 
     outputs:
-      NEXT_VERSION: ${{ steps.version.outputs.VERSION }}
+      NEXT_VERSION: ${{ env.VERSION }}
+
+    env:
+      IS_MERGE_TO_MAIN: ${{ needs.triggers.outputs.IS_MERGE_TO_MAIN }}
 
     steps:
       - name: Checkout Repository
@@ -275,12 +305,24 @@ jobs:
         run: |
           (cd published_app && zip -r ../${{env.DEPLOY_ZIP}} .)
 
-      - name: Calculate next version
-        id: version
+      - name: Calculate next pre-release version for branches
+        if: env.IS_MERGE_TO_MAIN == 'false'
         uses: im-open/git-version-lite@v1.0.0
         with:
           calculate-prerelease-version: true
           branch-name: ${{ github.head_ref }}
+
+      - name: Calculate next release version for merges to main
+        if: env.IS_MERGE_TO_MAIN == 'true'
+        uses: im-open/git-version-lite@v1.0.0
+
+      - name: Set PRERELEASE to true for branches
+        if: env.IS_MERGE_TO_MAIN == 'false'
+        run: echo "PRERELEASE=true" >> $GITHUB_ENV
+
+      - name: Set PRERELEASE to false for merges to main
+        if: env.IS_MERGE_TO_MAIN == 'true'
+        run: echo "PRERELEASE=false" >> $GITHUB_ENV
 
       # WARNING!!! This will upload the published_app.zip file to the release.  If it contains any sensitive information like in
       # appsettings.json or a web.config, that sensitive info will be available to download by anyone with read access to this repo.
@@ -290,14 +332,22 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           delete-existing-release: true # Handy when you hit 're-run jobs' on a workflow run
-          tag-name: ${{ steps.version.outputs.VERSION }}
-          prerelease: true
+          tag-name: ${{ env.VERSION }}
+          prerelease: ${{ env.PRERELEASE }}
           asset-path: ${{ env.PROJECT_ROOT }}/${{ env.DEPLOY_ZIP }}
           asset-name: ${{ env.DEPLOY_ZIP }}
           asset-content-type: application/zip
 
+      #TODO:  Remove this step if you want to keep the pre-releases/tags that were generated for each of the branch builds
+      - name: Cleanup the branch pre-releases
+        if: env.IS_MERGE_TO_MAIN == 'true'
+        uses: im-open/delete-prereleases-for-branch@v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          branch-name: ${{ github.head_ref }}
+
   finish-build:
-    if: always()
+    if: always() && needs.triggers.outputs.CONTINUE_WORKFLOW == 'true'
     needs:
       [
         dotnet-build-and-test,
@@ -346,6 +396,7 @@ jobs:
             ]
 
       - name: Comment on PR with version ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
+        if: github.event_name == "pull_request"
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
