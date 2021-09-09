@@ -9,11 +9,14 @@ on:
 env:
   DOTNET_VERSION: '' # TODO:  Add the .net version
   SOLUTION_FILE: '' # TODO:  Fill in the path and name of the solution file
+  PROJECT_ROOT: '' # TODO:  Fill in the path to the folder containing the project to pre-build artifacts for, like ./src/MyBff
+  DEPLOY_ZIP: 'published_app.zip'
+  REPO_URL: 'https://github.com/${{ github.repository }}'
   CODE_COVERAGE_REPORT_NAME_DOTNET: '' # TODO:  Add a name for the code coverage report like '<project> Code Coverage'
-  CODE_COVERAGE_REPORT_NAME_JEST: '' # TODO:  Add a name for the code coverage report like '<project> Code Coverage'
   CODE_COVERAGE_CHECK_NAME_DOTNET: 'dotnet code coverage'
-  CODE_COVERAGE_CHECK_NAME_JEST: 'jest code coverage'
   CODE_COVERAGE_DIR_DOTNET: 'coverage-results/dotnet'
+  CODE_COVERAGE_REPORT_NAME_JEST: '' # TODO:  Add a name for the code coverage report like '<project> Code Coverage'
+  CODE_COVERAGE_CHECK_NAME_JEST: 'jest code coverage'
   CODE_COVERAGE_DIR_JEST: 'coverage-results/jest'
   JEST_TEST_DIR: '' # TODO: Add the path to dir containing the package.json file that knows how to run the jest tests.  Like ./src/MyApp.Bff/FrontEnd
   JEST_TEST_RESULTS_FILE: 'jest-results.json'
@@ -27,7 +30,7 @@ env:
   DROP_DB_AFTER_STEP: '' # TODO: [true|false] Indicates whether the db should be dropped after the build step
 
 # TODO:  On the process=code-coverage-summary, process-dotnet-test-results and process-jest-test-results actions the
-# create-status-check is set to true and create-pr-comment is set to false but these can be udpated as desired.
+# create-status-check is set to true and create-pr-comment is set to false but these can be updated as desired.
 # If this workflow is ran many times for a PR the create-pr-comment may become very chatty.
 
 # TODO:  Check for the latest version of each action used
@@ -242,9 +245,66 @@ jobs:
       - name: Validate SAM.yaml
         run: echo "TODO - Implement once the action has been created"
 
+  build-deployment-artifacts:
+    runs-on: ubuntu-latest
+    # TODO:  Right now a pre-release will always be created with the published app as an asset and it happens
+    # in parallel with the jobs above.  If you only want the release to be created if the tests have passed,
+    # uncomment 'needs:'' below then this job will run after each of the jobs listed in 'needs:' have completed.
+    #needs: [ dotnet-build-and-test, jest, validate-sam-yaml ]
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      NEXT_VERSION: ${{ steps.version.outputs.VERSION }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Build and Publish
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: |
+          dotnet build --configuration Release
+          dotnet publish -c Release -o ./published_app --no-restore
+
+      - name: Zip the published app
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: |
+          (cd published_app && zip -r ../${{env.DEPLOY_ZIP}} .)
+
+      - name: Calculate next version
+        id: version
+        uses: im-open/git-version-lite@v1.0.0
+        with:
+          calculate-prerelease-version: true
+          branch-name: ${{ github.head_ref }}
+
+      # WARNING!!! This will upload the published_app.zip file to the release.  If it contains any sensitive information like in
+      # appsettings.json or a web.config, that sensitive info will be available to download by anyone with read access to this repo.
+      - name: Create Release with published_artifacts
+        id: create_release
+        uses: im-open/create-release@v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          delete-existing-release: true # Handy when you hit 're-run jobs' on a workflow run
+          tag-name: ${{ steps.version.outputs.VERSION }}
+          prerelease: true
+          asset-path: ${{ env.PROJECT_ROOT }}/${{ env.DEPLOY_ZIP }}
+          asset-name: ${{ env.DEPLOY_ZIP }}
+          asset-content-type: application/zip
+
   finish-build:
     if: always()
-    needs: [dotnet-build-and-test, jest, validate-sam-yaml]
+    needs:
+      [
+        dotnet-build-and-test,
+        jest,
+        validate-sam-yaml,
+        build-deployment-artifacts,
+      ]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - uses: im-open/workflow-conclusion@v1.0.1
@@ -284,6 +344,24 @@ jobs:
             [
               { "name": "", "uri": "" }
             ]
+
+      - name: Comment on PR with version ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            let nextVersion = '${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}';
+            let hasRelease = nextVersion && nextVersion.length > 0;
+            let releaseText = hasRelease ? '${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}](${{ env.REPO_URL }}/releases/${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}' : 'N/A';
+            const commentBody = `
+            - [Workflow Run - ${{ steps.conclusion.outputs.workflow_conclusion }}](${{ env.REPO_URL }}/actions/runs/${{ github.run_id }})
+            - [Release - ${releaseText})`;
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
 
       - name: Check for Failures
         if: steps.conclusion.outputs.workflow_conclusion == 'failure'
