@@ -92,6 +92,30 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
+      # TODO:  Remove this step if you do not want a teams notification
+      - name: Send Status to Teams
+        if: always()
+        uses: im-open/microsoft-teams-status-update-action@v1.0.0
+        with:
+          title: Auto-Deploying <project-name> Terraform to Dev # TODO:  Verify title
+          workflow-status: ${{ job.status }}
+          workflow-type: Deploy
+          teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists in GitHub
+          timezone: America/Denver # TODO:  Verify timezone
+          # TODO:  Verify the custom facts you want included
+          custom-facts: |
+            [
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" }
+            ]
+          # TODO:  Verify additional buttons you want included.  A View Build Log is included by default.  If no additional actions are needed, delete this arg.
+          custom-actions: |
+            [
+              { "name": "", "uri": "" }
+            ]
+
       # TODO: Remove if not using an automated deployment project board
       # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
       - name: Update Deployment Board
