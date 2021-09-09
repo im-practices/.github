@@ -1,0 +1,19 @@
+# Workflow Code: PanickyGnat_v1    DO NOT REMOVE
+
+name: Cleanup Releases for Branches
+on:
+  workflow_dispatch:
+    inputs:
+      branch-name:
+        description: The name of the branch the cleanup should be run for
+        required: true
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clean up the releases that were created for the branch
+        uses: im-open/delete-prereleases-for-branch@v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          branch-name: ${{ github.event.inputs.branch-name }}

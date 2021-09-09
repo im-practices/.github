@@ -1,0 +1,5 @@
+{
+    "name": "Build - Cleanup Releases for Branches",
+    "description": "Workflow template for cleaning up the releases that were created for branches.",
+    "iconName": "im_build"
+}
