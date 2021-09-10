@@ -14,8 +14,6 @@ jobs:
   cleanup-board:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
-      - uses: actions/checkout@v2
-
       - name: Cleanup
         uses: im-open/cleanup-deployment-board@v1.0.0
         with:
