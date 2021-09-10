@@ -10,14 +10,14 @@ name: Deploy On Prem Website
 on:
   workflow_dispatch:
     inputs:
-      branch-tag-sha:
-        description: The branch, tag or sha of the code that should be deployed.
+      tag:
+        description: The repository tag pointing to the code that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
         description: The environment to deploy to.
         required: true
 env:
-  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha }}
+  GITHUB_REF: ${{ github.event.inputs.tag }}
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
@@ -60,8 +60,8 @@ jobs:
 
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
 
-      # TODO: If any of the following deployment vars do not vary from environment to environment,
-      #       they should be converted to a global
+      # TODO: If any of the following deployment vars do not vary from environment to environment, they should
+      #      be converted to a global env var at the top of the workflow and the output in this job should be removed
 
       # TODO:  Fill in the iis-server and remove the environments that are not used.
       - name: Set IIS Server
@@ -237,7 +237,7 @@ jobs:
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
 
-      # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
+      # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
@@ -260,9 +260,9 @@ jobs:
       PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
-      DOTNET_VERSION: '' # TODO:  Set the .net core version of your project
-      PROJECT_ROOT: '' # TODO:  set this to the folder of your web site project. For most projects this will be ./src/ProjectName
-      DEPLOY_ZIP: 'published_site.zip'
+     ASSET_ZIP: 'published_app.zip' # TODO: Verify that this wasn't changed in the CI build.  This is the value in that workflow by default.
+      UNZIPPED_ASSET: 'published_app'
+      DEPLOY_ZIP: 'deploy.zip'
 
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
@@ -279,15 +279,15 @@ jobs:
       - run: |
           echo "The maintenance window ID is: ${{ steps.open-window.outputs.maintenance-window-id }}"
 
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Download artifacts from release
+        uses: im-open/download-release-asset@v1.0.0
         with:
-          ref: ${{ env.GITHUB_REF }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          asset-name: ${{ env.ASSET_ZIP }}
+          tag-name: ${{ github.event.inputs.tag}}
 
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Unzip release asset
+        run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
 
       # TODO:  If you need to do replacements in your appsettings.json file you can do it two ways.
       # 1- Repeat this add-or-update-json-properties action for each environment, and add an 'if: needs.set-vars.outputs.ENVIRONMENT == ""' condition with the appropriate env to each action.
@@ -295,7 +295,7 @@ jobs:
       # - name: Update appsettings.json with Environment Specific Values
       #   uses: im-open/add-or-update-json-properties@v1.0.1
       #   with:
-      #     path-to-json-file: '${{ env.PROJECT_ROOT }}/appsettings.json'
+      #     path-to-json-file: '${{ env.UNZIPPED_ASSET }}/appsettings.json'
       #     properties-to-update-or-add: |
       #       [
       #         {"SecretName": "SecretValue"},
@@ -320,18 +320,9 @@ jobs:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
       #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
 
-      # TODO:  If config transformation is needed for different environments include environment name
-      # For example to perform transformations on a web.config using the web.production.config file:
-      # dotnet publish --configuration Release /p:EnvironmentName=Production
-      - name: Build and Publish
-        working-directory: ${{ env.PROJECT_ROOT }}
-        run: |
-          dotnet build --configuration Release
-          dotnet publish -c Release -o ./published_app --no-restore
       - name: Zip the published app for faster deployment and uploads
-        working-directory: ${{ env.PROJECT_ROOT }}
-        run: |
-          (cd published_app && zip -r ../${{ env.DEPLOY_ZIP }} .)
+        working-directory: ${{ env.UNZIPPED_ASSET }}
+        run: zip -r ../${{env.DEPLOY_ZIP}} .
 
       # Uncomment this if the site hasn't been created before
       # This action does work better if the website cert is already installed
@@ -350,19 +341,6 @@ jobs:
       #     service-account-password: '${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}'
       #     server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
 
-      # TODO:  If config transformation is needed for different environments include environment name
-      # For example to perform transformations on a web.config using the web.production.config file:
-      # dotnet publish --configuration Release /p:EnvironmentName=Production
-      - name: Build and Publish
-        working-directory: ${{ env.PROJECT_ROOT }}
-        run: |
-          dotnet build --configuration Release
-          dotnet publish -c Release -o ./published_app --no-restore
-
-      - name: Zip the published site for faster deployment and uploads
-        working-directory: ${{ env.PROJECT_ROOT }}
-        run: |
-          (cd published_app && zip -r ../${{ env.DEPLOY_ZIP }} .)
 
       - name: Stop App Pool
         id: app-pool-stop
@@ -405,13 +383,13 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
-      - name: Delete .zip and appsettings file that contains sensitive info
+      - name: Delete .zips and folder that contains sensitive info
         continue-on-error: true
         working-directory: ${{ env.PROJECT_ROOT }}
         run: |
+          rm -f ${{ env.ASSET_ZIP }}
           rm -f ${{ env.DEPLOY_ZIP }}
-          rm -rf published_app
-          rm -f appsettings*.json
+          rm -rf ${{ env.UNZIPPED_ASSET }}
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
