@@ -163,7 +163,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           asset-name: ${{ env.ASSET_ZIP }}
-          tag-name: ${{ github.event.inputs.tag}}
+          tag-name: ${{ github.event.inputs.tag }}
 
       - name: Unzip release asset
         run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
@@ -268,7 +268,7 @@ jobs:
       - name: Delete the folder that contains sensitive info
         continue-on-error: true
         run: |
-          rm -f ${{env.ASSET_ZIP}}
+          rm -f ${{ env.ASSET_ZIP }}
           rm -rf ${{ env.UNZIPPED_ASSET }}
 
       # TODO:  Uncomment if you have a separate workflow for swapping slots and you want to trigger it now.  Delete if you don't.
