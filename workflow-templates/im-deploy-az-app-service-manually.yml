@@ -10,14 +10,14 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: The tag that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
+        description: The repository tag pointing to the code that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
         description: The environment to deploy to - dev|qa|stage|prod|demo|uat
         required: true
 
 env:
-  GITHUB_REF: ${{ github.event.inputs.tag  }} # This is the branch/tag/sha that we'll be deploying
+  GITHUB_REF: ${{ github.event.inputs.tag  }} # This is the tag that we'll be deploying
 
 jobs:
   set-vars:
@@ -117,7 +117,7 @@ jobs:
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
 
-      # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
+      # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
@@ -251,7 +251,7 @@ jobs:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           resourceGroupName: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.AZ_INSIGHTS_NAME }}'
-          releaseName: ${{ env.GITHUB_REF }} # TODO:  Verify release name (this will be the branch/tag/sha that the user input)
+          releaseName: ${{ env.GITHUB_REF }} # TODO:  Verify release name (this will be the tag that the user input)
           category: 'Deployment'
           customMetadata: 'ProjectName=${{ needs.set-vars.outputs.AZ_APP_NAME }},DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
 
