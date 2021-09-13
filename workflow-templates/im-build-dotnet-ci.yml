@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       CONTINUE_WORKFLOW: ${{ env.CONTINUE_WORKFLOW }}
-      IS_MERGE_TO_MAIN: ${{ env.IS_MERGE_TO_MAIN}}
+      IS_MERGE_TO_MAIN: ${{ env.IS_MERGE_TO_MAIN }}
     steps:
       - run: echo "CONTINUE_WORKFLOW=true" >> $GITHUB_ENV
       - run: echo "IS_MERGE_TO_MAIN=false" >> $GITHUB_ENV
@@ -303,7 +303,7 @@ jobs:
       - name: Zip the published app
         working-directory: ${{ env.PROJECT_ROOT }}
         run: |
-          (cd published_app && zip -r ../${{env.DEPLOY_ZIP}} .)
+          (cd published_app && zip -r ../${{ env.DEPLOY_ZIP }} .)
 
       - name: Calculate next pre-release version for branches
         if: env.IS_MERGE_TO_MAIN == 'false'

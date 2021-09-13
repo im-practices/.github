@@ -9,15 +9,15 @@ name: Manually deploy AZ Function
 on:
   workflow_dispatch:
     inputs:
-      branch-tag-sha:
-        description: The branch, tag or sha of the code that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
+      tag:
+        description: The repository tag pointing to the code that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
         description: The environment to deploy to - dev|qa|stage|prod|demo|uat
         required: true
 
 env:
-  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
+  GITHUB_REF: ${{ github.event.inputs.tag  }} # This is the tag that we'll be deploying
 
 jobs:
   set-vars:
@@ -118,7 +118,7 @@ jobs:
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
 
-      # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
+      # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
@@ -141,11 +141,10 @@ jobs:
       PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Make sure this secret exists.  The PD svc id usually has a format of P0XXXXX
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window.  This is typically set at 30 min in Octopus
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
-      DOTNET_VERSION: '' # TODO:  Set the .net core version of your project
-      PROJECT_ROOT: '' # TODO:  set this to the ./path/and/folder of your function project. For most projects this will be ./src/ProjectName
       AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot.  If this differs per environment, add a new section in the set-vars job above where the value can be set per environment
       TARGET_SLOT: 'Production' # TODO:  Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main func, update it here
-      DEPLOY_ZIP: 'published_app.zip'
+      ASSET_ZIP: 'published_app.zip' # TODO: Verify that this wasn't changed in the CI build.  This is the value in that workflow by default.
+      UNZIPPED_ASSET: 'published_app'
 
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
@@ -159,14 +158,15 @@ jobs:
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
 
-      - uses: actions/checkout@v2
+      - name: Download artifacts from release
+        uses: im-open/download-release-asset@v1.0.0
         with:
-          ref: ${{ env.GITHUB_REF }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          asset-name: ${{ env.ASSET_ZIP }}
+          tag-name: ${{ github.event.inputs.tag }}
 
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Unzip release asset
+        run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
 
       # TODO:  If you need to do replacements in your appsettings.json file you can do it two ways.
       # 1- Repeat this add-or-update-json-properties action for each environment, and add an 'if: needs.set-vars.outputs.ENVIRONMENT == ""' condition with the appropriate env to each action.
@@ -174,7 +174,7 @@ jobs:
       # - name: Update appsettings.json with Environment Specific Values
       #   uses: im-open/add-or-update-json-properties@v1.0.1
       #   with:
-      #     path-to-json-file: '${{ env.PROJECT_ROOT }}/appsettings.json'
+      #     path-to-json-file: '${{ env.UNZIPPED_ASSET }}/appsettings.json'
       #     properties-to-update-or-add: |
       #       [
       #         {"SecretName": "SecretValue"},
@@ -199,11 +199,6 @@ jobs:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
       #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
 
-      - name: Build and Publish
-        working-directory: ${{ env.PROJECT_ROOT }}
-        run: |
-          dotnet build --configuration Release
-          dotnet publish -c Release -o ./published_func --no-restore
       - name: AZ Login
         id: login
         uses: azure/login@v1
@@ -224,7 +219,7 @@ jobs:
         uses: azure/functions-action@v2
         with:
           app-name: ${{ needs.set-vars.outputs.AZ_FUNC_NAME }}
-          package: ${{ env.PROJECT_ROOT }}/published_func
+          package: ./${{ env.UNZIPPED_ASSET }}
           # slot-name: ${{ env.AZ_SLOT_NAME }}  # TODO:  Uncomment if using slots, delete if not
 
       # TODO:  Uncomment if using slots and you want to swap them now (as opposed to doing it in another workflow).  Delete this block if you don't.
@@ -252,7 +247,7 @@ jobs:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           resourceGroupName: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.AZ_INSIGHTS_NAME }}'
-          releaseName: ${{ env.GITHUB_REF }} # TODO:  Verify release name (this will be the branch/tag/sha that the user input)
+          releaseName: ${{ env.GITHUB_REF }} # TODO:  Verify release name (this will be the tag that the user input)
           category: 'Deployment'
           customMetadata: 'ProjectName=${{ needs.set-vars.outputs.AZ_FUNC_NAME }},DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
 
@@ -269,6 +264,12 @@ jobs:
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
+
+      - name: Delete the folder that contains sensitive info
+        continue-on-error: true
+        run: |
+          rm -f ${{ env.ASSET_ZIP }}
+          rm -rf ${{ env.UNZIPPED_ASSET }}
 
       # TODO:  Uncomment if you have a separate workflow for swapping slots and you want to trigger it now.  Delete if you don't.
       # - name: Trigger the Slot Swap
