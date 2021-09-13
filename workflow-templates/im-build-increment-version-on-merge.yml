@@ -1,4 +1,4 @@
-# Workflow Code: AngryGoose_v1    DO NOT REMOVE
+# Workflow Code: AngryGoose_v2    DO NOT REMOVE
 
 # Note: This workflow should not be used with CI workflows that create their own releases, this workflow would conflict with that.
 
@@ -26,17 +26,3 @@ jobs:
           create-ref: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           default-release-type: major
-
-      - name: Push the tag
-        uses: actions/github-script@v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            let newTag = '${{ steps.version.outputs.VERSION }}'
-            core.info(`Pushing tag '${newTag}' to the repository...`)
-            await github.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: `refs/tags/${newTag}`,
-              sha: context.sha
-            });
