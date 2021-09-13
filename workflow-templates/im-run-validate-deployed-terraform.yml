@@ -1,4 +1,4 @@
-# Workflow Code: ShinySQUIRREL_v1    DO NOT REMOVE
+# Workflow Code: ShinySQUIRREL_v2    DO NOT REMOVE
 
 # Pre-requisites
 # This workflow relies on a Deployment Board being set up to determine what should be currently deployed to the environment
@@ -9,8 +9,10 @@ on:
   schedule:
     # See the following site for help creating the right cron syntax: https://crontab.guru/
     # The cron job is specified in UTC.
-    # 05:00 on Monday UTC
-    - cron: 0 5 * * 1 #TODO:  Pick a new time to avoid running scheduled scans at the same time as everyone else.
+    # 16:00 on Monday UTC
+    # TODO:  Pick a new UTC time to avoid running scheduled scans at the same time as everyone else.  This also generates PD alerts so you probably want it to happen during business hours.
+    - cron: 0 16 * * 1
+  workflow_dispatch:
 
 jobs:
   auto-plan-the-tf:
@@ -121,16 +123,22 @@ jobs:
         run: terraform init
 
       # TODO:  Remove the pagerduty token if not configuring pagerduty.  If using pagerduty verify 'pagerduty_token' is the name of the variable that tf expects
-      # TODO:  Add any other secrets that would be required for a tf plan to succeed
+      # TODO:  Add any other secrets that would be required for a tf plan to succeed.  Since this is a multi-line command every line except the last will need a \ on the end of it
       # PAGERDUTY_API_KEY is an org level secret
       - name: Terraform Plan
         id: plan
         run: |
           terraform plan -detailed-exitcode \
-          -var="pagerduty_token=${{ secrets.PAGERDUTY_API_KEY }}"
+            -var="pagerduty_token=${{ secrets.PAGERDUTY_API_KEY }}"
         continue-on-error: true
 
-      - name: Trigger PagerDuty
+      - name: Fail the Job if terraform exited
+        if: steps.plan.outputs.exitcode == '1'
+        run: |
+          echo "Terraform plan failed"
+          exit 1
+
+      - name: Trigger PagerDuty when there are changes
         if: steps.plan.outputs.exitcode == '2'
         uses: im-open/create-pagerduty-incident@v1.0.0
         with:
@@ -139,3 +147,9 @@ jobs:
           email: 'svc-hubot@extendhealth.com'
           title: 'Your terraform does not match what was expected!'
           body: 'The workflow found changes in the ${{matrix.environment}} environment.  The workflow expected the infrastructure to match the terraform at ${{ steps.get-latest.outputs.VERSION }}.  See workflow run at ${{ env.REPO_URL }}/actions/runs/${{ github.run_id }} for more details.'
+
+      - name: Fail the Job if a PagerDuty incident was created for ${{ matrix.environment }}
+        if: steps.plan.outputs.exitcode == '2'
+        run: |
+          echo "PagerDuty Incident was created."
+          exit 1
