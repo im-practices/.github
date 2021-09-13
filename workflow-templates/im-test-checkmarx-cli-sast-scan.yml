@@ -8,7 +8,9 @@ on:
     paths:
       - 'src/**' #TODO:  Verify this is the directory with source code to be scanned.
   schedule:
-    # 05:00 on Monday
+    # See the following site for help creating the right cron syntax: https://crontab.guru/
+    # The cron job is specified in UTC.
+    # 05:00 on Monday UTC
     - cron: 0 5 * * 1 #TODO:  Pick a new time to avoid running scheduled scans at the same time as everyone else.
 
 jobs:

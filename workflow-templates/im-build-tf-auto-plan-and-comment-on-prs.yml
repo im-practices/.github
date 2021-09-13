@@ -1,4 +1,4 @@
-# Workflow Code: DeterminedPorcupine_v1    DO NOT REMOVE
+# Workflow Code: DeterminedPorcupine_v2    DO NOT REMOVE
 
 name: Automatically run tf plan and comment on PR
 on:
@@ -102,32 +102,8 @@ jobs:
               body: output
             })
 
-      # TODO:  Remove this step if you do not want a teams notification
-      - name: Send Status to Teams
-        if: always()
-        uses: im-open/microsoft-teams-status-update-action@v1.0.0
-        with:
-          title: Auto-Deploying <project-name> Terraform to Dev # TODO:  Verify title
-          workflow-status: ${{ job.status }}
-          workflow-type: Deploy
-          teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists in GitHub
-          timezone: America/Denver # TODO:  Verify timezone
-          # TODO:  Verify the custom facts you want included
-          custom-facts: |
-            [
-              { "name": "Event", "value": "${{ github.event_name }}" },
-              { "name": "Workflow", "value": "${{ github.workflow }}" },
-              { "name": "Run", "value": "${{ github.run_id }}" },
-              { "name": "Actor", "value": "${{ github.actor }}" }
-            ]
-          # TODO:  Verify additional buttons you want included.  A View Build Log is included by default.  If no additional actions are needed, delete this arg.
-          custom-actions: |
-            [
-              { "name": "", "uri": "" }
-            ]
-
       - name: Terraform Plan Status
-        if: steps.fmt.outcome == 'failure' || steps.init.outcome == 'failure' ||steps.plan.outcome == 'failure'
+        if: steps.fmt.outcome == 'failure' || steps.init.outcome == 'failure' || steps.plan.outcome == 'failure'
         run: |
           echo "fmt outcome ${{ steps.fmt.outcome }}"
           echo "init outcome ${{ steps.init.outcome }}"

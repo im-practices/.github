@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v1    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v2    DO NOT REMOVE
 
 name: Auto Apply main branch to Dev on PR Merge
 on:
@@ -77,7 +77,7 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
-          service-ids: '[ "P0XXXXX" ]'
+          service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
 
       # TODO:  Remove the pagerduty token if not configuring pagerduty.  If using pagerduty verify 'pagerduty_token' is the name of the variable that tf expects
       # PAGERDUTY_API_KEY is an organization-level secret
