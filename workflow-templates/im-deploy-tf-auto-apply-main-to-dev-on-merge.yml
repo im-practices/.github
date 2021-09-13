@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v2    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v3    DO NOT REMOVE
 
 name: Auto Apply main branch to Dev on PR Merge
 on:
@@ -80,6 +80,7 @@ jobs:
           service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
 
       # TODO:  Remove the pagerduty token if not configuring pagerduty.  If using pagerduty verify 'pagerduty_token' is the name of the variable that tf expects
+      # TODO:  Add any other secrets that would be required for a tf plan to succeed.  Since this is a multi-line command every line except the last will need a \ on the end of it
       # PAGERDUTY_API_KEY is an organization-level secret
       - name: Terraform Apply
         run: |
