@@ -1,4 +1,4 @@
-# Workflow Code: ShinySQUIRREL_v2    DO NOT REMOVE
+# Workflow Code: ShinySQUIRREL_v3    DO NOT REMOVE
 
 # Pre-requisites
 # This workflow relies on a Deployment Board being set up to determine what should be currently deployed to the environment
@@ -9,9 +9,9 @@ on:
   schedule:
     # See the following site for help creating the right cron syntax: https://crontab.guru/
     # The cron job is specified in UTC.
-    # 16:00 on Monday UTC
+    # 16:00 every day UTC
     # TODO:  Pick a new UTC time to avoid running scheduled scans at the same time as everyone else.  This also generates PD alerts so you probably want it to happen during business hours.
-    - cron: 0 16 * * 1
+    - cron: 0 16 * * 1-5
   workflow_dispatch:
 
 jobs:
@@ -39,7 +39,7 @@ jobs:
       SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }}
       SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
       SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
-      SSH_KEY_ON_PREM_EGRESS: ${{ secrets.SSH_ON_PREM_EGRESS }} # TODO: SSH_KEY_ON_PREM_EGRESS & its usages can be removed if you've transitioned to storage-account-network-rules v2.0.3 or higher and to network-information instead of on-prem-egress-ips in your tf.
+      # TODO:  If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 
     defaults:
       run:
@@ -114,8 +114,7 @@ jobs:
             [
               { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
               { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
-              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
             ]
 
       - name: Terraform Init

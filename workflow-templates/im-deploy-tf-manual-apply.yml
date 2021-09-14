@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v3    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v4    DO NOT REMOVE
 
 name: Apply Terraform
 on:
@@ -10,8 +10,6 @@ on:
       environment:
         description: The environment to deploy to - dev|qa|stage|prod|demo|uat
         required: true
-
-# TODO:  The terraform needs to be switched from on-prem-egress-ips to network-information.
 
 env:
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
@@ -26,8 +24,7 @@ env:
   SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }} # This is an org level secret
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
-  SSH_KEY_ON_PREM_EGRESS: ${{ secrets.SSH_ON_PREM_EGRESS }} # This is an org level secret,
-  # TODO: SSH_KEY_ON_PREM_EGRESS & its usages can be removed if you've transitioned to storage-account-network-rules v2.0.3 or higher and to network-information instead of on-prem-egress-ips in your tf.
+  # TODO:  If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 
 jobs:
   set-vars:
@@ -161,8 +158,7 @@ jobs:
             [
               { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
               { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
-              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
             ]
 
       - name: Open a PagerDuty Maintenance Window
@@ -266,8 +262,7 @@ jobs:
             [
               { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
               { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
-              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
             ]
 
       - name: AZ Login
@@ -348,7 +343,7 @@ jobs:
 
       - name: Send Status to Teams
         if: always()
-        uses: im-open/microsoft-teams-status-update-action@v1.0.0
+        uses: im-open/post-status-to-teams-action@v1.0.0
         with:
           title: Deploying <project-name> Terraform to Azure to ${{ needs.set-vars.outputs.ENVIRONMENT }} # TODO:  Verify title
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
