@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v1    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v2    DO NOT REMOVE
 
 name: .Net Core CI
 
@@ -374,7 +374,7 @@ jobs:
       # TODO: Remove if you do not want to send teams notifications after each push
       - name: Send Status to Teams
         if: always()
-        uses: im-open/microsoft-teams-status-update-action@v1.0.0
+        uses: im-open/post-status-to-teams-action@v1.0.0
         with:
           title: 'CI Build' # TODO:  Verify title
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}

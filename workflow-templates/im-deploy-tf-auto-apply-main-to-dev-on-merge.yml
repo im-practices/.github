@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v3    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v4    DO NOT REMOVE
 
 name: Auto Apply main branch to Dev on PR Merge
 on:
@@ -10,8 +10,6 @@ on:
       - 'qa/**'
       - 'stage/**'
       - 'prod/**'
-
-# TODO:  The terraform needs to be switched from on-prem-egress-ips to network-information.
 
 env:
   PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
@@ -28,8 +26,7 @@ env:
   SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }} # This is an org level secret
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
-  SSH_KEY_ON_PREM_EGRESS: ${{ secrets.SSH_ON_PREM_EGRESS }} # This is an org level secret
-  # TODO: SSH_KEY_ON_PREM_EGRESS & its usages can be removed if you've transitioned to storage-account-network-rules v2.0.3 or higher and to network-information instead of on-prem-egress-ips in your tf.
+  # TODO:  If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 
 jobs:
   auto-apply-tf:
@@ -56,8 +53,7 @@ jobs:
             [
               { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
               { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
-              { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
+              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
             ]
 
       - name: Setup Terraform
@@ -96,7 +92,7 @@ jobs:
       # TODO:  Remove this step if you do not want a teams notification
       - name: Send Status to Teams
         if: always()
-        uses: im-open/microsoft-teams-status-update-action@v1.0.0
+        uses: im-open/post-status-to-teams-action@v1.0.0
         with:
           title: Auto-Deploying <project-name> Terraform to Dev # TODO:  Verify title
           workflow-status: ${{ job.status }}
