@@ -1,0 +1,440 @@
+# Workflow Code: FuzzyDragon_v1    DO NOT REMOVE
+
+# Prerequisites
+# 1 - Make sure the Service account secrets have been added to the environment
+# 2 - Make sure the host IIS server has been prepped to accept incoming WinRM Requests
+#     See the IIS App Pool action README for more details: https://github.com/im-open/iis-service-action/#readme
+# 3 - If you're using a deployment board, create it first: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+
+name: Deploy On Prem Website
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The repository tag pointing to the code that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
+        required: true
+      environment:
+        description: The environment to deploy to.
+        required: true
+env:
+  GITHUB_REF: ${{ github.event.inputs.tag }}
+  # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
+
+jobs:
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    outputs:
+      ENVIRONMENT: ${{ needs.set-vars.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      IIS_Server: ${{ steps.iis-server.outputs.IIS_SERVER }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER }}
+      WEBSITE_NAME: ${{ steps.iis-server.outputs.WEBSITE_NAME }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_NAME }}
+      APP_POOL_NAME: ${{ steps.iis-server.outputs.APP_POOL_NAME }} # To use this value: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
+      WEBSITE_HOST_HEADER: ${{ steps.iis-server.outputs.WEBSITE_HOST_HEADER }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_HOST_HEADER }}
+      WEBSITE_PATH: ${{ steps.iis-server.outputs.WEBSITE_PATH }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_PATH }}
+      WEBSITE_CERT_FRIENDLY_NAME: ${{ steps.iis-server.outputs.WEBSITE_CERT_FRIENDLY_NAME }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_FRIENDLY_NAME }}
+      WEBSITE_CERT_PASSWORD: ${{ steps.iis-server.outputs.WEBSITE_CERT_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_PASSWORD }}
+      IIS_SERVER_SERVICE_USER: ${{ steps.iis-server.outputs.IIS_SERVER_SERVICE_USER }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
+      IIS_SERVER_SERVICE_PASSWORD: ${{ steps.iis-server.outputs.IIS_SERVER_SERVICE_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
+      IIS_SERVER_CERT_PATH: ${{ steps.iis-server.outputs.IIS_SERVER_CERT_PATH }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
+
+    steps:
+      - name: Set ENVIRONMENT
+        id: clean-env
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ github.event.inputs.environment }}
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          input_map: |
+            {
+              "dev": ["dev", "d", "development"],
+              "qa": ["qa", "q"],
+              "stage": ["stg", "s", "stage"],
+              "demo": ["o", "demo"],
+              "uat": ["u", "uat"],
+              "prod": ["prod", "production", "p"]
+            }
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
+      # TODO: If any of the following deployment vars do not vary from environment to environment, they should
+      #      be converted to a global env var at the top of the workflow and the output in this job should be removed
+
+      # TODO:  Fill in the iis-server and remove the environments that are not used.
+      - name: Set IIS Server
+        id: iis-server
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'IIS_SERVER'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          prod-value: ''
+          demo-value: ''
+          uat-value: ''
+
+      # TODO:  Fill in the website-name and remove the environments that are not used.
+      - name: Set Website Name
+        id: website-name
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'WEBSITE_NAME'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: '' # TODO: Add the dev website name or delete if env does not exist
+          qa-value: '' # TODO: Add the qa website name or delete if env does not exist
+          stage-value: '' # TODO: Add the stage website name or delete if env does not exist
+          prod-value: '' # TODO: Add the prod website name or delete if env does not exist
+          demo-value: '' # TODO: Add the demo website name or delete if env does not exist
+          uat-value: '' # TODO: Add the uat website name or delete if env does not exist
+
+      # TODO:  Fill in the app-pool-name and remove the environments that are not used.
+      - name: app-pool-name
+        id: app-pool-name
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'APP_POOL_NAME'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          prod-value: ''
+          demo-value: ''
+          uat-value: ''
+
+      # TODO:  Fill in the website-host-header and remove the environments that are not used.
+      - name: website-host-header
+        id: website-host-header
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'WEBSITE_HOST_HEADER'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: ''
+          qa-value: ''
+          stage-value:
+          prod-value: ''
+          demo-value: ''
+          uat-value: ''
+
+      # TODO:  Fill in the website-path and remove the environments that are not used.
+      - name: website-path
+        id: website-path
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'WEBSITE_PATH'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          prod-value: ''
+          demo-value: ''
+          uat-value: ''
+
+      # TODO:  Fill in the website-cert-path and remove the environments that are not used.
+      - name: website-cert-path
+        id: website-cert-path
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'WEBSITE_CERT_PATH'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          prod-value: ''
+          demo-value: ''
+          uat-value: ''
+
+      # TODO:  Fill in the website-cert-friendly-name and remove the environments that are not used.
+      - name: website-cert-friendly-name
+        id: website-cert-friendly-name
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'WEBSITE_CERT_FRIENDLY_NAME'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          prod-value: ''
+          demo-value: ''
+          uat-value: ''
+
+      # TODO:  Fill in the website-cert-password and remove the environments that are not used.
+      - name: website-cert-password
+        id: website-cert-password
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'WEBSITE_CERT_PASSWORD'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          prod-value: ''
+          demo-value: ''
+          uat-value: ''
+
+      # TODO:  Fill in the iis-server-service-user for WinRm access to the IIS Server and remove the environments that are not used.
+      - name: iis-server-service-user
+        id: iis-server-service-user
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'IIS_SERVER_SERVICE_USER'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          prod-value: ''
+          demo-value: ''
+          uat-value: ''
+
+      # TODO:  Fill in the iis-server-service-password for WinRm access to the IIS Server and remove the environments that are not used.
+      - name: iis-server-service-password
+        id: iis-server-service-password
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'IIS_SERVER_SERVICE_PASSWORD'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          prod-value: ''
+          demo-value: ''
+          uat-value: ''
+
+      # TODO:  Fill in the iis-server-cert-path for WinRm access to the IIS Server and remove the environments that are not used.
+      - name: iis-server-cert-path
+        id: iis-server-cert-path
+        uses: im-open/set-variable-based-on-environment@v1.0.0
+        with:
+          variable-name: 'IIS_SERVER_CERT_PATH'
+          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          dev-value: ''
+          qa-value: ''
+          stage-value: ''
+          prod-value: ''
+          demo-value: ''
+          uat-value: ''
+
+  # Each env has their own stakeholder approval environment.  If no required reviewers are set for
+  # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  stakeholder-approval:
+    needs: [set-vars]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
+    steps:
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
+      - name: Approval Received
+        run: echo "Stakeholder approval was received"
+
+  # This job needs to run for all environments because build-deploy relies
+  # on it but the steps inside this job will only run for the Prod env.
+  validate-tag-for-deploys:
+    needs: [set-vars, stakeholder-approval]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    steps:
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
+      # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
+      # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
+      - name: Checkout Repository
+        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        uses: actions/checkout@v2
+        with:
+          ref: 'main' # TODO: verify the name of your default branch
+          fetch-depth: 0
+
+      - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
+        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        with:
+          tag: ${{ env.GITHUB_REF }}
+
+  build-deploy:
+    needs: [set-vars, stakeholder-approval, validate-tag-for-prod-deploys]
+    runs-on: [self-hosted, windows-2019]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+
+    env:
+      PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Add your PD Service IDs here, the svc id usually has a format of P0XXXXX
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
+      ASSET_ZIP: 'published_app.zip' # TODO: Verify that this wasn't changed in the CI build.  This is the value in that workflow by default.
+      UNZIPPED_ASSET: 'published_app'
+      DEPLOY_ZIP: 'deploy.zip'
+
+    steps:
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
+      - name: Open a PagerDuty Maintenance Window
+        id: open-window
+        uses: im-open/open-pagerduty-maintenance-window@v1.0.0
+        with:
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
+          description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
+          minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
+          service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
+
+      - run: |
+          echo "The maintenance window ID is: ${{ steps.open-window.outputs.maintenance-window-id }}"
+
+      - name: Download artifacts from release
+        uses: im-open/download-release-asset@v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          asset-name: ${{ env.ASSET_ZIP }}
+          tag-name: ${{ github.event.inputs.tag}}
+
+      - name: Unzip release asset
+        run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
+
+      # TODO:  If you need to do replacements in your appsettings.json file you can do it two ways.
+      # 1- Repeat this add-or-update-json-properties action for each environment, and add an 'if: needs.set-vars.outputs.ENVIRONMENT == ""' condition with the appropriate env to each action.
+      # 2- In the set-vars job, add one set-variable-based-on-environment action block per variable then use that variable in the single add-or-update-json-properties action below.
+      # - name: Update appsettings.json with Environment Specific Values
+      #   uses: im-open/add-or-update-json-properties@v1.0.1
+      #   with:
+      #     path-to-json-file: '${{ env.UNZIPPED_ASSET }}/appsettings.json'
+      #     properties-to-update-or-add: |
+      #       [
+      #         {"SecretName": "SecretValue"},
+      #         {"Nested.Secret.Name": "SecretValue"},
+      #         {"": ""}
+      #       ]
+
+      # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.
+      # - uses: im-open/octostache-action@v1.0.0
+      #   with:
+      #     variablesFile: '' # Files containing the variable substitutions to make, you will need to create this file
+      #     templateFile: ''  # The file to make the substitutions in
+      #     outputFile: ''    # The file to save the substitutions in (generally the same as above)
+
+      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
+      # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
+      #        - Remove the file and use this action or
+      #        - Delete this action and modify the file so it has the appropriate org entries in nuget.config. https://github.com/im-practices/git-er-done/blob/main/packages/connect-nuget.md#script-output
+      # - name: Authenticate with GitHub Packages
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
+      #   with:
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
+      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+
+      - name: Zip the published app for faster deployment and uploads
+        working-directory: ${{ env.UNZIPPED_ASSET }}
+        run: zip -r ../${{env.DEPLOY_ZIP}} .
+
+      # Uncomment this if the site hasn't been created before
+      # This action does work better if the website cert is already installed
+      # - name: Create Web Site
+      #   uses: im-open/iis-site-create@v1.0.0
+      #   with:
+      #     server: '${{ needs.set-vars.outputs.IIS_SERVER }}'
+      #     website-name: '${{ needs.set-vars.outputs.WEBSITE_NAME }}'
+      #     app-pool-name: '${{ needs.set-vars.outputs.APP_POOL_NAME }}'
+      #     website-host-header: '${{ needs.set-vars.outputs.WEBSITE_HOST_HEADER }}'
+      #     website-path: '${{ needs.set-vars.outputs.WEBSITE_PATH }}'
+      #     website-cert-path: '${{ needs.set-vars.outputs.WEBSITE_CERT_PATH }}'
+      #     website-cert-friendly-name: '${{ needs.set-vars.outputs.WEBSITE_CERT_FRIENDLY_NAME }}'
+      #     website-cert-password: '${{ needs.set-vars.outputs.WEBSITE_CERT_PASSWORD }}'
+      #     service-account-id: '${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}'
+      #     service-account-password: '${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}'
+      #     server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
+
+
+      - name: Stop App Pool
+        id: app-pool-stop
+        if: always()
+        uses: im-open/app-pool-action@v1.0.0
+        with:
+          action: 'stop'
+          server: ${{ needs.set-vars.outputs.IIS_SERVER }}
+          app-pool-name: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
+          service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
+          service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
+          server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
+
+      - name: Deploy deployment package
+        if: steps.app-pool-stop.outcome == 'success'
+        uses: 'im-open/deploy-on-prem-web-app@v1.0.0'
+        with:
+          server: ${{ needs.set-vars.outputs.IIS_SERVER }}
+          source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
+          deployment-folder-path: ${{ needs.set-vars.outputs.WEBSITE_PATH }}
+          clean-deployment-folder: 'true'
+          service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
+          service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
+          server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
+
+      - name: Start App Pool
+        uses: im-open/app-pool-action@v1.0.0
+        with:
+          action: 'start'
+          server: ${{ needs.set-vars.outputs.IIS_SERVER }}
+          app-pool-name: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
+          service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
+          service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
+          server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
+
+      - name: Close the PagerDuty Maintenance Window
+        if: always() && steps.open-window.outcome == 'success'
+        uses: im-open/close-pagerduty-maintenance-window@v1.0.0
+        with:
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }}
+          maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
+
+      - name: Delete .zips and folder that contains sensitive info
+        continue-on-error: true
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: |
+          rm -f ${{ env.ASSET_ZIP }}
+          rm -f ${{ env.DEPLOY_ZIP }}
+          rm -rf ${{ env.UNZIPPED_ASSET }}
+
+  update-deployment-board-and-send-teams-notification:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    needs: [set-vars, deploy-code]
+    if: always()
+    steps:
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
+      - uses: im-open/workflow-conclusion@v1.0.2
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # TODO: Remove if not using an automated deployment project board
+      # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+      - name: Update Deployment Board
+        if: always()
+        uses: im-open/update-deployment-board@v1.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
+          ref: ${{ env.GITHUB_REF }}
+          deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          timezone: 'america/denver'
+
+      - name: Send Status to Teams
+        if: always()
+        uses: im-open/microsoft-teams-status-update-action@v1.0.0
+        with:
+          title: Deploying ${{ needs.set-vars.outputs.WEBSITE_NAME }} to ${{ needs.set-vars.outputs.IIS_SERVER }} # TODO:  Verify title
+          workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          workflow-type: Deploy
+          teams-uri: ${{ secrets.MS_TEAMS_URI }} # TODO:  Verify this secret exists
+          timezone: America/Denver # TODO:  Verify timezone
+          # TODO:  Verify the custom facts you want included
+          custom-facts: |
+            [
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" }
+            ]
+          # TODO:  Verify additional buttons you want included.  A View Build Log is included by default.  If no additional actions are needed, delete this arg.
+          custom-actions: |
+            [
+              { "name": "", "uri": "" }
+            ]
