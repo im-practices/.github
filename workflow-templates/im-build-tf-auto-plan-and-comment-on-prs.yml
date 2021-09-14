@@ -1,4 +1,4 @@
-# Workflow Code: DeterminedPorcupine_v4    DO NOT REMOVE
+# Workflow Code: DeterminedPorcupine_v5    DO NOT REMOVE
 
 name: Automatically run tf plan and comment on PR
 on:
@@ -23,7 +23,13 @@ env:
   SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }} # This is an org level secret
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
-  # TODO:  If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+  # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+  SSH_DEPLOY_KEY_INFO: |
+    [
+      { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
+      { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
+      { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
+    ]
 
 jobs:
   auto-plan-the-tf:
@@ -50,12 +56,7 @@ jobs:
       - name: Setup SSH Keys and known_hosts
         uses: im-open/setup-deploy-keys@1.0.1
         with:
-          deploy-key-info: |
-            [
-              { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
-              { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
-            ]
+          deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: Terraform Init
         id: init

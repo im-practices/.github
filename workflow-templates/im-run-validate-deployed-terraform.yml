@@ -1,4 +1,4 @@
-# Workflow Code: ShinySQUIRREL_v3    DO NOT REMOVE
+# Workflow Code: ShinySQUIRREL_v4    DO NOT REMOVE
 
 # Pre-requisites
 # This workflow relies on a Deployment Board being set up to determine what should be currently deployed to the environment
@@ -39,7 +39,13 @@ jobs:
       SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }}
       SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
       SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
-      # TODO:  If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+      # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+      SSH_DEPLOY_KEY_INFO: |
+        [
+          { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
+          { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
+          { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
+        ]
 
     defaults:
       run:
@@ -82,7 +88,7 @@ jobs:
               else {
                 const title = response.repository.issues.edges.map(ri => ri.node.title)[0];
                 core.info(`The following issues had label '${labelName}': '${title}'`);
-                
+
                 const regex = /(branch|tag|sha) Deploy: /i;
                 let version = title.replace(regex, '').trim();
                 core.info(`The deployed infrastructure will be compared against ${version}`);
@@ -110,12 +116,7 @@ jobs:
       - name: Setup SSH Keys and known_hosts
         uses: im-open/setup-deploy-keys@1.0.1
         with:
-          deploy-key-info: |
-            [
-              { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
-              { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
-            ]
+          deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: Terraform Init
         id: init

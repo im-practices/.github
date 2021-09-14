@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v4    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v5    DO NOT REMOVE
 
 name: Apply Terraform
 on:
@@ -24,7 +24,13 @@ env:
   SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }} # This is an org level secret
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
-  # TODO:  If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+  # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+  SSH_DEPLOY_KEY_INFO: |
+    [
+      { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
+      { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
+      { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
+    ]
 
 jobs:
   set-vars:
@@ -46,13 +52,13 @@ jobs:
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           input_map: |
-            { 
-              "dev": ["dev", "d", "development"], 
-              "qa": ["qa", "q"], 
-              "stage": ["stg", "s", "stage"], 
-              "demo": ["o", "demo"], 
-              "uat": ["u", "uat"], 
-              "prod": ["prod", "production", "p"] 
+            {
+              "dev": ["dev", "d", "development"],
+              "qa": ["qa", "q"],
+              "stage": ["stg", "s", "stage"],
+              "demo": ["o", "demo"],
+              "uat": ["u", "uat"],
+              "prod": ["prod", "production", "p"]
             }
           error_on_no_match: true
           custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
@@ -154,12 +160,7 @@ jobs:
       - name: Setup SSH Keys and known_hosts
         uses: im-open/setup-deploy-keys@1.0.1
         with:
-          deploy-key-info: |
-            [
-              { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
-              { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
-            ]
+          deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -258,12 +259,7 @@ jobs:
       - name: Setup SSH Keys and known_hosts
         uses: im-open/setup-deploy-keys@1.0.1
         with:
-          deploy-key-info: |
-            [
-              { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
-              { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
-            ]
+          deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: AZ Login
         uses: azure/login@v1
@@ -289,7 +285,7 @@ jobs:
           az storage blob download --no-progress --auth-mode key --account-key $key --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $pwd/$terraformBlobName --name $terraformBlobName
 
           try {
-            [System.IO.Compression.ZipFile]::ExtractToDirectory("$pwd/$terraformBlobName", "$pwd/plans")    
+            [System.IO.Compression.ZipFile]::ExtractToDirectory("$pwd/$terraformBlobName", "$pwd/plans")
           }
           catch {
             # Even though it hits this catch block the archive is extracted as expected.  No good explanation.
