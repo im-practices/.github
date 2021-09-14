@@ -1,4 +1,4 @@
-# Workflow Code: InsecureLion_v2    DO NOT REMOVE
+# Workflow Code: InsecureLion_v3    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the az secrets have been added to the environment
@@ -138,7 +138,6 @@ jobs:
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     env:
-      PAGERDUTY_SERVICE_IDS: '[ "${{ secrets.PAGERDUTY_SERVICE_ID }}" ]' # TODO:  Make sure this secret exists.  The PD svc id usually has a format of P0XXXXX
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window.  This is typically set at 30 min in Octopus
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
       AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot.  If this differs per environment, add a new section in the set-vars job above where the value can be set per environment
@@ -151,12 +150,12 @@ jobs:
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
-        uses: im-open/open-pagerduty-maintenance-window@v1.0.0
+        uses: im-open/open-pagerduty-maintenance-window@v1.0.1
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
-          service-ids: ${{ env.PAGERDUTY_SERVICE_IDS }}
+          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # TODO: make sure this secret has been populated in your repository
 
       - name: Download artifacts from release
         uses: im-open/download-release-asset@v1.0.0
