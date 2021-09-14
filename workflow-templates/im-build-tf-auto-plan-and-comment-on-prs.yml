@@ -23,7 +23,15 @@ env:
   SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }} # This is an org level secret
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
-  # TODO:  If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+  SSH_KEY_ON_PREM_EGRESS: ${{ secrets.SSH_ON_PREM_EGRESS }} # This is an org level secret
+  # TODO: SSH_KEY_ON_PREM_EGRESS & its usages can be removed if you've transitioned to storage-account-network-rules v2.0.3 or higher and to network-information instead of on-prem-egress-ips in your tf.
+  SSH_DEPLOY_KEY_INFO: |
+    [
+      { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
+      { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
+      { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
+      { "orgAndRepo": "im-platform/on-prem-egress-ips", "envName" : "SSH_KEY_ON_PREM_EGRESS" }
+    ]
 
 jobs:
   auto-plan-the-tf:
@@ -50,12 +58,7 @@ jobs:
       - name: Setup SSH Keys and known_hosts
         uses: im-open/setup-deploy-keys@1.0.1
         with:
-          deploy-key-info: |
-            [
-              { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
-              { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-              { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
-            ]
+          deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: Terraform Init
         id: init
