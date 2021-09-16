@@ -1,0 +1,102 @@
+# Workflow Code: FrazzledFerret_v1    DO NOT REMOVE
+
+name: Unlock Terrafrom State
+on:
+  workflow_dispatch:
+    inputs:
+      lock-id:
+        description: The lock ID that needs to be removed.  Terraform provides this value (lock info.ID) in the message indicating there was an error acquiring the state lock.
+        required: true
+      environment:
+        description: The environment the lock should be removed in - dev|qa|stage|prod|demo|uat
+        required: true
+      branch-tag-sha:
+        description: The branch, tag or sha of the terraform that is currently in the environment where the lock is.  This is needed to do a terraform init with the appropriate code.
+        required: true
+
+env:
+  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }}
+  PLAN_STORAGE_CONTAINER: 'tfstate'
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_ENVIRONMENT: 'public'
+  TF_IN_AUTOMATION: 'true'
+  TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
+  # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+  SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }} # This is an org level secret
+  SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
+  SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
+  SSH_DEPLOY_KEY_INFO: |
+    [
+      { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
+      { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
+      { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
+    ]
+
+jobs:
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    outputs:
+      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+
+    steps:
+      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      - name: Set ENVIRONMENT
+        id: clean-env
+        uses: im-open/map-input-action@v1.0.1
+        with:
+          input: ${{ github.event.inputs.environment }}
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          input_map: |
+            {
+              "dev": ["dev", "d", "development"],
+              "qa": ["qa", "q"],
+              "stage": ["stg", "s", "stage"],
+              "demo": ["o", "demo"],
+              "uat": ["u", "uat"],
+              "prod": ["prod", "production", "p"]
+            }
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+
+  tf-unlock-state:
+    needs: [set-vars]
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO:  Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
+      # Allows pulling modules from the repo instead of artifactory
+      - name: Setup SSH Keys and known_hosts
+        uses: im-open/setup-deploy-keys@1.0.1
+        with:
+          deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1.2.1
+        with:
+          terraform_version: '${{ env.TF_VERSION }}'
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Unlock State
+        run: terraform force-unlock -force ${{ github.event.inputs.lock-id }}
