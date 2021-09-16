@@ -1,4 +1,4 @@
-# Workflow Code: ShinySQUIRREL_v4    DO NOT REMOVE
+# Workflow Code: ShinySQUIRREL_v5    DO NOT REMOVE
 
 # Pre-requisites
 # This workflow relies on a Deployment Board being set up to determine what should be currently deployed to the environment
@@ -128,7 +128,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
-          terraform plan -detailed-exitcode \
+          terraform plan -detailed-exitcode -lock-timeout=90s \
             -var="pagerduty_token=${{ secrets.PAGERDUTY_API_KEY }}"
         continue-on-error: true
 
