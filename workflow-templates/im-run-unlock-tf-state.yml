@@ -8,10 +8,14 @@ on:
         description: The lock ID that needs to be removed.  Terraform provides this value (lock info.ID) in the message indicating there was an error acquiring the state lock.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat
+        description: The environment the lock should be removed in - dev|qa|stage|prod|demo|uat
+        required: true
+      branch-tag-sha:
+        description: The branch, tag or sha of the terraform that is currently in the environment where the lock is.  This is needed to do a terraform init with the appropriate code.
         required: true
 
 env:
+  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }}
   PLAN_STORAGE_CONTAINER: 'tfstate'
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
@@ -37,8 +41,6 @@ jobs:
 
     outputs:
       ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }} # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-      STORAGE_ACCOUNT: ${{ steps.stg-acct.outputs.STORAGE_ACCOUNT }} # To use this value: ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}
 
     steps:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
@@ -65,7 +67,7 @@ jobs:
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
 
   tf-unlock-state:
-    needs: [set-vars, validate-tag-for-prod-deploys]
+    needs: [set-vars]
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
@@ -73,10 +75,6 @@ jobs:
       run:
         shell: bash
         working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO:  Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
-
-    outputs:
-      tf_plan_name: ${{ steps.upload.outputs.tf_plan_name }}
-      maintenance_window_id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
     steps:
       - name: Checkout Repository
