@@ -1,5 +1,5 @@
 {
-  "name": "Build - Validate Deployed Terraform",
+  "name": "Run - Validate Deployed Terraform",
   "description": "Workflow template for validating the deployed infrastructure has not been manually changed.",
   "iconName": "im_tf"
 }

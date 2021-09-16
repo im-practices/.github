@@ -1,9 +1,10 @@
-# Workflow Code: DeterminedPorcupine_v5    DO NOT REMOVE
+# Workflow Code: DeterminedPorcupine_v6    DO NOT REMOVE
 
 name: Automatically run tf plan and comment on PR
 on:
   pull_request:
     types: [opened, reopened, synchronize]
+    # TODO:  Verify the paths where changes should trigger this workflow.  This can be removed entirely if all changes should trigger the workflow.
     paths:
       - 'common/**'
       - 'dev/**'
@@ -11,31 +12,36 @@ on:
       - 'stage/**'
       - 'prod/**'
 
-env:
-  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-  ARM_ENVIRONMENT: 'public'
-  TF_IN_AUTOMATION: 'true'
-  TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
-  TF_WORKING_DIR: './dev' # TODO:  Verify this directory is correct for your repository
-  SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }} # This is an org level secret
-  SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
-  SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
-  # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
-  SSH_DEPLOY_KEY_INFO: |
-    [
-      { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
-      { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-      { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
-    ]
-
 jobs:
   auto-plan-the-tf:
     runs-on: [self-hosted, ubuntu-20.04]
 
-    environment: 'Dev'
+    strategy:
+      matrix:
+        # TODO: By default this only runs a plan against dev, but other envs can be added:  qa, stage, demo, uat, prod
+        environment: [dev]
+
+    environment: ${{ matrix.environment }}
+
+    env:
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_ENVIRONMENT: 'public'
+      TF_IN_AUTOMATION: 'true'
+      TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
+      TF_WORKING_DIR: './${{ matrix.environment }}' # TODO:  Verify this directory structure would be correct for your repository
+      SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }} # This is an org level secret
+      SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
+      SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
+      # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+      SSH_DEPLOY_KEY_INFO: |
+        [
+          { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
+          { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
+          { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
+        ]
 
     defaults:
       run:
@@ -75,7 +81,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
-          terraform plan -no-color \
+          terraform plan -no-color -lock=false \
             -var="pagerduty_token=${{ secrets.PAGERDUTY_API_KEY }}"
         continue-on-error: true
 
@@ -86,13 +92,15 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            const output = `### Format, Init and Plan Results for ${{ matrix.environment }} 
+            #### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
             #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
             #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
             <details><summary>Show Plan</summary>
             ${process.env.PLAN}
             </details>
-            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            __Pusher__: @${{ github.actor }}
+            __Action__: \`${{ github.event_name }}\``;
             github.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
