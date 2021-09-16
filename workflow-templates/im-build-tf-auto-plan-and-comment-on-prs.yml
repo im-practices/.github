@@ -4,7 +4,7 @@ name: Automatically run tf plan and comment on PR
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-    # TODO:  Verify the paths where changes should trigger this workflow.  This can be moved entirely if all changes should trigger the workflow.
+    # TODO:  Verify the paths where changes should trigger this workflow.  This can be removed entirely if all changes should trigger the workflow.
     paths:
       - 'common/**'
       - 'dev/**'
