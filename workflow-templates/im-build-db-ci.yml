@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v1    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v2    DO NOT REMOVE
 
 name: Build Database CI
 # TODO:  Select the appropriate trigger, if push and pull are both included, two builds will be kicked off when a PR exists and a new commit is pushed to the corresponding branch.
@@ -172,5 +172,5 @@ jobs:
       #     backup-name: '${{ env.BACKUP_FILENAME }}'
       #     version: '1.1.${{ github.run_number }}' # TODO: Update this if need be
       #     nuget-source-url: '' # TODO: Add the url to publish the backup file package to
-      #     nuget-api-key: '${{ secrets.MY_GH_PACKAGES_ACCESS_TOKEN }}' # TODO: Update to use a real secret
+      #     nuget-api-key: '${{ secrets.READ_PKG_TOKEN }}' # This is an org-level secret
       #     authors: 'My-Team' # TODO: This will get put in the .nuspec file. It should be updated with your team name or something similar.

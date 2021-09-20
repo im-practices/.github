@@ -56,6 +56,7 @@ The templates in this repository fall into one of the following categories:
       - Expected: `runs-on: ubuntu-latest`
       - Not Expected: `runs-on: [ubuntu-latest]`
     - [ ] Outside of script blocks, use single `'` instead of double `"`
+    - [ ] For any secrets, document whether it is an org, repo or environment level secret
     
   
 

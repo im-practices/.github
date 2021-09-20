@@ -1,5 +1,7 @@
 # Workflow Code: LazyPorpoise_v1    DO NOT REMOVE
 
+# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+
 name: Runbook - Start, stop or restart azure function app
 
 #TODO:  You may wish to add the name of the function app to the name above and the file name if there are multiple functions within the repository
@@ -118,20 +120,23 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO: Ensure this secret has been populated in your repo
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
       # TODO:  if you wish to perform any of the following actions on a slot, append the following to each of the commands: --slot ${{ env.SLOT_NAME }}
 
       - name: start
         if: steps.clean-action.outputs.mapped_input == 'start'
+        # ARM_SUBSCRIPTION_ID is an env-level secret
         run: az functionapp start --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
       - name: stop
         if: steps.clean-action.outputs.mapped_input == 'stop'
+        # ARM_SUBSCRIPTION_ID is an env-level secret
         run: az functionapp stop --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
       - name: restart
         if: steps.clean-action.outputs.mapped_input == 'restart'
+        # ARM_SUBSCRIPTION_ID is an env-level secret
         run: az functionapp restart --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
       - name: Azure logout

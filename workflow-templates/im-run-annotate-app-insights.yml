@@ -1,5 +1,7 @@
 # Workflow Code: EmpatheticDolphin_v1    DO NOT REMOVE
 
+# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+
 name: Runbook - Annotate App Insights
 # TODO:  You may wish to update the name and filename with the project this is for
 
@@ -96,12 +98,12 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO: Ensure this secret has been populated in your repo
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
       - name: annotate
         uses: im-open/create-app-insights-annotation@v1.0.0
         with:
-          subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
           resourceGroupName: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
           releaseName: ${{ github.event.inputs.releaseName }}
