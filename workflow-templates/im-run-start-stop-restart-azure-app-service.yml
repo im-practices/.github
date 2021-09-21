@@ -1,5 +1,7 @@
 # Workflow Code: NeedyPig_v1    DO NOT REMOVE
 
+# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+
 name: Runbook - Start, stop or restart azure app service
 #TODO:  You may wish to add the name of the app service to the name above and the file name if there are multiple app services within the repository
 
@@ -117,20 +119,23 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO: Ensure this secret has been populated in your repo
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
       # TODO:  if you wish to perform any of the following actions on a slot, append the following to each of the commands: --slot ${{ env.SLOT_NAME }}
 
       - name: start
         if: steps.clean-action.outputs.mapped_input == 'start'
+        # ARM_SUBSCRIPTION_ID is an env-level secret
         run: az webapp start --name ${{ env.APP_SERVICE_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
       - name: stop
         if: steps.clean-action.outputs.mapped_input == 'stop'
+        # ARM_SUBSCRIPTION_ID is an env-level secret
         run: az webapp stop --name ${{ env.APP_SERVICE_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
       - name: restart
         if: steps.clean-action.outputs.mapped_input == 'restart'
+        # ARM_SUBSCRIPTION_ID is an env-level secret
         run: az webapp restart --name ${{ env.APP_SERVICE_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
       - name: Azure logout

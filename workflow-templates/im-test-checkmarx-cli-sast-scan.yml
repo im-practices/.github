@@ -23,9 +23,9 @@ jobs:
         id: scan
         uses: im-open/checkmarx-cli-sast-scan@v1.0.0
         with:
-          checkmarx-server-url: ${{ secrets.CHECKMARX_URL }} # This is an org level secret
-          checkmarx-username: ${{ secrets.CHECKMARX_USERNAME }} # This is an org level secret
-          checkmarx-password: ${{ secrets.CHECKMARX_PASSWORD }} # This is an org level secret
+          checkmarx-server-url: ${{ secrets.CHECKMARX_URL }} # This is an org-level secret
+          checkmarx-username: ${{ secrets.CHECKMARX_USERNAME }} # This is an org-level secret
+          checkmarx-password: ${{ secrets.CHECKMARX_PASSWORD }} # This is an org-level secret
           team: 'CxServer\SP\Company\Users\BDA_IndividualMarketplace\BDAOutSourceTeamCity' # Same for all IM scans
 
           # TODO:  Add your App name and optional project type.

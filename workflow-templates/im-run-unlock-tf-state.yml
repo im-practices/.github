@@ -1,5 +1,8 @@
 # Workflow Code: FrazzledFerret_v1    DO NOT REMOVE
 
+# TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+# TODO:  Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+
 name: Unlock Terrafrom State
 on:
   workflow_dispatch:
@@ -17,6 +20,7 @@ on:
 env:
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }}
   PLAN_STORAGE_CONTAINER: 'tfstate'
+  # The following ARM_* secrets are org-level secrets
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
@@ -24,10 +28,10 @@ env:
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
-  # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
-  SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }} # This is an org level secret
-  SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }} # This is an org level secret
-  SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }} # This is an org level secret
+  # The following SSH_* secrets are org-level secrets
+  SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }}
+  SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
+  SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
   SSH_DEPLOY_KEY_INFO: |
     [
       { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },

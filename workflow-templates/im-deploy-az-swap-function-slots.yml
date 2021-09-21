@@ -1,7 +1,6 @@
 # Workflow Code: DelightedPug_v2    DO NOT REMOVE
 
-# Prerequisites
-# 1 - Make sure the az secrets have been added to the environments
+# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Swap Azure Function Slots
 
@@ -117,18 +116,19 @@ jobs:
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.0.1
         with:
-          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
-          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # TODO: make sure this secret has been populated in your repository
+          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
 
       - name: AZ Login
         id: login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
       - name: Swap
+        # ARM_SUBSCRIPTION_ID is an env-level secret
         run: |
           az functionapp  deployment slot swap \
           --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
@@ -138,6 +138,7 @@ jobs:
           --target-slot ${{ env.TARGET_SLOT }}
 
       # TODO:  Uncomment if you want to destroy the slot after swap.  Delete if you don't.
+      # ARM_SUBSCRIPTION_ID is an env-level secret
       # - run: |
       #     az functionapp  deployment slot delete \
       #     --slot ${{ env.SOURCE_SLOT }} \
@@ -156,5 +157,5 @@ jobs:
         if: always() && env.OPEN_WINDOW == 'true' && steps.open-window.outcome == 'success'
         uses: im-open/close-pagerduty-maintenance-window@v1.0.0
         with:
-          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org level secret
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}

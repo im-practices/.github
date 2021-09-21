@@ -29,7 +29,7 @@ jobs:
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
-      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org level secret
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
 
       - name: npm install
