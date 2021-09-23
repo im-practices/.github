@@ -1,4 +1,4 @@
-# Workflow Code: FrazzledFerret_v1    DO NOT REMOVE
+# Workflow Code: FrazzledFerret_v2    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO:  Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
@@ -68,7 +68,7 @@ jobs:
           error_on_no_match: true
           custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.   The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
   tf-unlock-state:
     needs: [set-vars]

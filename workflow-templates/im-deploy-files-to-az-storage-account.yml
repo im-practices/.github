@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v1    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v2    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
@@ -32,6 +32,11 @@ jobs:
       ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
 
     steps:
+      - name: Verify Tag Exists
+        uses: im-open/verify-git-ref@v1.0.0
+        with:
+          branch-tag-sha: ${{ env.GITHUB_REF }}
+
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
@@ -53,7 +58,7 @@ jobs:
           error_on_no_match: true
           custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
   deploy-to-azure:
     runs-on: [self-hosted, ubuntu-20.04]
@@ -61,7 +66,7 @@ jobs:
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }} # TODO:  Verify the environment
 
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       - name: Checkout Repository
         uses: actions/checkout@v2

@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v7    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v8    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
@@ -47,6 +47,11 @@ jobs:
       STORAGE_ACCOUNT: ${{ steps.stg-acct.outputs.STORAGE_ACCOUNT }} # To use this value: ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}
 
     steps:
+      - name: Verify Tag Exists
+        uses: im-open/verify-git-ref@v1.0.0
+        with:
+          branch-tag-sha: ${{ env.GITHUB_REF }}
+
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
@@ -68,7 +73,7 @@ jobs:
           error_on_no_match: true
           custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
       # This variable is used to upload and download blobs from blob storage
@@ -109,17 +114,17 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
       - name: Approval Received
         run: echo "Stakeholder approval was received"
 
   # This job needs to run for all environments because tf-plan relies
   # on it but the steps inside this job will only run for the Prod env.
-  validate-tag-for-prod-deploys:
+  validate-tag-is-in-main-for-prod-deploys:
     needs: [set-vars, stakeholder-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
@@ -136,7 +141,7 @@ jobs:
           tag: ${{ env.GITHUB_REF }}
 
   tf-plan:
-    needs: [set-vars, validate-tag-for-prod-deploys]
+    needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
     env:
@@ -158,7 +163,7 @@ jobs:
         with:
           ref: ${{ env.GITHUB_REF }}
 
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
@@ -236,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: 'Terraform Approval' # TODO:  Add required reviewers to this environment in GitHub.  This should be anyone who can review a terraform plan and proceed with the deployment
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       - name: Approval Received
         run: echo "Approval on the tf plan was received"
@@ -257,7 +262,7 @@ jobs:
         with:
           ref: ${{ env.GITHUB_REF }}
 
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
@@ -321,7 +326,7 @@ jobs:
     needs: [set-vars, tf-apply]
     if: always()
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{  needs.set-vars.outputs.ENVIRONMENT  }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       - uses: im-open/workflow-conclusion@v1.0.2
         id: conclusion
