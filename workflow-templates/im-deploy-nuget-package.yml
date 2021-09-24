@@ -64,7 +64,7 @@ jobs:
       # - name: Pack with version in csproj
       #   run: dotnet pack --configuration Release
 
-      # - name: Pack with version from env.Tag
+      # - name: Pack with version from git-version-lite
       #   run: dotnet pack --configuration Release -p:PackageVersion=${{ steps.increment.outputs.VERSION }}
 
       # - name: Pack with version input
