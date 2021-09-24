@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v1    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v2    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -59,7 +59,7 @@ jobs:
           error_on_no_match: true
           custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The release name is ${{ github.event.inputs.releaseName }}"
 
       # This variable is used to upload and download blobs from blob storage
       - name: Set RESOURCE_GROUP
@@ -93,7 +93,7 @@ jobs:
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
     needs: [set-vars]
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The release name is ${{ github.event.inputs.releaseName }}"
 
       - name: AZ Login
         uses: azure/login@v1

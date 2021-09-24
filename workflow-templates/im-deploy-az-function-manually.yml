@@ -1,4 +1,4 @@
-# Workflow Code: InsecureLion_v3    DO NOT REMOVE
+# Workflow Code: InsecureLion_v4    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the az secrets have been added to the environment
@@ -32,6 +32,11 @@ jobs:
       AZ_INSIGHTS_NAME: ${{ steps.insights.outputs.AZ_INSIGHTS_NAME }} # To use this value: ${{ needs.set-vars.outputs.AZ_INSIGHTS_NAME }}
 
     steps:
+      - name: Verify Tag Exists
+        uses: im-open/verify-git-ref@v1.0.0
+        with:
+          branch-tag-sha: ${{ env.GITHUB_REF }}
+
       - name: Set ENVIRONMENT
         id: clean-env
         uses: im-open/map-input-action@v1.0.1
@@ -53,7 +58,7 @@ jobs:
           error_on_no_match: true
           custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The Tag is ${{ env.GITHUB_REF }}."
 
       # This variable is used to swap slots and annotate app insights
       - name: Set RESOURCE_GROUP
@@ -107,18 +112,18 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.GITHUB_REF }}."
 
       - name: Approval Received
         run: echo "Stakeholder approval was received"
 
   # This job needs to run for all environments because tf-plan relies
   # on it but the steps inside this job will only run for the Prod env.
-  validate-tag-for-prod-deploys:
+  validate-tag-is-in-main-for-prod-deploys:
     needs: [set-vars, stakeholder-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.GITHUB_REF }}."
 
       # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
@@ -135,7 +140,7 @@ jobs:
           tag: ${{ env.GITHUB_REF }}
 
   deploy-code:
-    needs: [set-vars, validate-tag-for-prod-deploys]
+    needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
@@ -148,7 +153,7 @@ jobs:
       UNZIPPED_ASSET: 'published_app'
 
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.GITHUB_REF }}."
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -295,7 +300,7 @@ jobs:
     needs: [set-vars, deploy-code]
     if: always()
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.GITHUB_REF }}."
 
       - uses: im-open/workflow-conclusion@v1.0.2
         id: conclusion
