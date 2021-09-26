@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v4    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v5    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the az secrets have been added to the environment
@@ -174,26 +174,36 @@ jobs:
       - name: Unzip release asset
         run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
 
-      # TODO:  If you need to do replacements in your appsettings.json file you can do it two ways.
-      # 1- Repeat this add-or-update-json-properties action for each environment, and add an 'if: needs.set-vars.outputs.ENVIRONMENT == ""' condition with the appropriate env to each action.
-      # 2- In the set-vars job, add one set-variable-based-on-environment action block per variable then use that variable in the single add-or-update-json-properties action below.
-      # - name: Update appsettings.json with Environment Specific Values
-      #   uses: im-open/add-or-update-json-properties@v1.0.1
-      #   with:
-      #     path-to-json-file: '${{ env.UNZIPPED_ASSET }}/appsettings.json'
-      #     properties-to-update-or-add: |
-      #       [
-      #         {"SecretName": "SecretValue"},
-      #         {"Nested.Secret.Name": "SecretValue"},
-      #         {"": ""}
-      #       ]
+      # TODO:  If you need to do replacements in your appsettings.json file use this action or delete if not using.
+      - name: Update appsettings.json with Environment Specific Values
+        uses: im-open/add-or-update-json-properties@v1.0.1
+        with:
+          path-to-json-file: '${{ env.UNZIPPED_ASSET }}/appsettings.json' # TODO:  Verify the path to the json file to update
+          # TODO:  replace examples with actual substitutions
+          properties-to-update-or-add: |
+            [
+              {"SecretName": "SecretValue"},
+              {"Nested.Secret.Name": "SecretValue"},
+              {"": ""}
+            ]
 
-      # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.
+      # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.  Delete if not using.
       - uses: im-open/octostache-action@v1.0.0
         with:
           variablesFile: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
           templateFile: '' # TODO:  Add the ./path/file to make the substitutions in
           outputFile: '' # TODO:  Add the ./path/file to save the substitutions in (generally the same as templateFile above)
+
+      # TODO:  If you need any xml file (web.config/app.config/nlog.config) substitutions use the following action, otherwise delete it.
+      # This action won't add or remove items, it will just update the values.  It can also do xml/json/yaml substitutions.
+      - uses: microsoft/variable-substitution@v1
+        with:
+          files: '' # TODO: add a comma separated list of files and the patterns, like './src/MyProj/We*.config, ./src/MyProj/Nlog.config'
+        env:
+          # TODO:  replace examples with actual substituations
+          Value1: 'Value1'
+          Nested.Value.Name: 'Value2'
+          SecretValue: ${{ secrets.VALUE }}
 
       # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
