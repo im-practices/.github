@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v2    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v3    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -105,12 +105,31 @@ jobs:
       #   uses: im-open/add-or-update-json-properties@v1.0.1
       #   with:
       #     path-to-json-file: '' #TODO:  Add file path and name to json file being updated like './src/myapp/appsettings.json'
+      #     # TODO:  replace examples with actual substitutions
       #     properties-to-update-or-add: |
       #       [
       #         {"SecretName": "SecretValues"},
       #         {"Nested.SecretName": "${{ secrets.NESTED_SECRET }}"},
       #         {"Auth0.ClientId": "${{ secrets.AUTH0_CLIENT_ID }}"}
       #       ]
+
+      # TODO: Uncomment if you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) during CI, delete this step if not needed.
+      # - uses: im-open/octostache-action@v1.0.0
+      #   with:
+      #     variablesFile: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
+      #     templateFile: '' # TODO:  Add the ./path/file to make the substitutions in
+      #     outputFile: '' # TODO:  Add the ./path/file to save the substitutions in (generally the same as templateFile above)
+
+      # TODO: Uncomment if you need any xml file (web.config/app.config/nlog.config) substitutions done during CI, otherwise delete it.
+      # # This action won't add or remove items, it will just update the values.  It can also do xml/json/yaml substitutions.
+      # - uses: microsoft/variable-substitution@v1
+      #   with:
+      #     files: '' # TODO: add a comma separated list of files and the patterns, like './src/MyProj/We*.config, ./src/MyProj/Nlog.config'
+      #   env:
+      #     # TODO:  replace examples with actual substituations
+      #     Value1: 'Value1'
+      #     Nested.Value.Name: 'Value2'
+      #     SecretValue: ${{ secrets.VALUE }}
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
