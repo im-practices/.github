@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v9    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v10    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
@@ -47,6 +47,11 @@ jobs:
       STORAGE_ACCOUNT: ${{ steps.stg-acct.outputs.STORAGE_ACCOUNT }} # To use this value: ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
       - name: Verify Tag Exists
         uses: im-open/verify-git-ref@v1.0.0
         with:

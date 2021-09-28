@@ -1,4 +1,4 @@
-# Workflow Code: InsecureLion_v6    DO NOT REMOVE
+# Workflow Code: InsecureLion_v7    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the az secrets have been added to the environment
@@ -32,6 +32,11 @@ jobs:
       AZ_INSIGHTS_NAME: ${{ steps.insights.outputs.AZ_INSIGHTS_NAME }} # To use this value: ${{ needs.set-vars.outputs.AZ_INSIGHTS_NAME }}
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
       - name: Verify Tag Exists
         uses: im-open/verify-git-ref@v1.0.0
         with:

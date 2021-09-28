@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v5    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v6    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the Service account secrets have been added to the environment
@@ -40,6 +40,11 @@ jobs:
       IIS_SERVER_CERT_PATH: ${{ steps.iis-server.outputs.IIS_SERVER_CERT_PATH }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
       - name: Verify Tag Exists
         uses: im-open/verify-git-ref@v1.0.0
         with:
