@@ -354,7 +354,6 @@ jobs:
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           timezone: America/Denver # TODO:  Verify timezone
-          # TODO:  Verify the custom facts you want included
           custom-facts: |
             [
               { "name": "Event", "value": "${{ github.event_name }}" },
@@ -362,9 +361,4 @@ jobs:
               { "name": "Run", "value": "${{ github.run_id }}" },
               { "name": "Actor", "value": "${{ github.actor }}" },
               { "name": "Branch/Tag/SHA", "value": "${{ env.GITHUB_REF }}" }
-            ]
-          # TODO:  Verify additional buttons you want included.  A View Build Log is included by default.  If no additional actions are needed, delete this arg.
-          custom-actions: |
-            [
-              { "name": "", "uri": "" }
             ]

@@ -9,23 +9,20 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment the service is in - dev|qa|stage|prod|demo|uat
+        description: The environment the service is in - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
         required: true
         default: prod
       category:
         description: The category of the annotation
         required: false
         default: 'Deployment'
-      releaseName:
-        description: The name of the release (generally the tag that will be deployed)
+      eventName:
+        description: The name of the release/tag that will be deployed) or the event that will be annotated
         required: true
       customMetadata:
         description: 'The comma separated custom metadata pairs.  Format: name1=value1,name2=value2'
         required: false
         default: ''
-
-env:
-  PROJECT_NAME: '' # TODO:  Add a project name
 
 jobs:
   set-vars:
@@ -35,7 +32,7 @@ jobs:
     outputs:
       ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
       RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }}
-      APP_INSIGHTS_NAME: ${{ steps.stg-acct.outputs.APP_INSIGHTS_NAME }}
+      APP_INSIGHTS_NAME: ${{ steps.insights.outputs.APP_INSIGHTS_NAME }}
 
     steps:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
@@ -77,6 +74,7 @@ jobs:
           prod-value: ''
 
       - uses: im-open/set-variable-based-on-environment@v1.0.0
+        id: insights
         with:
           variable-name: 'APP_INSIGHTS_NAME'
           current-environment: ${{ steps.clean-env.outputs.mapped_input }}
@@ -106,7 +104,7 @@ jobs:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
           resourceGroupName: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
-          releaseName: ${{ github.event.inputs.releaseName }}
+          releaseName: ${{ github.event.inputs.eventName }}
           category: ${{ github.event.inputs.category }}
           customMetadata: ${{ github.event.inputs.customMetadata }}
 
