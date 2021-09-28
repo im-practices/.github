@@ -1,4 +1,4 @@
-# Workflow Code: EnthralledOyster_v1    DO NOT REMOVE
+# Workflow Code: EnthralledOyster_v2    DO NOT REMOVE
 
 name: Checkmarx CLI SAST Scan
 
@@ -23,7 +23,7 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
     steps:
       - uses: actions/checkout@v2
-        if: github.event_name != 'repository_dispatch'
+        if: github.event_name == 'schedule'
 
       - uses: actions/checkout@v2
         if: github.event_name == 'repository_dispatch'
