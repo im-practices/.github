@@ -92,7 +92,7 @@ jobs:
       #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
 
       - name: Build Database
-        uses: im-open/build-database-ci-action@v1.0.1
+        uses: im-open/build-database-ci-action@v1.0.4
         with:
           db-server-name: localhost
           db-name: ${{ env.DB_NAME }}
