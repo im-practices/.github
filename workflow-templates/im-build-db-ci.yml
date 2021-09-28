@@ -1,42 +1,74 @@
-# Workflow Code: GiddyBuzzard_v2    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v3    DO NOT REMOVE
 
 name: Build Database CI
 # TODO:  Select the appropriate trigger, if push and pull are both included, two builds will be kicked off when a PR exists and a new commit is pushed to the corresponding branch.
 on:
-  push:
-    branches: [main]
+  # This workflow will run for the PR events:
+  # opened/reopened: A PR is opened/re-opened,
+  # synchronize: The PR's head branch is updated (commits pushed, the base branch changed or the head is updated from the base branch)
+  # closed: A PR is merged or closed (The triggers job makes sure we only run if a merge happened, not when a close happens)
   pull_request:
-    branches: [main]
+    types: [opened, reopened, synchronize, closed]
 env:
   DB_NAME: '' # TODO: Fill in your repo's database name
-  DB_SERVER_NAME: 'localhost,1433'
+  DB_SERVER_NAME: 'localhost'
+  DB_SERVER_PORT: '1433'
   DEFAULT_BRANCH: 'main'
+  ARTIFACTORY_RETRIEVAL_URL: 'https://artifacts.mktp.io/artifactory/api/nuget/nuget-all'
 
   # The following are all for the snapshot step below and can be removed if it's not used
   SNAPSHOT_PATH: './snapshot' # TODO: Verify this path is correct
   EXCLUDED_DB_SNAPSHOT_OBJECTS: '' # TODO: Add some comma separated values to this
 
   # These next variables are for backing up the database. Remove if not needed.
-  BACKUP_PATH: '' # TODO: Update or remove this
-  BACKUP_FILENAME: '' # TODO: Update or remove this
+  BACKUP_PATH: '' # TODO: The path on the action runner to put the backup path
+  BACKUP_FILENAME: '' # TODO: The name to give the backup file
 
 jobs:
-  # TODO: Remove this and it's usages below if no snapshots are created for your database
-  check-for-snapshot-commit:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+  set-vars:
+    runs-on: ubuntu-latest
     outputs:
-      should-skip-remaining-workflow-jobs: ${{ steps.check.outputs.skip }}
+      last-commit-is-snapshot: ${{ steps.capture-branch-state.outputs.isSnapshot }} # Can be useful for if logic to skip steps. Remove if this isn't something you need to branch on.
+      current-branch-is-default: ${{ steps.capture-branch-state.outpus.isDefaultBranch }} # Can be useful for if logic to skip steps. Remove if this isn't something you need to branch on.
+      # TODO: This is only needed if your workflow is committing a snapshot and needs to skip running the CI for that commit. Remove this and its usages if not needed.
+      should-skip-remaining-workflow-jobs: ${{ steps.capture-branch-state.outputs.skip }}
+      artifactory-publish-url: ${{ steps.set-artifactory-url.outputs.url }}
     steps:
       - uses: actions/checkout@v2
 
-      - name: Check for snapshot commit
-        id: check
+      # The outputted url will point to nuget-branch or nuget-master, depending on the current branch
+      - name: Set artifactory publish url
+        id: set-artifactory-url
+        shell: pwsh
+        run: |
+          $CurrentBranch = git rev-parse --abbrev-ref HEAD
+          $CurrentBranchIsDefault = ($CurrentBranch -eq "${{ env.DEFAULT_BRANCH }}")
+          $ArtifactoryUrl = "https://artifacts.mktp.io/artifactory/api/nuget"
+
+          if ($CurrentBranchIsDefault)
+          {
+            $ArtifactoryUrl = $ArtifactoryUrl + "/nuget-master/Database"
+          }
+          else
+          {
+            $ArtifactoryUrl = $ArtifactoryUrl + "/nuget-branches/Database"
+          }
+
+          echo "::set-output name=url::$ArtifactoryUrl"
+
+      - name: Capture branch details
+        id: capture-branch-state
         shell: pwsh
         run: |
           $CurrentBranch = git rev-parse --abbrev-ref HEAD
           $LastCommitBy = git --no-pager show -s --format="%aN"
+          $CurrentBranchIsDefault = ($CurrentBranch -eq "${{ env.DEFAULT_BRANCH }}")
+          $LastCommitIsSnapshot = ($LastCommitBy -eq "github-actions")
 
-          if ($LastCommitBy -eq "github-actions" -and $CurrentBranch -ne "${{ env.DEFAULT_BRANCH }}")
+          echo "::set-output name=isDefaultBranch::$CurrentBranchIsDefault"
+          echo "::set-output name=isSnapshot::$LastCommitIsSnapshot"
+
+          if ($LastCommitIsSnapshot -and !$CurrentBranchIsDefault)
           {
             Write-Host "Snapshot was last commit, skipping the other jobs"
             echo "::set-output name=skip::true"
@@ -50,20 +82,21 @@ jobs:
   # TODO: Remove this linting job if your project doesn't need/want it
   lint-migration-files:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: check-for-snapshot-commit
-    if: ${{ needs.check-for-snapshot-commit.outputs.should-skip-remaining-workflow-jobs == 'false' }}
+    needs: set-vars
+    # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
+    if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }}
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/setup-node@v2
         with:
-          node-version: '14' # TODO: Update this if necessary
+          node-version: '14' # TODO: The current LTS version. Can be updated to something else if needed.
 
       - id: migration-folder
         shell: pwsh
         run: echo "::set-output name=folder::$($(Get-Date).Year).$($(Get-Date).Month.ToString("00"))"
       - name: SQL Lint
-        uses: im-open/tsql-lint-action@v1.0.0
+        uses: im-open/tsql-lint-action@v1.0.2
         with:
           tsqllint-version: 1.11.0
           path-to-sql-files: 'Database/src/SqlDatabase/Migrations/${{ steps.migration-folder.outputs.folder }}' # TODO: Update this path to wherever the files to lint live
@@ -72,8 +105,9 @@ jobs:
 
   build-database:
     runs-on: [self-hosted, windows-2019]
-    needs: [check-for-snapshot-commit, lint-migration-files]
-    if: ${{ needs.check-for-snapshot-commit.outputs.should-skip-remaining-workflow-jobs == 'false' }}
+    needs: [set-vars, lint-migration-files]
+    # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
+    if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }}
     steps:
       - uses: actions/checkout@v2
 
@@ -83,14 +117,17 @@ jobs:
           version: 7.2.0 # This version works with the current version of build-database-ci-action. Newer versions might, but they should be tested.
 
       - name: Build Database
-        uses: im-open/build-database-ci-action@v1.0.1
+        uses: im-open/build-database-ci-action@v1.0.4
         with:
           db-server-name: ${{ env.DB_SERVER_NAME }}
+          db-server-port: ${{ env.DB_SERVER_PORT }}
           db-name: ${{ env.DB_NAME }}
           install-mock-db-objects: true # TODO: Verify this is needed
-          mock-db-object-nuget-feed-url: https://artifacts.mktp.io/artifactory/api/nuget/nuget-all # TODO: Verify this is needed and correct
+          mock-db-object-nuget-feed-url: ${{ env.ARTIFACTORY_RETRIEVAL_URL }} # TODO: If install-mock-db-objects is set to false, this can be removed
           drop-db-after-build: false
           run-tests: true # TODO: Remove this if your database doesn't have tests.
+          nuget-username: ${{ secrets.ARTIFACTORY_USERNAME }} # TODO: If install-mock-db-objects is set to false, this can be removed
+          nuget-password: ${{ secrets.ARTIFACTORY_API_KEY }} # TODO: If install-mock-db-objects is set to false, this can be removed
 
       #########################################################################################################################
       # The previous three steps are all that most builds will need.
@@ -100,6 +137,11 @@ jobs:
       # The next four steps can be removed if your build doesn't need to create snapshots of database objects.
       # Otherwise they can be uncommented and the TODO's addressed.
       # TODO: Replace what is in this step with what your build needs in order to determine what database objects have changed
+      # The output is a json string containing a list of objects with the following properties (see https://github.com/im-open/increment-database-object-snapshots#inputs for more information)
+      #   * objectName
+      #   * schemaName
+      #   * objectType
+      #   * operationType
       # - name: Get db objects that have changed
       #   id: changed-objects
       #   shell: pwsh
@@ -122,46 +164,57 @@ jobs:
       #           END AS objectType,
       #           operationType
       #         FROM DBA.V_ChangedObjectsForSnapshot"
-      #     $changedObjects = Invoke-Sqlcmd -ServerInstance $instanceName -Database $dbName -Query $changedObjectsQuery
+
+      #     $changedObjects = Invoke-Sqlcmd -ServerInstance "${{ env.DB_SERVER_NAME }}" -Database "${{ env.DB_NAME }}" -Query $changedObjectsQuery
       #     $mappedObjects = $changedObjects | foreach-object { @{ schemaName=$_.schemaName; objectName=$_.objectName; objectType=$_.objectType; operationType=$_.operationType } }
       #     $objectsAsJson = $mappedObjects | ConvertTo-Json -Compress
+
       #     echo "::set-output name=json::$objectsAsJson"
+
       # - name: Increment snapshots
-      #   uses: im-open/increment-database-object-snapshots@v1.0.0
+      #   uses: im-open/increment-database-object-snapshots@v1.0.1
       #   with:
       #     db-name: ${{ env.DB_NAME }}
       #     instance-name: ${{ env.DB_SERVER_NAME }}
       #     snapshot-path: ${{ env.SNAPSHOT_PATH }}
       #     objects-to-increment: '${{ steps.changed-objects.outputs.json }}'
       #     excluded-db-objects: ${{ env.EXCLUDED_DB_SNAPSHOT_OBJECTS }}
+      
       # - name: Setup git for snapshot commit
       #   run: |
       #     git config user.name github-actions
       #     git config user.email github-actions@github.com
+
       # TODO: Update the commit message if desired
       # - name: Commit the snapshots
       #   run: |
       #     git add ${{ env.SNAPSHOT_PATH }}
       #     git commit -m "Automated Snapshot Commit"
       #     git push -f origin HEAD
+
+      # End of snapshot steps
+
       # Remove this if your build doesn't have need of publishing views for tables inside certain schemas
       # - name: Create and publish views from tables
-      #   uses: im-open/sql-view-to-table-generator@v1.0.0
+      #   uses: im-open/sql-view-to-table-generator@v1.0.2
       #   with:
       #     schema-names: 'dbo,CustomSchema' # TODO: Replace this with an actual list
       #     db-name: ${{ env.DB_NAME }}
       #     db-server: ${{ env.DB_SERVER_NAME }}
       #     default-branch: ${{ env.DEFAULT_BRANCH }}
-      #     nuget-retrieval-url: '' # TODO: Replace this with the url for retrieving packages
+      #     nuget-retrieval-url: ${{ env.ARTIFACTORY_URL }}
       #     publish-packages: true
-      #     nuget-publish-url: '' # TODO: Add the url for publishing packages
-      #     nuget-api-key: '' # TODO: Update this with a real PAT
-      # Remove or update this depending on your build's needs
+      #     nuget-publish-url: ${{ needs.set-vars.outputs.artifactory-publish-url }}
+      #     nuget-api-key: '${{ secrets.ARTIFACTORY_USERNAME }}:${{ secrets.ARTIFACTORY_API_KEY }}'
+
+      # TODO: This is needed only if you have to update what objects have changed so it can be used in another step like changed-objects.
+      #       Remove or update as needed.
       # - name: Update database object versions
       #   shell: pwsh
       #   run: |
       #     $updateObjectVersionsSQL = "EXEC DBA.usp_UpdateCheckSumForChangedObjectDefinitions;"
       #     Invoke-Sqlcmd -ServerInstance "${{ env.DB_SERVER_NAME }}" -Database "${{ env.DB_NAME }}" $updateObjectVersionsSQL
+
       # Remove this if your build doesn't need to create/publish backup files
       # - name: Create and publish backup files
       #   uses: im-open/create-and-publish-db-backup-file@v1.0.0
@@ -170,7 +223,7 @@ jobs:
       #     db-name: ${{ env.DB_NAME }}
       #     backup-path: '${{ env.BACKUP_PATH }}' # This can be changed if needed
       #     backup-name: '${{ env.BACKUP_FILENAME }}'
-      #     version: '1.1.${{ github.run_number }}' # TODO: Update this if need be
-      #     nuget-source-url: '' # TODO: Add the url to publish the backup file package to
-      #     nuget-api-key: '${{ secrets.READ_PKG_TOKEN }}' # This is an org-level secret
-      #     authors: 'My-Team' # TODO: This will get put in the .nuspec file. It should be updated with your team name or something similar.
+      #     version: '1.1.${{ github.run_number }}' # TODO: Set to 1.1.*** in order to not conflict with previous versions from Teamcity. Update this if desired.
+      #     nuget-source-url: '${{ needs.set-vars.outputs.artifactory-publish-url }}'
+      #     nuget-api-key: '${{ secrets.ARTIFACTORY_USERNAME }}:${{ secrets.ARTIFACTORY_API_KEY }}'
+      #     authors: '' # TODO: This will get put in the .nuspec file. It should be updated with your team name or something similar.
