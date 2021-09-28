@@ -3,10 +3,12 @@
 name: Build Database CI
 # TODO:  Select the appropriate trigger, if push and pull are both included, two builds will be kicked off when a PR exists and a new commit is pushed to the corresponding branch.
 on:
-  push:
-    branches: [main]
+  # This workflow will run for the PR events:
+  # opened/reopened: A PR is opened/re-opened,
+  # synchronize: The PR's head branch is updated (commits pushed, the base branch changed or the head is updated from the base branch)
+  # closed: A PR is merged or closed (The triggers job makes sure we only run if a merge happened, not when a close happens)
   pull_request:
-    branches: [main]
+    types: [opened, reopened, synchronize, closed]
 env:
   DB_NAME: '' # TODO: Fill in your repo's database name
   DB_SERVER_NAME: 'localhost'
