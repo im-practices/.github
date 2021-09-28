@@ -13,7 +13,7 @@ env:
   DB_NAME: '' # TODO: Fill in your repo's database name
   DB_SERVER_NAME: 'localhost'
   DB_SERVER_PORT: '1433'
-  DEFAULT_BRANCH: 'main'
+  DEFAULT_BRANCH: 'main' # TODO:  verify default branch name
   ARTIFACTORY_RETRIEVAL_URL: 'https://artifacts.mktp.io/artifactory/api/nuget/nuget-all'
 
   # The following are all for the snapshot step below and can be removed if it's not used

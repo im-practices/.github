@@ -1,9 +1,8 @@
-# Workflow Code: EmpatheticDolphin_v3    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v4    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Runbook - Annotate App Insights
-# TODO:  You may wish to update the name and filename with the project this is for
 
 on:
   workflow_dispatch:
@@ -17,7 +16,7 @@ on:
         required: false
         default: 'Deployment'
       eventName:
-        description: The name of the release/tag that will be deployed) or the event that will be annotated
+        description: The name of the release/tag that will be deployed or the event that will be annotated.  If there are multiple deployables in the repo you should include the project it is for.
         required: true
       customMetadata:
         description: 'The comma separated custom metadata pairs.  Format: name1=value1,name2=value2'
@@ -54,9 +53,9 @@ jobs:
               "prod": ["prod", "production", "p"] 
             }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The release name is ${{ github.event.inputs.releaseName }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The event is ${{ github.event.inputs.eventName }}"
 
       # This variable is used to upload and download blobs from blob storage
       - name: Set RESOURCE_GROUP
@@ -73,7 +72,8 @@ jobs:
           uat-value: ''
           prod-value: ''
 
-      - uses: im-open/set-variable-based-on-environment@v1.0.0
+      - name: Set APP_INSIGHTS_NAME
+        uses: im-open/set-variable-based-on-environment@v1.0.0
         id: insights
         with:
           variable-name: 'APP_INSIGHTS_NAME'
@@ -91,7 +91,7 @@ jobs:
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
     needs: [set-vars]
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The release name is ${{ github.event.inputs.releaseName }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The event is ${{ github.event.inputs.eventName }}"
 
       - name: AZ Login
         uses: azure/login@v1

@@ -12,11 +12,12 @@ on:
         description: The branch, tag or sha of the terraform that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
         required: true
 
 env:
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
+  TIMEZONE: 'america/denver' # TODO:  Verify timezone
   PLAN_STORAGE_CONTAINER: 'tfstate'
   # The following ARM_* secrets are org-level secrets
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
@@ -76,7 +77,7 @@ jobs:
               "prod": ["prod", "production", "p"]
             }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
@@ -348,7 +349,7 @@ jobs:
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.GITHUB_REF }}
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
-          timezone: 'america/denver'
+          timezone: ${{ env.TIMEZONE }}
 
       - name: Send Status to Teams
         if: always()
@@ -358,7 +359,7 @@ jobs:
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
-          timezone: America/Denver # TODO:  Verify timezone
+          timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [
               { "name": "Event", "value": "${{ github.event_name }}" },

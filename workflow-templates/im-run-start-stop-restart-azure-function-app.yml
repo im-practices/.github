@@ -14,7 +14,7 @@ on:
         required: true
         default: restart
       environment:
-        description: The environment the function is in - dev|qa|stage|prod|demo|uat
+        description: The environment the function is in - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
         required: true
         default: prod
 
@@ -48,7 +48,7 @@ jobs:
               "prod": ["prod", "production", "p"] 
             }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
 

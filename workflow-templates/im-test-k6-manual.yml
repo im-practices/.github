@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v1    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v2    DO NOT REMOVE
 
 name: Manual trigger K6 test
 
@@ -55,7 +55,7 @@ jobs:
               "stage": ["stg", "s", "stage"]
             }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA or Stage' # TODO:  Update for the environments that are available
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
 
