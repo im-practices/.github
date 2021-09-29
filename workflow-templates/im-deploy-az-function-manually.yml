@@ -1,4 +1,4 @@
-# Workflow Code: InsecureLion_v6    DO NOT REMOVE
+# Workflow Code: InsecureLion_v7    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the az secrets have been added to the environment
@@ -20,6 +20,7 @@ on:
 
 env:
   RELEASE_TAG: ${{ github.event.inputs.tag  }} # This is the tag that we'll be deploying
+  TIMEZONE: 'america/denver' # TODO:  Verify timezone
 
 jobs:
   set-vars:
@@ -29,9 +30,14 @@ jobs:
       ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }} # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
       AZ_FUNC_NAME: ${{ steps.app-name.outputs.AZ_FUNC_NAME }} # To use this value: ${{ needs.set-vars.outputs.AZ_FUNC_NAME }}
-      AZ_INSIGHTS_NAME: ${{ steps.insights.outputs.AZ_INSIGHTS_NAME }} # To use this value: ${{ needs.set-vars.outputs.AZ_INSIGHTS_NAME }}
+      APP_INSIGHTS_NAME: ${{ steps.insights.outputs.APP_INSIGHTS_NAME }} # To use this value: ${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
       - name: Verify Tag Exists
         uses: im-open/verify-git-ref@v1.0.0
         with:
@@ -56,7 +62,7 @@ jobs:
               "production", "p"] 
             }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
@@ -91,11 +97,11 @@ jobs:
           prod-value: ''
 
       # This variable is used to annotate app insights
-      - name: Set AZ_INSIGHTS_NAME
+      - name: Set APP_INSIGHTS_NAME
         id: insights
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
-          variable-name: 'AZ_INSIGHTS_NAME'
+          variable-name: 'APP_INSIGHTS_NAME'
           current-environment: ${{ steps.clean-env.outputs.mapped_input }}
           # TODO: For the following azure insights name inputs, fill in the value if you have the environment and delete the environment if it does not exist
           dev-value: ''
@@ -145,12 +151,12 @@ jobs:
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     env:
-      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window.  This is typically set at 30 min in Octopus
-      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
+      PAGERDUTY_WINDOW_IN_MIN: 30 
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions'
+      TARGET_SLOT: 'Production' 
       AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot.  If this differs per environment, add a new section in the set-vars job above where the value can be set per environment
-      TARGET_SLOT: 'Production' # TODO:  Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main func, update it here
-      ASSET_ZIP: 'published_app.zip' # TODO: Verify that this wasn't changed in the CI workflow.  This is the value in that workflow by default.  If you have multiple deployables, this name would have changed.
-      UNZIPPED_ASSET: 'published_app'
+      ASSET_ZIP: 'published_app.zip' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
+      UNZIPPED_ASSET: 'published_app' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
 
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -166,6 +172,7 @@ jobs:
         run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
 
       # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.  Delete if not using.
+      # https://github.com/im-open/octostache-action
       - uses: im-open/octostache-action@v1.0.0
         with:
           variablesFile: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
@@ -181,19 +188,9 @@ jobs:
           files: '' 
         env:
           # TODO:  replace examples with actual substitutions
-          Value1: 'Value1'
-          Nested.Value.Name: 'Value2'
-          SecretValue: ${{ secrets.VALUE }}
-
-      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
-      #        - Remove the file and use this action or
-      #        - Delete this action and modify the file so it has the appropriate org entries in nuget.config. https://github.com/im-practices/git-er-done/blob/main/packages/connect-nuget.md#script-output
-      # - name: Authenticate with GitHub Packages
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
-      #   with:
-      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+          Value1: 'Value1' # Example showing replacement at a root level node
+          Nested.Value.Name: 'Value2' # Example showing replacement at a nested node
+          SecretValue: ${{ secrets.VALUE }} # Example showing replacement with a secret
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -261,8 +258,8 @@ jobs:
         with:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
           resourceGroupName: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-          appInsightsResourceName: '${{ needs.set-vars.outputs.AZ_INSIGHTS_NAME }}'
-          releaseName: ${{ env.RELEASE_TAG }} # TODO:  Verify release name (this will be the tag that the user input)
+          appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
+          releaseName: '${{ needs.set-vars.outputs.AZ_FUNC_NAME }}-${{ env.RELEASE_TAG }}'
           category: 'Deployment'
           customMetadata: 'ProjectName=${{ needs.set-vars.outputs.AZ_FUNC_NAME }},DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
 
@@ -316,7 +313,7 @@ jobs:
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.RELEASE_TAG }}
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
-          timezone: 'america/denver'
+          timezone: ${{ env.TIMEZONE }}
 
       - name: Send Status to Teams
         if: always()
@@ -326,7 +323,7 @@ jobs:
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
-          timezone: America/Denver # TODO:  Verify timezone
+          timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [
               { "name": "Event", "value": "${{ github.event_name }}" },

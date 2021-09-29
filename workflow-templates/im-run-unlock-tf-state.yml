@@ -11,7 +11,7 @@ on:
         description: The lock ID that needs to be removed.  Terraform provides this value (lock info.ID) in the message indicating there was an error acquiring the state lock.
         required: true
       environment:
-        description: The environment the lock should be removed in - dev|qa|stage|prod|demo|uat
+        description: The environment the lock should be removed in - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
         required: true
       branch-tag-sha:
         description: The branch, tag or sha of the terraform that is currently in the environment where the lock is.  This is needed to do a terraform init with the appropriate code.
@@ -66,7 +66,7 @@ jobs:
               "prod": ["prod", "production", "p"]
             }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.   The branch/tag/sha is ${{ env.GITHUB_REF }}."
 

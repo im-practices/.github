@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v2    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v3    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
@@ -13,7 +13,7 @@ on:
         description: The branch, tag or sha of the terraform that should be deployed to the Dev environment.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
         required: true
 
 env:
@@ -32,6 +32,11 @@ jobs:
       ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
       - name: Verify Tag Exists
         uses: im-open/verify-git-ref@v1.0.0
         with:
@@ -56,7 +61,7 @@ jobs:
               "prod": ["prod", "production", "p"] 
             }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
@@ -101,4 +106,4 @@ jobs:
           board-number: ${{ env.DEPLOY_BOARD_NUM }}
           ref: ${{ env.GITHUB_REF }}
           deploy-status: ${{ job.status }}
-          timezone: 'america/denver'
+          timezone: 'america/denver' # TODO:  Verify timezone

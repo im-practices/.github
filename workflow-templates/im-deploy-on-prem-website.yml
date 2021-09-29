@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v5    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v6    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the Service account secrets have been added to the environment
@@ -20,6 +20,7 @@ on:
         required: true
 env:
   RELEASE_TAG: ${{ github.event.inputs.tag }}
+  TIMEZONE: 'america/denver' # TODO:  Verify timezone
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
@@ -40,6 +41,11 @@ jobs:
       IIS_SERVER_CERT_PATH: ${{ steps.iis-server.outputs.IIS_SERVER_CERT_PATH }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
       - name: Verify Tag Exists
         uses: im-open/verify-git-ref@v1.0.0
         with:
@@ -63,7 +69,7 @@ jobs:
               "prod": ["prod", "production", "p"]
             }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
@@ -310,19 +316,9 @@ jobs:
           files: '' # TODO: add a comma separated list of files and the patterns, like './src/MyProj/We*.config, ./src/MyProj/Nlog.config'
         env:
           # TODO:  replace examples with actual substitutions
-          Value1: 'Value1'
-          Nested.Value.Name: 'Value2'
-          SecretValue: ${{ secrets.VALUE }}
-
-      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
-      #        - Remove the file and use this action or
-      #        - Delete this action and modify the file so it has the appropriate org entries in nuget.config. https://github.com/im-practices/git-er-done/blob/main/packages/connect-nuget.md#script-output
-      # - name: Authenticate with GitHub Packages
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
-      #   with:
-      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+          Value1: 'Value1' # Example showing replacement at a root level node
+          Nested.Value.Name: 'Value2' # Example showing replacement at a nested node
+          SecretValue: ${{ secrets.VALUE }} # Example showing replacement with a secret
 
       - name: Zip the published app for faster deployment and uploads
         working-directory: ${{ env.UNZIPPED_ASSET }}
@@ -416,7 +412,7 @@ jobs:
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.RELEASE_TAG }}
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
-          timezone: 'america/denver'
+          timezone: ${{ env.TIMEZONE }}
 
       - name: Send Status to Teams
         if: always()
@@ -426,7 +422,7 @@ jobs:
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
-          timezone: America/Denver # TODO:  Verify timezone
+          timezone: ${{ env.TIMEZONE }}
           # TODO:  Verify the custom facts you want included
           custom-facts: |
             [

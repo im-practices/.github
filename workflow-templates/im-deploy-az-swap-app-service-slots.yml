@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment where slots are being swapped - dev|qa|stage|prod|demo|uat
+        description: The environment where slots are being swapped - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
         required: true
       open-pagerduty-window:
         description: Flag indicating whether a pagerduty maintenance window should be opened
@@ -64,7 +64,7 @@ jobs:
               "prod": ["prod", "production", "p"] 
             }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
 

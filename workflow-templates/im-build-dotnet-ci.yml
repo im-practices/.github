@@ -1,6 +1,8 @@
-# Workflow Code: LoathsomeSnipe_v4    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v5    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+
+# TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
 
 name: .Net Core CI
 
@@ -16,9 +18,8 @@ env:
   DOTNET_VERSION: '' # TODO:  Add the .net version
   SOLUTION_FILE: '' # TODO:  Fill in the path and name of the solution file
   REPO_URL: 'https://github.com/${{ github.repository }}'
+  TIMEZONE: 'america/denver' # TODO:  Verify timezone
   
-# TODO:  Check for the latest version of each action used
-
 jobs:
   examine-triggers:
     runs-on: ubuntu-latest
@@ -36,7 +37,7 @@ jobs:
         run: echo "IS_MERGE_TO_MAIN=true" >> $GITHUB_ENV
 
   dotnet-build-and-test:
-    runs-on: [self-hosted, ubuntu-20.04] #TODO:  Switch this to [self-hosted, windows-2019] if building a db
+    runs-on: [self-hosted, ubuntu-20.04] # TODO:  Switch this to [self-hosted, windows-2019] if building a db
 
     needs: [examine-triggers]
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
@@ -72,14 +73,11 @@ jobs:
           version: ${{ env.FLYWAY_VERSION }}
 
       # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
-      #        - Remove the file and use this action or
-      #        - Delete this action and modify the file so it has the appropriate org entries in nuget.config. https://github.com/im-practices/git-er-done/blob/main/packages/connect-nuget.md#script-output
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
 
       - name: Build Database
         uses: im-open/build-database-ci-action@v1.0.4
@@ -90,52 +88,32 @@ jobs:
           install-mock-db-objects: ${{ env.INSTALL_MOCK_DB_OBJ }} # TODO:  Delete if not using
           mock-db-object-nuget-feed-url: ${{ env.MOCK_DB_OBJ_URL }} # TODO:  Delete if not using
 
-      # TODO: Uncomment if you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) during CI, delete this step if not needed.
-      # - uses: im-open/octostache-action@v1.0.0
-      #   with:
-      #     variablesFile: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
-      #     templateFile: '' # TODO:  Add the ./path/file to make the substitutions in
-      #     outputFile: '' # TODO:  Add the ./path/file to save the substitutions in (generally the same as templateFile above)
-
-      # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following 
-      #        action, otherwise delete it. This action won't add or remove items, it will just update the values.  
-      # - uses: microsoft/variable-substitution@v1
-      #   with:
-      #     files: '' # TODO: add a comma separated list of files and the patterns, like './src/MyProj/We*.config, ./src/MyProj/Nlog.config'
-      #   env:
-      #     # TODO:  replace examples with actual substitutions
-      #     Value1: 'Value1'
-      #     Nested.Value.Name: 'Value2'
-      #     SecretValue: ${{ secrets.VALUE }}
-
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # TODO:  If config transformation is needed for different environments include an environment name and switch to publish instead of build
-      # For example to perform transformations on a web.config using the web.production.config file:
-      # dotnet publish --configuration Release /p:EnvironmentName=Production 
       - name: dotnet build
         run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release
 
       # TODO:  The test projects need a package reference to coverlet.msbuild for this to output the coverage reports correctly:
       # <PackageReference Include="coverlet.msbuild" Version="3.1.0" />
+      # TODO:  Filters can be added to exclude certain tests: https://docs.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests?pivots=xunit
       - name: dotnet test with coverage
         continue-on-error: true
         run: dotnet test ${{ env.SOLUTION_FILE }} --logger trx --no-restore --configuration Release /property:CollectCoverage=True /property:CoverletOutputFormat=opencover
 
-      - name: Process dotnet test results and create a status check
+      - name: create status check/comment for test results
         id: dotnet_test_check
         uses: im-open/process-dotnet-test-results@v1.0.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          timezone: 'america/denver'
+          timezone: ${{ env.TIMEZONE }}
           # TODO:  Determine if you would like status checks, pr comments or both (sometimes it's best to enable both to see what you like best)
           create-status-check: true
-          create-pr-comment: false
+          create-pr-comment: true
 
-      - name: Generate dotnet Code Coverage Artifacts and Summary
+      - name: create code coverage report
         uses: im-open/code-coverage-report-generator@4.8.13
         with:
           reports: '*/**/coverage.opencover.xml'
@@ -149,7 +127,7 @@ jobs:
           filefilters: ''
           classfilters: ''
 
-      - name: Process dotnet code coverage results and create a status check
+      - name: create status check/comment for code coverage results
         id: dotnet_coverage_check
         uses: im-open/process-code-coverage-summary@v1.0.2
         with:
@@ -159,13 +137,13 @@ jobs:
           check-name: ${{ env.CODE_COVERAGE_CHECK_NAME_DOTNET }}
           # TODO:  Determine if you would like status checks, pr comments or both (sometimes it's best to enable both to see what you like best)
           create-status-check: true
-          create-pr-comment: false
+          create-pr-comment: true
           # TODO:  Set the thresholds for branch and line coverage.
           # When set to 0 the outcome is neutral.  Otherwise line/branch coverage will be a 'failure' if actual coverage < threshold.
           line-threshold: 0
           branch-threshold: 0
 
-      - name: Upload dotnet code coverage report
+      - name: upload dotnet code coverage report
         uses: actions/upload-artifact@v2
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
@@ -203,14 +181,11 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
-      #        - Remove the file and use this action or
-      #        - Delete this action and modify the file so it has the appropriate org entries in nuget.config. https://github.com/im-practices/git-er-done/blob/main/packages/connect-nuget.md#script-output
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
 
       # TODO:  `dotnet build` is here because most projects have an npm install/build as part of their
       #        builds. If that is not included in your project, replace this `dotnet build` step
@@ -218,31 +193,31 @@ jobs:
       - name: dotnet build
         run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release
 
-      - name: jest test with Coverage
+      - name: jest test with coverage
         continue-on-error: true
         working-directory: ${{ env.JEST_TEST_DIR }}
-        # TODO:  If you want to use the npm step (npm run test:coverage), it needs to be updated to output a results file, otherwise use the jest command directly
+        # TODO:  If you want to use the npm script (npm run test:coverage) instead of this command, the script in package.json needs to be updated to output a results file
         run: jest --config ./jest.config.js --coverage --json --outputFile=${{ env.JEST_TEST_RESULTS_FILE }}
 
-      - name: Process jest test results and create a status check
+      - name: create status check/comment for jest test results
         id: jest_test_check
         uses: im-open/process-jest-test-results@v1.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          timezone: 'america/denver'
+          timezone: ${{ env.TIMEZONE }}
           results-file: ${{ env.JEST_TEST_DIR }}/${{ env.JEST_TEST_RESULTS_FILE }}
           report-name: ${{ env.JEST_TEST_REPORT_NAME }}
           # TODO:  Determine if you would like status checks, pr comments or both (sometimes it's best to enable both to see what you like best)
           create-status-check: true
-          create-pr-comment: false
+          create-pr-comment: true
 
-      - name: Generate jest code coverage artifacts and summary
+      - name: create code coverage report
         uses: im-open/code-coverage-report-generator@4.8.13
         with:
           reports: '*/**/lcov.info'
           targetdir: ${{ env.CODE_COVERAGE_DIR_JEST }}
           title: jest code coverage
-          tag: 'Workflow: ${{ github.workflow }} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}' #TODO;  Verify the tag to add
+          tag: 'Workflow: ${{ github.workflow }} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}'
           # TODO:  Add the appropriate filters to each type.
           # The filters are a ; separated list of items to include(+) or exclude(-).  Wildcards are accepted.
           # For instance: -xunit*;-Dapper;-*.Tests
@@ -250,7 +225,7 @@ jobs:
           filefilters: ''
           classfilters: ''
 
-      - name: Process jest code coverage results and create a status check
+      - name: create status check/comment for code coverage results
         id: jest_coverage_check
         uses: im-open/process-code-coverage-summary@v1.0.2
         with:
@@ -260,13 +235,13 @@ jobs:
           check-name: ${{ env.CODE_COVERAGE_CHECK_NAME_JEST }}
           # TODO:  Determine if you would like status checks, pr comments or both (sometimes it's best to enable both to see what you like best)
           create-status-check: true
-          create-pr-comment: false
+          create-pr-comment: true
           # TODO:  Set the thresholds for branch and line coverage.
           # When set to 0 the outcome is neutral.  Otherwise line/branch coverage will be a 'failure' if actual coverage < threshold.
           line-threshold: 0
           branch-threshold: 0
 
-      - name: Upload jest code coverage report
+      - name: upload jest code coverage report
         uses: actions/upload-artifact@v2
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}
@@ -290,12 +265,13 @@ jobs:
         id: sam-yaml
         uses: im-open/yaml-file-validation@v1.0.1
         with:
-          yaml-file-path: ./SAM.yml  # TODO:  Verify name/case of your sam.yml file  
+          yaml-file-path: ./SAM.yml  # TODO:  Verify name, case and extension of your sam.yml file  
           schema-file-path: 'SAM'
+
 
   build-deployment-artifacts:
     runs-on: ubuntu-latest
-    needs: [examine-triggers, dotnet-build-and-test, jest, validate-sam-yaml]  # TODO:  Update if any jobs were added/removed/renamed
+    needs: [examine-triggers, dotnet-build-and-test, jest, validate-sam-yaml]  # TODO:  Update if any jobs were added/removed/renamed (usually jest has been removed)
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
@@ -313,6 +289,27 @@ jobs:
       DEPLOY_ZIP: 'published_app.zip'
 
     steps:
+      - name: Check job/step status to this point
+        uses: im-open/workflow-conclusion@v1.0.1
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          # TODO:  Determine if there are any additional step outcomes/outputs you want considered or steps that need to be removed
+          additional-conclusions: |
+            [
+              { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.test }}" },
+              { "name": "dotnet coverage", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.coverage }}" },
+              { "name": "jest test", "conclusion" : "${{ needs.jest.outputs.test }}" },
+              { "name": "jest coverage", "conclusion" : "${{ needs.jest.outputs.coverage }}" },
+              { "name": "sam.yaml validation", "conclusion" : "${{ needs.validate-sam-yaml.outputs.validate }}" }
+            ]
+      
+      - name:  Do not create a release if there have been failures
+        if: steps.conclusion.outputs.workflow_conclusion != 'success'
+        run: |
+          echo "The workflow was not successful up to this point.  A release will not be created."
+          exit 1
+
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
@@ -323,24 +320,23 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      # TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+
       # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
-      #        - Remove the file and use this action or
-      #        - Delete this action and modify the file so it has the appropriate org entries in nuget.config. https://github.com/im-practices/git-er-done/blob/main/packages/connect-nuget.md#script-output
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
 
-      # TODO:  If there are multiple deployables, this step can be duplicated once per deployable project and updated to use the deployable-specific variables.
+      # TODO:  If there are multiple deployables, duplicate this step once per deployable project and update the PROJECT_ROOT/PUBLISHED_APP variables.
       - name: Build and Publish
         working-directory: ${{ env.PROJECT_ROOT }}
         run: |
           dotnet build --configuration Release
           dotnet publish -c Release -o ./${{ env.PUBLISHED_APP }} --no-restore
 
-      # TODO:  If there are multiple deployables, this step can be duplicated once per deployable project and updated to use the deployable-specific variables.
+      # TODO:  If there are multiple deployables, duplicate this step once per deployable project and update the PROJECT_ROOT/PUBLISHED_APP/DEPLOY_ZIP variables.
       - name: Zip the published app
         working-directory: ${{ env.PROJECT_ROOT }}
         run: |
@@ -368,7 +364,6 @@ jobs:
       # WARNING!!! This will upload the published artifacts to the release.  If you have done any transformations  
       # on the config files and included sensitive information (that isn't already present in committed files) 
       # that sensitive info will be available to download by anyone with read access to this repo.
-      # TODO:  If there are multiple deployables, this step can be duplicated once per deployable project and updated to use the deployable-specific variables.
       - name: Create Release with published_artifacts
         id: create_release
         uses: im-open/create-release@v1.0.0
@@ -377,9 +372,21 @@ jobs:
           delete-existing-release: true # Handy when you hit 're-run jobs' on a workflow run
           tag-name: ${{ env.VERSION }}
           prerelease: ${{ env.PRERELEASE }}
+          # TODO:  if there are multiple deployables that are created, delete these three items.
           asset-path: ${{ env.PROJECT_ROOT }}/${{ env.DEPLOY_ZIP }}
           asset-name: ${{ env.DEPLOY_ZIP }}
           asset-content-type: application/zip
+
+      # TODO:  If you have multiple deployables, duplicate this action once per deployable.  It will upload
+      #        each release asset individually.  Ensure the variables (PROJECT_ROOT, DEPLOY_ZIP) are updated with the 
+      #        appropriate var names
+      # - name: Upload Release Asset for <site/api/mfe/etc> 
+      #   uses: im-open/upload-release-asset@v1.0.0
+      #   github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+      #   upload-url: ${{ steps.create_release.outputs.asset-upload-url }}
+      #   asset-path: ${{ env.PROJECT_ROOT }}/${{ env.DEPLOY_ZIP }}
+      #   asset-name: ${{ env.DEPLOY_ZIP }}
+      #   asset-content-type: application/zip
 
       - name: Cleanup the branch pre-releases
         if: env.IS_MERGE_TO_MAIN == 'true'
@@ -403,7 +410,7 @@ jobs:
         id: conclusion
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          # TODO:  Determine if there are any additional step outcomes/outputs you want considered
+          # TODO:  Determine if there are any additional step outcomes/outputs you want considered or remove some items if they do not apply (like jest)
           additional-conclusions: |
             [
               { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.test }}" },
@@ -421,7 +428,7 @@ jobs:
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Build
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the finish-build job)
-          timezone: America/Denver # TODO:  Verify timezone
+          timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [
               { "name": "Event", "value": "${{ github.event_name }}" },
@@ -458,6 +465,7 @@ jobs:
           echo "There were errors in the workflow.  Check the workflow-conclusion step above for more details on what failed."
           exit 1
 
+      # NOTE:  Currently this is not working and WTW needs needs to whitelist our actions runners in order to initiate a scan
       # TODO:  Delete if you have other triggers for checkmarx scans
       # TODO: Uncomment once this workflow has been merged to master at least once.
       # The repository_dispatch event won't work until the checkmarx workflow is in main.
@@ -470,7 +478,7 @@ jobs:
       #       github.repos.createDispatchEvent({
       #         owner: context.repo.owner,
       #         repo: context.repo.repo,
-      #         event_type: "run_checkmarx",
+      #         event_type: 'run_checkmarx',
       #         client_payload: {
       #           ref: "${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}"
       #         }

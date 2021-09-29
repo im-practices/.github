@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v2    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v3    DO NOT REMOVE
 
 name: 'Package Push npm Workflow'
 
@@ -22,7 +22,7 @@ on:
 
 jobs:
   publish-to-gpr:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  Update if using a different trigger
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  Update if using a different trigger & verify name of default branch
     runs-on: [self-hosted, ubuntu-20.04]
     defaults:
       run:
@@ -36,12 +36,14 @@ jobs:
           node-version: 12 # TODO: verify node version
           registry-url: https://npm.pkg.github.com/
 
+      # TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+
       # TODO:  If the project contains dependencies to other npm packages in GitHub's npm package registry, uncomment this step, otherwise delete
       # - name: Authenticate with GitHub Packages for Restoring Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
 
       # TODO:  Uncomment if this workflow should increment the version.  Delete if a different workflow already incremented the version.
       # - name: Increment git tag and create release

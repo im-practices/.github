@@ -1,4 +1,4 @@
-# Workflow Code: EnthralledOyster_v2    DO NOT REMOVE
+# Workflow Code: EnthralledOyster_v3    DO NOT REMOVE
 
 name: Checkmarx CLI SAST Scan
 
@@ -47,15 +47,14 @@ jobs:
           # TODO:  Add your App name and optional project type.
           # Required Format: IndividualMarketplace.[projectName].[optional-project-type]
           # Examples: (IndividualMarketplace.1UP or IndividualMarketplace.Shopping.Mfe)
-          # If you have an existing scan, view the checkmarx build step in TeamCity to find this value.
-          project: ''
+          # If you have an existing scan, view the checkmarx build step in TeamCity to find this value in the 'Checkmarx Project Name' field.
+          project: 'IndividualMarketplace.'
 
           # TODO:  Replace with any files or folders that need to be excluded from the scan.
           # Default list and format at https://github.com/im-open/checkmarx-cli-sast-scan/tree/main#excluding-files-and-folders
           # If you have an existing scan, view the checkmarx build step in TeamCity to see if there were additional exclusions added.
           exclude-paths: ''
 
-          # TODO:  Review default values and if changes are desired uncomment then update value
           # report-name: 'CheckmarxSASTResults.pdf'
           # sast-high: 0    # This cannot exceed 0 according to our standards
           # sast-medium: 4  # This cannot exceed 4 according to our standards

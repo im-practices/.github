@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v2    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v3    DO NOT REMOVE
 
 name: 'Package Push Nuget Workflow'
 
@@ -27,7 +27,7 @@ jobs:
     PKG_NAME: '' # TODO:  Add the name of the nuget package if pushing to artifactory
 
   publish-to-gpr:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  Update if using a different trigger
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  Update if using a different trigger & verify name of default branch
     runs-on: [self-hosted, ubuntu-20.04]
     defaults:
       run:
@@ -37,15 +37,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+
       # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
-      #        - Remove the file and use this action or
-      #        - Delete this action and modify the file so it has the appropriate org entries in nuget.config. https://github.com/im-practices/git-er-done/blob/main/packages/connect-nuget.md#script-output
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
 
       # TODO:  Uncomment if this workflow should increment the version.  Delete if a different workflow already incremented the version.
       # - name: Increment git tag and create release

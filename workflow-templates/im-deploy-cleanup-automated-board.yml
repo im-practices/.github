@@ -2,7 +2,6 @@
 
 name: Cleanup Automated Deployment Board
 
-# TODO:  Evaluate the appropriate triggers
 # See the following site for help creating the right cron syntax: https://crontab.guru/
 # The cron job is specified in UTC.
 on:
@@ -32,11 +31,12 @@ jobs:
           #
           # See https://github.com/im-open/cleanup-deployment-board/ for more information
 
-          branch-cleanup-strategy: '' # TODO: age|number
-          branch-threshold: '' # TODO: positive whole number representing max age in days or number of inactive releases to keep
+          # TODO:  Set the clean up strategy and threshold for branch, tag and sha
+          branch-cleanup-strategy: '' # age|number
+          branch-threshold: '' # positive whole number representing max age in days or number of inactive releases to keep
 
-          tag-cleanup-strategy: '' # TODO: age|number
-          tag-threshold: '' # TODO: positive whole number representing max age in days or number of inactive releases to keep
+          tag-cleanup-strategy: '' # age|number
+          tag-threshold: '' # positive whole number representing max age in days or number of inactive releases to keep
 
-          sha-cleanup-strategy: '' # TODO: age|number
-          sha-threshold: '' # TODO: positive whole number representing max age in days or number of inactive releases to keep
+          sha-cleanup-strategy: '' # age|number
+          sha-threshold: '' # positive whole number representing max age in days or number of inactive releases to keep

@@ -1,4 +1,4 @@
-# Workflow Code: GuiltyBison_v1    DO NOT REMOVE
+# Workflow Code: GuiltyBison_v2    DO NOT REMOVE
 
 name: Run Postman Tests
 
@@ -35,15 +35,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+
       # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
-      #        - Remove the file and use this action or
-      #        - Delete this action and modify the file so it has the appropriate org entries in nuget.config. https://github.com/im-practices/git-er-done/blob/main/packages/connect-nuget.md#script-output
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
 
       - name: Restore npm packages
         run: npm install
