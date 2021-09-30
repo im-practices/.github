@@ -1,4 +1,4 @@
-# Workflow Code: InsecureLion_v7    DO NOT REMOVE
+# Workflow Code: InsecureLion_v8    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the az secrets have been added to the environment
@@ -15,7 +15,7 @@ on:
         description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat  # TODO:  update for the environments you use
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  update for the environments you use
         required: true
 
 env:
@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-          
+
       - name: Verify Tag Exists
         uses: im-open/verify-git-ref@v1.0.0
         with:
@@ -118,15 +118,25 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: |
+          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "Stakeholder approval was received or no required reviewers were set for this environment."
 
-      - name: Approval Received
-        run: echo "Stakeholder approval was received"
+  # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
+  # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  attestor-approval:
+    needs: [set-vars]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Attestor Approval'
+    steps:
+      - run: |
+          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "Attestor approval was received or no required reviewers were set for this environment."
 
   # This job needs to run for all environments because tf-plan relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
-    needs: [set-vars, stakeholder-approval]
+    needs: [set-vars, stakeholder-approval, attestor-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -151,9 +161,9 @@ jobs:
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     env:
-      PAGERDUTY_WINDOW_IN_MIN: 30 
+      PAGERDUTY_WINDOW_IN_MIN: 30
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions'
-      TARGET_SLOT: 'Production' 
+      TARGET_SLOT: 'Production'
       AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot.  If this differs per environment, add a new section in the set-vars job above where the value can be set per environment
       ASSET_ZIP: 'published_app.zip' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
       UNZIPPED_ASSET: 'published_app' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
@@ -179,13 +189,13 @@ jobs:
           templateFile: '' # TODO:  Add the ./path/file to make the substitutions in
           outputFile: '' # TODO:  Add the ./path/file to save the substitutions in (generally the same as templateFile above)
 
-      # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following 
-      #        action, otherwise delete it. This action won't add or remove items, it will just update the values.  
+      # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
+      #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
       - uses: microsoft/variable-substitution@v1
         with:
-          # TODO: add a comma separated list of files and the patterns, like './We*.config, ./Nlog.config' 
+          # TODO: add a comma separated list of files and the patterns, like './We*.config, ./Nlog.config'
           # The unzipped directory will not match your original solution structure.  The zip file only contains the published files for the project.
-          files: '' 
+          files: ''
         env:
           # TODO:  replace examples with actual substitutions
           Value1: 'Value1' # Example showing replacement at a root level node
@@ -200,7 +210,7 @@ jobs:
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
-          
+
       - name: AZ Login
         id: login
         uses: azure/login@v1
