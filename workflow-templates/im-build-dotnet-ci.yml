@@ -353,7 +353,6 @@ jobs:
       #       4 - Add another output to this job for each new version you've added
       - name: Calculate next version
         id: version
-        if: env.IS_MERGE_TO_MAIN == 'false'
         uses: im-open/git-version-lite@v2.0.0
         with:
           calculate-prerelease-version: ${{ env.PRERELEASE }}
