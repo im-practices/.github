@@ -278,7 +278,7 @@ jobs:
       IS_MERGE_TO_MAIN: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
       PRERELEASE: ${{ needs.examine-triggers.outputs.PRERELEASE }}
 
-      # TODO:  If you have a single deployable in the repo, uses these variables and delete the multi-deployable block below
+      # TODO:  If you have a single deployable in the repo, use these variables and delete the multi-deployable block below
       PROJECT_ROOT: '' # TODO:  Fill in the path to the folder containing the project that will be deployed, like ./src/MyBff
       PUBLISHED_APP: 'published_app' # Value will be used in the deployment workflow
       DEPLOY_ZIP: 'published_app.zip' # Value will be used in the deployment workflow
