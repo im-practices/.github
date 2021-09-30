@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v5    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v6    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -19,22 +19,27 @@ env:
   SOLUTION_FILE: '' # TODO:  Fill in the path and name of the solution file
   REPO_URL: 'https://github.com/${{ github.repository }}'
   TIMEZONE: 'america/denver' # TODO:  Verify timezone
-  
+
 jobs:
   examine-triggers:
     runs-on: ubuntu-latest
     outputs:
       CONTINUE_WORKFLOW: ${{ env.CONTINUE_WORKFLOW }}
       IS_MERGE_TO_MAIN: ${{ env.IS_MERGE_TO_MAIN }}
+      PRERELEASE: ${{ env.PRERELEASE }}
+
     steps:
       - run: echo "CONTINUE_WORKFLOW=true" >> $GITHUB_ENV
       - run: echo "IS_MERGE_TO_MAIN=false" >> $GITHUB_ENV
+      - run: echo "PRERELEASE=true" >> $GITHUB_ENV
 
       - if: github.event.action == 'closed' && github.event.pull_request.merged == false
         run: echo "CONTINUE_WORKFLOW=false" >> $GITHUB_ENV
 
       - if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  verify default branch name
-        run: echo "IS_MERGE_TO_MAIN=true" >> $GITHUB_ENV
+        run: |
+          echo "IS_MERGE_TO_MAIN=true" >> $GITHUB_ENV
+          echo "PRERELEASE=false" >> $GITHUB_ENV
 
   dotnet-build-and-test:
     runs-on: [self-hosted, ubuntu-20.04] # TODO:  Switch this to [self-hosted, windows-2019] if building a db
@@ -54,7 +59,7 @@ jobs:
       CODE_COVERAGE_REPORT_NAME_DOTNET: '<project-name> .Net Code Coverage' # TODO:  Replace <project-name>
       CODE_COVERAGE_CHECK_NAME_DOTNET: 'dotnet code coverage'
       CODE_COVERAGE_DIR_DOTNET: 'coverage-results/dotnet'
-      
+
       # TODO:  Remove the following vars if not setting up a db during ci
       FLYWAY_VERSION: '' # TODO:  Add the flyway version
       DB_NAME: '' # TODO: The name of the database
@@ -180,24 +185,14 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # - name: Authenticate with GitHub Packages
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
-      #   with:
-      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
-
-      # TODO:  `dotnet build` is here because most projects have an npm install/build as part of their
-      #        builds. If that is not included in your project, replace this `dotnet build` step
-      #        with the appropriate npm commands to ensure it is built before the jest tests are run.
-      - name: dotnet build
-        run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release
+      - name: restore npm packages
+        working-directory: ${{ env.JEST_TEST_DIR }}
+        run: npm ci
 
       - name: jest test with coverage
         continue-on-error: true
         working-directory: ${{ env.JEST_TEST_DIR }}
-        # TODO:  If you want to use the npm script (npm run test:coverage) instead of this command, the script in package.json needs to be updated to output a results file
-        run: jest --config ./jest.config.js --coverage --json --outputFile=${{ env.JEST_TEST_RESULTS_FILE }}
+        run: npm run test -- --outputFile=${{ env.JEST_TEST_RESULTS_FILE }} # TODO:  If your script for running jest is named something besides 'test' update it here
 
       - name: create status check/comment for jest test results
         id: jest_test_check
@@ -252,10 +247,9 @@ jobs:
 
     needs: [examine-triggers]
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
-    
 
     outputs:
-      validate: ${{ steps.sam-yaml.outputs.validation-outcome }} 
+      validate: ${{ steps.sam-yaml.outputs.validation-outcome }}
 
     steps:
       - uses: actions/checkout@v2
@@ -265,13 +259,12 @@ jobs:
         id: sam-yaml
         uses: im-open/yaml-file-validation@v1.0.1
         with:
-          yaml-file-path: ./SAM.yml  # TODO:  Verify name, case and extension of your sam.yml file  
+          yaml-file-path: ./SAM.yml # TODO:  Verify name, case and extension of your sam.yml file
           schema-file-path: 'SAM'
-
 
   build-deployment-artifacts:
     runs-on: ubuntu-latest
-    needs: [examine-triggers, dotnet-build-and-test, jest, validate-sam-yaml]  # TODO:  Update if any jobs were added/removed/renamed (usually jest has been removed)
+    needs: [examine-triggers, dotnet-build-and-test, jest, validate-sam-yaml] # TODO:  Update if any jobs were added/removed/renamed (usually jest has been removed)
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
@@ -279,16 +272,27 @@ jobs:
         shell: bash
 
     outputs:
-      NEXT_VERSION: ${{ env.VERSION }}
+      NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
 
     env:
       IS_MERGE_TO_MAIN: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
-      # TODO:  if a repository has multiple deployables, update this variables like MFE_PROJECT_ROOT or SVC_DEPLOY_ZIP
+      PRERELEASE: ${{ needs.examine-triggers.outputs.PRERELEASE }}
+
+      # TODO:  If you have a single deployable in the repo, use these variables and delete the multi-deployable block below
       PROJECT_ROOT: '' # TODO:  Fill in the path to the folder containing the project that will be deployed, like ./src/MyBff
-      PUBLISHED_APP: 'published_app'
-      DEPLOY_ZIP: 'published_app.zip'
+      PUBLISHED_APP: 'published_app' # Value will be used in the deployment workflow
+      DEPLOY_ZIP: 'published_app.zip' # Value will be used in the deployment workflow
+
+      # TODO:  For multiple deployables, each deployable should have a block with the appropriate values and delete the single-deployable block above.
+      # PROJECT_ROOT_SITE: '' # TODO:  Fill in the path to the folder containing the project that will be deployed, like ./src/MyBff
+      # PUBLISHED_SITE: 'published_site' # Value will be used in the deployment workflow
+      # DEPLOY_ZIP_SITE: 'published_site.zip' # Value will be used in the deployment workflow
+      # PROJECT_ROOT_API: '' # TODO:  Fill in the path to the folder containing the project that will be deployed, like ./src/MyBff
+      # PUBLISHED_API: 'published_api' # Value will be used in the deployment workflow
+      # DEPLOY_ZIP_API: 'published_api.zip' # Value will be used in the deployment workflow
 
     steps:
+      # We don't want to create a release if there were test/build failures, so check the conclusion
       - name: Check job/step status to this point
         uses: im-open/workflow-conclusion@v1.0.1
         id: conclusion
@@ -303,11 +307,11 @@ jobs:
               { "name": "jest coverage", "conclusion" : "${{ needs.jest.outputs.coverage }}" },
               { "name": "sam.yaml validation", "conclusion" : "${{ needs.validate-sam-yaml.outputs.validate }}" }
             ]
-      
-      - name:  Do not create a release if there have been failures
+
+      - name: Do not create a release if there have been failures
         if: steps.conclusion.outputs.workflow_conclusion != 'success'
         run: |
-          echo "The workflow was not successful up to this point.  A release will not be created."
+          echo "The workflow was not successful up to this point.  A release will not be created.  Check the previous step for more details."
           exit 1
 
       - name: Checkout Repository
@@ -342,35 +346,30 @@ jobs:
         run: |
           (cd ${{ env.PUBLISHED_APP }} && zip -r ../${{ env.DEPLOY_ZIP }} .)
 
-      - name: Calculate next pre-release version for branches
-        if: env.IS_MERGE_TO_MAIN == 'false'
-        uses: im-open/git-version-lite@v1.0.0
+      # TODO: If you have different tags per deployable in your repository:
+      #       1 - Duplicate this step once per deployable
+      #       2 - Update the ID so the NEXT_VERSION can be referenced elsewhere
+      #       3 - Uncomment and add a value for the prefix (mfe/db/site/api/etc) so the deployable's tag can be incremented.
+      #       4 - Add another output to this job for each new version you've added
+      - name: Calculate next version
+        id: version
+        uses: im-open/git-version-lite@v2.0.0
         with:
-          calculate-prerelease-version: true
-          branch-name: ${{ github.head_ref }}
+          calculate-prerelease-version: ${{ env.PRERELEASE }}
+          branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
+          # prefix: '' # TODO:  If you prefix your tags like (mfe/db/etc) uncomment and add that value here
 
-      - name: Calculate next release version for merges to main
-        if: env.IS_MERGE_TO_MAIN == 'true'
-        uses: im-open/git-version-lite@v1.0.0
-
-      - name: Set PRERELEASE to true for branches
-        if: env.IS_MERGE_TO_MAIN == 'false'
-        run: echo "PRERELEASE=true" >> $GITHUB_ENV
-
-      - name: Set PRERELEASE to false for merges to main
-        if: env.IS_MERGE_TO_MAIN == 'true'
-        run: echo "PRERELEASE=false" >> $GITHUB_ENV
-
-      # WARNING!!! This will upload the published artifacts to the release.  If you have done any transformations  
-      # on the config files and included sensitive information (that isn't already present in committed files) 
+      # WARNING!!! This will upload the published artifacts to the release.  If you have done any transformations
+      # on the config files and included sensitive information (that isn't already present in committed files)
       # that sensitive info will be available to download by anyone with read access to this repo.
+      # TODO:  If you have different tags per deployable in your repository, you may need to create multiple releases
       - name: Create Release with published_artifacts
         id: create_release
         uses: im-open/create-release@v1.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
           delete-existing-release: true # Handy when you hit 're-run jobs' on a workflow run
-          tag-name: ${{ env.VERSION }}
+          tag-name: ${{ steps.version.outputs.NEXT_VERSION }}
           prerelease: ${{ env.PRERELEASE }}
           # TODO:  if there are multiple deployables that are created, delete these three items.
           asset-path: ${{ env.PROJECT_ROOT }}/${{ env.DEPLOY_ZIP }}
@@ -378,9 +377,9 @@ jobs:
           asset-content-type: application/zip
 
       # TODO:  If you have multiple deployables, duplicate this action once per deployable.  It will upload
-      #        each release asset individually.  Ensure the variables (PROJECT_ROOT, DEPLOY_ZIP) are updated with the 
+      #        each release asset individually.  Ensure the variables (PROJECT_ROOT, DEPLOY_ZIP) are updated with the
       #        appropriate var names
-      # - name: Upload Release Asset for <site/api/mfe/etc> 
+      # - name: Upload Release Asset for <site/api/mfe/etc>
       #   uses: im-open/upload-release-asset@v1.0.0
       #   github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
       #   upload-url: ${{ steps.create_release.outputs.asset-upload-url }}
@@ -464,7 +463,6 @@ jobs:
         run: |
           echo "There were errors in the workflow.  Check the workflow-conclusion step above for more details on what failed."
           exit 1
-
       # NOTE:  Currently this is not working and WTW needs needs to whitelist our actions runners in order to initiate a scan
       # TODO:  Delete if you have other triggers for checkmarx scans
       # TODO: Uncomment once this workflow has been merged to master at least once.
