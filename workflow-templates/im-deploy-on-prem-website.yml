@@ -441,8 +441,3 @@ jobs:
               { "name": "Run", "value": "${{ github.run_id }}" },
               { "name": "Actor", "value": "${{ github.actor }}" }
             ]
-          # TODO:  Verify additional buttons you want included.  A View Build Log is included by default.  If no additional actions are needed, delete this arg.
-          custom-actions: |
-            [
-              { "name": "", "uri": "" }
-            ]

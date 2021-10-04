@@ -18,9 +18,8 @@ on:
         description: The environment to deploy to.
         required: true
 env:
-  GITHUB_REF: ${{ github.event.inputs.tag }}
-  SERVICE_EXE_NAME: '' # TDOO: Set the name of the service exe - To use this value: ${{ needs.set-vars.outputs.SERVICE_PATH }}
-
+  RELEASE_TAG: ${{ github.event.inputs.tag }}
+  TIMEZONE: 'america/denver' # TODO:  Verify timezone
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
@@ -39,6 +38,16 @@ jobs:
       WINDOWS_SERVER_CERT_PATH: ${{ steps.windows-server.outputs.WINDOWS_SERVER_CERT_PATH }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Verify Tag Exists
+        uses: im-open/verify-git-ref@v1.0.0
+        with:
+          branch-tag-sha: ${{ env.RELEASE_TAG }}
+
       - name: Set ENVIRONMENT
         id: clean-env
         uses: im-open/map-input-action@v1.0.1
@@ -57,9 +66,9 @@ jobs:
               "prod": ["prod", "production", "p"]
             }
           error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
 
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       # TODO: If any of the following deployment vars do not vary from environment to environment, they should
       #      be converted to a global env var at the top of the workflow and the output in this job should be removed
@@ -183,18 +192,29 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
-
       - name: Approval Received
-        run: echo "Stakeholder approval was received"
+        run: |
+          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "Stakeholder approval was received or no required reviewers were set for this environment."
+
+  # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
+  # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  attestor-approval:
+    needs: [set-vars]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Attestor Approval'
+    steps:
+      - run: |
+          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "Attestor approval was received or no required reviewers were set for this environment."
 
   # This job needs to run for all environments because build-deploy relies
   # on it but the steps inside this job will only run for the Prod env.
-  validate-tag-for-deploys:
-    needs: [set-vars, stakeholder-approval]
+  validate-tag-is-in-main-for-prod-deploys:
+    needs: [set-vars, stakeholder-approval, attestor-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
@@ -208,9 +228,9 @@ jobs:
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
         with:
-          tag: ${{ env.GITHUB_REF }}
+          tag: ${{ env.RELEASE_TAG }}
 
-  build-deploy:
+  deploy-service:
     needs: [set-vars, stakeholder-approval, validate-tag-for-prod-deploys]
     runs-on: [self-hosted, windows-2019]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
@@ -223,7 +243,7 @@ jobs:
       DEPLOY_ZIP: 'deploy.zip'
 
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -247,36 +267,23 @@ jobs:
       - name: Unzip release asset
         run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
 
-      # TODO:  If you need to do replacements in your appsettings.json file you can do it two ways.
-      # 1- Repeat this add-or-update-json-properties action for each environment, and add an 'if: needs.set-vars.outputs.ENVIRONMENT == ""' condition with the appropriate env to each action.
-      # 2- In the set-vars job, add one set-variable-based-on-environment action block per variable then use that variable in the single add-or-update-json-properties action below.
-      # - name: Update appsettings.json with Environment Specific Values
-      #   uses: im-open/add-or-update-json-properties@v1.0.1
-      #   with:
-      #     path-to-json-file: '${{ env.UNZIPPED_ASSET }}/appsettings.json'
-      #     properties-to-update-or-add: |
-      #       [
-      #         {"SecretName": "SecretValue"},
-      #         {"Nested.Secret.Name": "SecretValue"},
-      #         {"": ""}
-      #       ]
+      # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.  Delete if not using.
+      - uses: im-open/octostache-action@v1.0.0
+        with:
+          variablesFile: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
+          templateFile: '' # TODO:  Add the ./path/file to make the substitutions in
+          outputFile: '' # TODO:  Add the ./path/file to save the substitutions in (generally the same as templateFile above)
 
-      # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.
-      # - uses: im-open/octostache-action@v1.0.0
-      #   with:
-      #     variablesFile: '' # Files containing the variable substitutions to make, you will need to create this file
-      #     templateFile: ''  # The file to make the substitutions in
-      #     outputFile: ''    # The file to save the substitutions in (generally the same as above)
-
-      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # TODO:  If the project contains a local nuget.config, this action will not work properly.  Either:
-      #        - Remove the file and use this action or
-      #        - Delete this action and modify the file so it has the appropriate org entries in nuget.config. https://github.com/im-practices/git-er-done/blob/main/packages/connect-nuget.md#script-output
-      # - name: Authenticate with GitHub Packages
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
-      #   with:
-      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: '' # TODO:  Add a csv list of organizations that npm/nuget packages will be pulled from like 'im-enrollment,im-client'
+      # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
+      #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
+      - uses: microsoft/variable-substitution@v1
+        with:
+          files: '' # TODO: add a comma separated list of files and the patterns, like './src/MyProj/We*.config, ./src/MyProj/Nlog.config'
+        env:
+          # TODO:  replace examples with actual substitutions
+          Value1: 'Value1' # Example showing replacement at a root level node
+          Nested.Value.Name: 'Value2' # Example showing replacement at a nested node
+          SecretValue: ${{ secrets.VALUE }} # Example showing replacement with a secret
 
       - name: Zip the published app for faster deployment and uploads
         working-directory: ${{ env.UNZIPPED_ASSET }}
@@ -353,7 +360,7 @@ jobs:
     needs: [set-vars, deploy-code]
     if: always()
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - uses: im-open/workflow-conclusion@v1.0.2
         id: conclusion
@@ -368,19 +375,19 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
           environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
-          ref: ${{ env.GITHUB_REF }}
+          ref: ${{ env.RELEASE_TAG }}
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
-          timezone: 'america/denver'
+          timezone: ${{ env.TIMEZONE }}
 
       - name: Send Status to Teams
         if: always()
         uses: im-open/microsoft-teams-status-update-action@v1.0.0
         with:
-          title: Deploying ${{ needs.set-vars.outputs.SERVICE_NAME }} to ${{ needs.set-vars.outputs.WINDOWS_SERVER }} # TODO:  Verify title
+          title: Deploying ${{ needs.set-vars.outputs.WEBSITE_NAME }} to ${{ needs.set-vars.outputs.IIS_SERVER }} # TODO:  Verify title
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
-          timezone: America/Denver # TODO:  Verify timezone
+          timezone: ${{ env.TIMEZONE }}
           # TODO:  Verify the custom facts you want included
           custom-facts: |
             [
@@ -388,9 +395,4 @@ jobs:
               { "name": "Workflow", "value": "${{ github.workflow }}" },
               { "name": "Run", "value": "${{ github.run_id }}" },
               { "name": "Actor", "value": "${{ github.actor }}" }
-            ]
-          # TODO:  Verify additional buttons you want included.  A View Build Log is included by default.  If no additional actions are needed, delete this arg.
-          custom-actions: |
-            [
-              { "name": "", "uri": "" }
             ]
