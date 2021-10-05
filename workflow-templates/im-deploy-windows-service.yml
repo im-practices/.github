@@ -208,7 +208,7 @@ jobs:
           echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
-  # This job needs to run for all environments because build-deploy relies
+  # This job needs to run for all environments because deploy-service relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
     needs: [set-vars, stakeholder-approval, attestor-approval]
