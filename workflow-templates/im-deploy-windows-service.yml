@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: The repository tag pointing to the code that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
+        description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
         description: The environment to deploy to.
