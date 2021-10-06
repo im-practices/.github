@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v8    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v9    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the az secrets have been added to the environment
@@ -183,11 +183,11 @@ jobs:
 
       # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Must be done once per file.  Delete if not using.
       # https://github.com/im-open/octostache-action
-      - uses: im-open/octostache-action@v1.0.0
+      - uses: im-open/octostache-action@v2.0.0
         with:
           variablesFile: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
-          templateFile: '' # TODO:  Add the ./path/file to make the substitutions in
-          outputFile: '' # TODO:  Add the ./path/file to save the substitutions in (generally the same as templateFile above)
+          files-with-substitutions: '' # TODO:  Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
+        # env: # TODO: Environment variables can be added that will also be used for substitution. These will override any variable in the variablesFile with the same name.
 
       # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
