@@ -1,4 +1,4 @@
-# Workflow Code: FrazzledFerret_v2    DO NOT REMOVE
+# Workflow Code: FrazzledFerret_v3    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO:  Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
@@ -50,23 +50,22 @@ jobs:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/map-input-action@v1.0.1
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
-          input: ${{ github.event.inputs.environment }}
+          scope: ${{ github.event.inputs.environment }}
+          create-output-variables: true
+          error_on_no_match: true
+          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        env:
           # TODO:  Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
-          input_map: |
-            {
-              "dev": ["dev", "d", "development"],
-              "qa": ["qa", "q"],
-              "stage": ["stg", "s", "stage"],
-              "demo": ["o", "demo"],
-              "uat": ["u", "uat"],
-              "prod": ["prod", "production", "p"]
-            }
-          error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          mapped_input@dev d development: 'dev'
+          mapped_input@qa q: 'qa'
+          mapped_input@stg s stage: 'stage'
+          mapped_input@o demo: 'demo'
+          mapped_input@u uat: 'uat'
+          mapped_input@prod p production: 'prod'
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.   The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
