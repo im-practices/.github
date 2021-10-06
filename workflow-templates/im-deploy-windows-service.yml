@@ -1,14 +1,13 @@
-# Workflow Code: FuzzyDragon_v8    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v1    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the Service account secrets have been added to the environment
-# 2 - Make sure the host IIS server has been prepped to accept incoming WinRM Requests
-#     See the IIS App Pool action README for more details: https://github.com/im-open/iis-service-action/#readme
+# 2 - Make sure the host windows server has been prepped to accept incoming WinRM Requests
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
-name: Deploy On Prem Website
+name: Deploy On Prem Windows Service
 on:
   workflow_dispatch:
     inputs:
@@ -29,16 +28,14 @@ jobs:
 
     outputs:
       ENVIRONMENT: ${{ needs.set-vars.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      IIS_Server: ${{ steps.iis-server.outputs.IIS_SERVER }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER }}
-      WEBSITE_NAME: ${{ steps.iis-server.outputs.WEBSITE_NAME }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_NAME }}
-      APP_POOL_NAME: ${{ steps.iis-server.outputs.APP_POOL_NAME }} # To use this value: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
-      WEBSITE_HOST_HEADER: ${{ steps.iis-server.outputs.WEBSITE_HOST_HEADER }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_HOST_HEADER }}
-      WEBSITE_PATH: ${{ steps.iis-server.outputs.WEBSITE_PATH }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_PATH }}
-      WEBSITE_CERT_FRIENDLY_NAME: ${{ steps.iis-server.outputs.WEBSITE_CERT_FRIENDLY_NAME }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_FRIENDLY_NAME }}
-      WEBSITE_CERT_PASSWORD: ${{ steps.iis-server.outputs.WEBSITE_CERT_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_PASSWORD }}
-      IIS_SERVER_SERVICE_USER: ${{ steps.iis-server.outputs.IIS_SERVER_SERVICE_USER }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
-      IIS_SERVER_SERVICE_PASSWORD: ${{ steps.iis-server.outputs.IIS_SERVER_SERVICE_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
-      IIS_SERVER_CERT_PATH: ${{ steps.iis-server.outputs.IIS_SERVER_CERT_PATH }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
+      WINDOWS_SERVER: ${{ steps.windows-server.outputs.WINDOWS_SERVER }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
+      SERVICE_NAME: ${{ steps.windows-server.outputs.SERVICE_NAME }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_NAME }}
+      SERVICE_USER_NAME: ${{ steps.windows-server.outputs.SERVICE_USER_NAME }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_USER_NAME }}
+      SERVICE_USER_SECRET: ${{ steps.windows-server.outputs.SERVICE_USER_SECRET }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_USER_SECRET }}
+      SERVICE_PATH: ${{ steps.windows-server.outputs.SERVICE_PATH }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_PATH }}
+      WINDOWS_SERVER_SERVICE_USER: ${{ steps.windows-server.outputs.WINDOWS_SERVER_SERVICE_USER }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
+      WINDOWS_SERVER_SERVICE_PASSWORD: ${{ steps.windows-server.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
+      WINDOWS_SERVER_CERT_PATH: ${{ steps.windows-server.outputs.WINDOWS_SERVER_CERT_PATH }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
 
     steps:
       - name: Checkout Repository
@@ -76,12 +73,12 @@ jobs:
       # TODO: If any of the following deployment vars do not vary from environment to environment, they should
       #      be converted to a global env var at the top of the workflow and the output in this job should be removed
 
-      # TODO:  Fill in the iis-server and remove the environments that are not used.
-      - name: Set IIS Server
-        id: iis-server
+      # TODO:  Fill in the windows-server and remove the environments that are not used.
+      - name: Set Windows Server
+        id: windows-server
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
-          variable-name: 'IIS_SERVER'
+          variable-name: 'WINDOWS_SERVER'
           current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           dev-value: ''
           qa-value: ''
@@ -90,12 +87,12 @@ jobs:
           demo-value: ''
           uat-value: ''
 
-      # TODO:  Fill in the website-name and remove the environments that are not used.
-      - name: Set Website Name
-        id: website-name
+      # TODO:  Fill in the service-name and remove the environments that are not used.
+      - name: Set Serivce Name
+        id: service-name
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
-          variable-name: 'WEBSITE_NAME'
+          variable-name: 'SERVICE_NAME'
           current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           dev-value: '' # TODO: Add the dev website name or delete if env does not exist
           qa-value: '' # TODO: Add the qa website name or delete if env does not exist
@@ -104,12 +101,12 @@ jobs:
           demo-value: '' # TODO: Add the demo website name or delete if env does not exist
           uat-value: '' # TODO: Add the uat website name or delete if env does not exist
 
-      # TODO:  Fill in the app-pool-name and remove the environments that are not used.
-      - name: app-pool-name
-        id: app-pool-name
+      # TODO:  Fill in the service-path and remove the environments that are not used.
+      - name: service-path
+        id: service-path
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
-          variable-name: 'APP_POOL_NAME'
+          variable-name: 'SERVICE_PATH'
           current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           dev-value: ''
           qa-value: ''
@@ -118,26 +115,12 @@ jobs:
           demo-value: ''
           uat-value: ''
 
-      # TODO:  Fill in the website-host-header and remove the environments that are not used.
-      - name: website-host-header
-        id: website-host-header
+      # TODO:  Fill in the windows-server-service-user for WinRm access to the Windows machine and remove the environments that are not used.
+      - name: windows-server-service-user
+        id: windows-server-service-user
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
-          variable-name: 'WEBSITE_HOST_HEADER'
-          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-          dev-value: ''
-          qa-value: ''
-          stage-value:
-          prod-value: ''
-          demo-value: ''
-          uat-value: ''
-
-      # TODO:  Fill in the website-path and remove the environments that are not used.
-      - name: website-path
-        id: website-path
-        uses: im-open/set-variable-based-on-environment@v1.0.0
-        with:
-          variable-name: 'WEBSITE_PATH'
+          variable-name: 'WINDOWS_SERVER_SERVICE_USER'
           current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           dev-value: ''
           qa-value: ''
@@ -146,12 +129,12 @@ jobs:
           demo-value: ''
           uat-value: ''
 
-      # TODO:  Fill in the website-cert-path and remove the environments that are not used.
-      - name: website-cert-path
-        id: website-cert-path
+      # TODO:  Fill in the windows-server-service-password for WinRm access to the Windows machine and remove the environments that are not used.
+      - name: windows-server-service-password
+        id: windows-server-service-password
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
-          variable-name: 'WEBSITE_CERT_PATH'
+          variable-name: 'WINDOWS_SERVER_SERVICE_PASSWORD'
           current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           dev-value: ''
           qa-value: ''
@@ -160,12 +143,12 @@ jobs:
           demo-value: ''
           uat-value: ''
 
-      # TODO:  Fill in the website-cert-friendly-name and remove the environments that are not used.
-      - name: website-cert-friendly-name
-        id: website-cert-friendly-name
+      # TODO:  Fill in the windows-server-cert-path for WinRm access to the Windows machine and remove the environments that are not used.
+      - name: windows-server-cert-path
+        id: windows-server-cert-path
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
-          variable-name: 'WEBSITE_CERT_FRIENDLY_NAME'
+          variable-name: 'WINDOWS_SERVER_CERT_PATH'
           current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           dev-value: ''
           qa-value: ''
@@ -174,12 +157,12 @@ jobs:
           demo-value: ''
           uat-value: ''
 
-      # TODO:  Fill in the website-cert-password and remove the environments that are not used.
-      - name: website-cert-password
-        id: website-cert-password
+        # TODO:  Fill in the service-user-name for that the windows service uses remove if using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+      - name: service-user-name
+        id: service-user-name
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
-          variable-name: 'WEBSITE_CERT_PASSWORD'
+          variable-name: 'SERVICE_USER_NAME'
           current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           dev-value: ''
           qa-value: ''
@@ -188,40 +171,12 @@ jobs:
           demo-value: ''
           uat-value: ''
 
-      # TODO:  Fill in the iis-server-service-user for WinRm access to the IIS Server and remove the environments that are not used.
-      - name: iis-server-service-user
-        id: iis-server-service-user
+        # TODO:  Fill in the service-user-secret for that the windows service uses remove if using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+      - name: service-user-secret
+        id: service-user-secret
         uses: im-open/set-variable-based-on-environment@v1.0.0
         with:
-          variable-name: 'IIS_SERVER_SERVICE_USER'
-          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-          dev-value: ''
-          qa-value: ''
-          stage-value: ''
-          prod-value: ''
-          demo-value: ''
-          uat-value: ''
-
-      # TODO:  Fill in the iis-server-service-password for WinRm access to the IIS Server and remove the environments that are not used.
-      - name: iis-server-service-password
-        id: iis-server-service-password
-        uses: im-open/set-variable-based-on-environment@v1.0.0
-        with:
-          variable-name: 'IIS_SERVER_SERVICE_PASSWORD'
-          current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-          dev-value: ''
-          qa-value: ''
-          stage-value: ''
-          prod-value: ''
-          demo-value: ''
-          uat-value: ''
-
-      # TODO:  Fill in the iis-server-cert-path for WinRm access to the IIS Server and remove the environments that are not used.
-      - name: iis-server-cert-path
-        id: iis-server-cert-path
-        uses: im-open/set-variable-based-on-environment@v1.0.0
-        with:
-          variable-name: 'IIS_SERVER_CERT_PATH'
+          variable-name: 'SERVICE_USER_SECRET'
           current-environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           dev-value: ''
           qa-value: ''
@@ -253,7 +208,7 @@ jobs:
           echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
-  # This job needs to run for all environments because build-deploy relies
+  # This job needs to run for all environments because deploy-service relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
     needs: [set-vars, stakeholder-approval, attestor-approval]
@@ -275,8 +230,8 @@ jobs:
         with:
           tag: ${{ env.RELEASE_TAG }}
 
-  build-deploy:
-    needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
+  deploy-service:
+    needs: [set-vars, stakeholder-approval, validate-tag-for-prod-deploys]
     runs-on: [self-hosted, windows-2019]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
@@ -334,56 +289,56 @@ jobs:
         working-directory: ${{ env.UNZIPPED_ASSET }}
         run: zip -r ../${{env.DEPLOY_ZIP}} .
 
-      # Uncomment this if the site hasn't been created before
-      # This action does work better if the website cert is already installed
-      # - name: Create Web Site
-      #   uses: im-open/iis-site-create@v1.0.0
-      #   with:
-      #     server: '${{ needs.set-vars.outputs.IIS_SERVER }}'
-      #     website-name: '${{ needs.set-vars.outputs.WEBSITE_NAME }}'
-      #     app-pool-name: '${{ needs.set-vars.outputs.APP_POOL_NAME }}'
-      #     website-host-header: '${{ needs.set-vars.outputs.WEBSITE_HOST_HEADER }}'
-      #     website-path: '${{ needs.set-vars.outputs.WEBSITE_PATH }}'
-      #     website-cert-path: '${{ needs.set-vars.outputs.WEBSITE_CERT_PATH }}'
-      #     website-cert-friendly-name: '${{ needs.set-vars.outputs.WEBSITE_CERT_FRIENDLY_NAME }}'
-      #     website-cert-password: '${{ needs.set-vars.outputs.WEBSITE_CERT_PASSWORD }}'
-      #     service-account-id: '${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}'
-      #     service-account-password: '${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}'
-      #     server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
-
-      - name: Stop App Pool
-        id: app-pool-stop
+      - name: Stop Service
+        id: stop-service
         if: always()
-        uses: im-open/app-pool-action@v1.0.0
+        uses: im-open/windows-service-action@v1.0.0
         with:
           action: 'stop'
-          server: ${{ needs.set-vars.outputs.IIS_SERVER }}
-          app-pool-name: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
-          service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
-          service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
-          server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
+          service-name: ${{ needs.set-vars.outputs.SERVICE_NAME }}
+          server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
+          service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
+          service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
+          server-public-key: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
+        continue-on-error: true
 
-      - name: Deploy deployment package
+      - name: Deploy Deployment Package
+        id: deploy
         if: steps.app-pool-stop.outcome == 'success'
         uses: 'im-open/deploy-windows-files@v1.0.2'
         with:
-          server: ${{ needs.set-vars.outputs.IIS_SERVER }}
+          server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
+          service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
+          service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
-          deployment-folder-path: ${{ needs.set-vars.outputs.WEBSITE_PATH }}
+          deployment-folder-path: ${{ needs.set-vars.outputs.SERVICE_PATH }}
           clean-deployment-folder: 'true'
-          service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
-          service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
-          server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
+          server-public-key: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
 
-      - name: Start App Pool
-        uses: im-open/app-pool-action@v1.0.0
+      - name: Register Service
+        id: register
+        if: steps.deploy.outcome == 'success'
+        uses: im-open/register-windows-service@initial-release
+        with:
+          service-name: '${{ needs.set-vars.outputs.SERVICE_NAME }}'
+          deployment-path: '${{ needs.set-vars.outputs.SERVICE_PATH }}\\win-service.exe'
+          server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
+          service-credential-user: ${{ needs.set-vars.outputs.SERVICE_USER_NAME }} # TODO:  If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          service-credential-password: ${{ needs.set-vars.outputs.SERVICE_USER_SECRET }} # TODO:  If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
+          service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
+          server-public-key: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
+
+      - name: Start Service
+        if: steps.register.outcome == 'success'
+        uses: im-open/windows-service-action@v1.0.0
         with:
           action: 'start'
-          server: ${{ needs.set-vars.outputs.IIS_SERVER }}
-          app-pool-name: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
-          service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
-          service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
-          server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
+          service-name: ${{ needs.set-vars.outputs.SERVICE_NAME }}
+          server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
+          service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
+          service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
+          server-public-key: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'
