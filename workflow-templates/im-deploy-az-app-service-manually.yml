@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }} # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
       AZ_APP_NAME: ${{ steps.set-variables.outputs.AZ_APP_NAME }} # To use this value: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
       APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }} # To use this value: ${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}
@@ -49,18 +49,18 @@ jobs:
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
-          error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
         env:
           # TODO:  Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
-          mapped_input@dev d development: 'dev'
-          mapped_input@qa q: 'qa'
-          mapped_input@stg s stage: 'stage'
-          mapped_input@o demo: 'demo'
-          mapped_input@u uat: 'uat'
-          mapped_input@prod p production: 'prod'
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
@@ -172,7 +172,7 @@ jobs:
         with:
           variablesFile: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
           files-with-substitutions: '' # TODO:  Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
-        # env: # TODO: Environment variables can be added that will also be used for substitution. These will override any variable in the variablesFile with the same name.
+        # env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variablesFile with the same name.
 
       # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.

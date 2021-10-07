@@ -35,8 +35,8 @@ jobs:
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
-          error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
         env:
           # TODO:  Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
@@ -100,8 +100,8 @@ jobs:
         uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
           scope: ${{ github.event.inputs.action }}
-          error_on_no_match: true
-          custom_error_message: 'The action must be start, stop or restart'
+          error-on-no-match: true
+          custom-error-message: 'The action must be start, stop or restart'
         env:
           mapped_input@start t: 'start'
           mapped_input@stop p: 'stop'
