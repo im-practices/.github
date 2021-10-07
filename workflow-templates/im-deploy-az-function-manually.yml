@@ -1,4 +1,4 @@
-# Workflow Code: InsecureLion_v8    DO NOT REMOVE
+# Workflow Code: InsecureLion_v9    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the az secrets have been added to the environment
@@ -154,6 +154,13 @@ jobs:
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
         with:
           tag: ${{ env.RELEASE_TAG }}
+
+      - uses: im-open/is-release-production-ready@v1.0.0
+        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.RELEASE_TAG }}
+          fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
 
   deploy-code:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
