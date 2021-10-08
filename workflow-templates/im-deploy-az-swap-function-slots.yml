@@ -28,7 +28,7 @@ jobs:
 
     # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
     outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
       RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }}
       AZ_FUNC_NAME: ${{ steps.set-variables.outputs.AZ_FUNC_NAME }}
       OPEN_WINDOW: ${{ steps.get-inputs-from-trigger.OPEN_WINDOW }}
@@ -57,14 +57,14 @@ jobs:
           # TODO:  Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
-          mapped_input@dev d development: 'dev'
-          mapped_input@qa q: 'qa'
-          mapped_input@stg s stage: 'stage'
-          mapped_input@o demo: 'demo'
-          mapped_input@u uat: 'uat'
-          mapped_input@prod p production: 'prod'
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}"
 
       # This variable is used to swap slots and annotate app insights
       # This variable is used to deploy the app, swap slots, annotate app insights and send a teams notification
@@ -73,7 +73,7 @@ jobs:
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
-          scope: ${{ steps.clean-env.outputs.mapped_input }}
+          scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
           create-output-variables: true
         env:
           # This variable is used to swap slots and annotate app insights

@@ -36,7 +36,7 @@ jobs:
 
     outputs:
       # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value in another job: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value in another job: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     steps:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
@@ -52,14 +52,14 @@ jobs:
           # TODO:  Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
-          mapped_input@dev d development: 'dev'
-          mapped_input@qa q: 'qa'
-          mapped_input@stg s stage: 'stage'
-          mapped_input@o demo: 'demo'
-          mapped_input@u uat: 'uat'
-          mapped_input@prod p production: 'prod'
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}"
 
   k6_test:
     runs-on: [self-hosted, ubuntu-20.04]
