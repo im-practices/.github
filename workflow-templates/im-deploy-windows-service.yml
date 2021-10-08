@@ -267,6 +267,18 @@ jobs:
       - name: Unzip release asset
         run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
 
+      - name: Set Service Configuration and Substitution Values
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        with:
+          scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          create-output-variables: true
+          input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
+        env:
+          # TODO:  Add the values your service needs to be configured with (app.config/octo var substitution/config changes). Envs that aren't used can be deleted.
+          #  - The name of the env (left side of @) (ex: Auth0_Domain).  This can be used in the later variable-substitution and octostache actions for replacement
+          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses set-vars.ENVIRONMENT to match one of the scopes below and these are the values it will have.
+          #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
+
       # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
       # https://github.com/im-open/octostache-action
