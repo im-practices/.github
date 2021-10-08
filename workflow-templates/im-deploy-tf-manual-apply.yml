@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v10    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v11    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
@@ -43,16 +43,16 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }} # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-      STORAGE_ACCOUNT: ${{ steps.stg-acct.outputs.STORAGE_ACCOUNT }} # To use this value: ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }} # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+      STORAGE_ACCOUNT: ${{ steps.set-variables.outputs.STORAGE_ACCOUNT }} # To use this value: ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-          
+
       - name: Verify Tag Exists
         uses: im-open/verify-git-ref@v1.0.0
         with:
@@ -61,57 +61,46 @@ jobs:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/map-input-action@v1.0.1
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
-          input: ${{ github.event.inputs.environment }}
+          scope: ${{ github.event.inputs.environment }}
+          create-output-variables: true
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        env:
           # TODO:  Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
-          input_map: |
-            {
-              "dev": ["dev", "d", "development"],
-              "qa": ["qa", "q"],
-              "stage": ["stg", "s", "stage"],
-              "demo": ["o", "demo"],
-              "uat": ["u", "uat"],
-              "prod": ["prod", "production", "p"]
-            }
-          error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
-      # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-      # This variable is used to upload and download blobs from blob storage
-      - name: Set RESOURCE_GROUP
-        uses: im-open/set-variable-based-on-environment@v1.0.0
-        id: rgrp
+      - name: Set Variables
+        id: set-variables
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
-          variable-name: 'RESOURCE_GROUP'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
-          # TODO: For the following resource group inputs, fill in the value if you have the environment and delete the environment if it does not exist
-          dev-value: ''
-          qa-value: ''
-          stage-value: ''
-          demo-value: ''
-          uat-value: ''
-          prod-value: ''
-
-      # To use this value: ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}
-      # This variable is used to upload and download blobs from blob storage
-      - name: Set STORAGE_ACCOUNT
-        uses: im-open/set-variable-based-on-environment@v1.0.0
-        id: stg-acct
-        with:
-          variable-name: 'STORAGE_ACCOUNT'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
-          # TODO: For the following storage-account inputs, fill in the value if you have the environment and delete the environment if it does not exist
-          dev-value: ''
-          qa-value: ''
-          stage-value: ''
-          demo-value: ''
-          uat-value: ''
-          prod-value: ''
+          scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
+          create-output-variables: true
+        env:
+          # This variable is used to upload and download blobs from blob storage
+          RESOURCE_GROUP@dev: ''
+          RESOURCE_GROUP@qa: ''
+          RESOURCE_GROUP@stage: ''
+          RESOURCE_GROUP@demo: ''
+          RESOURCE_GROUP@uat: ''
+          RESOURCE_GROUP@prod: ''
+          # This variable is used to upload and download blobs from blob storage
+          STORAGE_ACCOUNT@dev: ''
+          STORAGE_ACCOUNT@qa: ''
+          STORAGE_ACCOUNT@stage: ''
+          STORAGE_ACCOUNT@demo: ''
+          STORAGE_ACCOUNT@uat: ''
+          STORAGE_ACCOUNT@prod: ''
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.

@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v3    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v4    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
@@ -29,14 +29,14 @@ jobs:
 
     # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.ENVIRONMENT }}
     outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-          
+
       - name: Verify Tag Exists
         uses: im-open/verify-git-ref@v1.0.0
         with:
@@ -45,25 +45,24 @@ jobs:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/map-input-action@v1.0.1
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
-          input: ${{ github.event.inputs.environment }}
+          scope: ${{ github.event.inputs.environment }}
+          create-output-variables: true
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        env:
           # TODO:  Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
-          input_map: |
-            { 
-              "dev": ["dev", "d", "development"], 
-              "qa": ["qa", "q"], 
-              "stage": ["stg", "s", "stage"], 
-              "demo": ["o", "demo"], 
-              "uat": ["u", "uat"], 
-              "prod": ["prod", "production", "p"] 
-            }
-          error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
   deploy-to-azure:
     runs-on: [self-hosted, ubuntu-20.04]

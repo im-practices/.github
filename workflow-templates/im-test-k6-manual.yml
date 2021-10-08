@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v2    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v3    DO NOT REMOVE
 
 name: Manual trigger K6 test
 
@@ -36,28 +36,30 @@ jobs:
 
     outputs:
       # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value in another job: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value in another job: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     steps:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/map-input-action@v1.0.1
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
-          input: ${{ github.event.inputs.env-to-test }}
+          scope: ${{ github.event.inputs.environment }}
+          create-output-variables: true
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        env:
           # TODO:  Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
-          input_map: |
-            { 
-              "dev": ["dev", "d", "development"], 
-              "qa": ["qa", "q"], 
-              "stage": ["stg", "s", "stage"]
-            }
-          error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA or Stage' # TODO:  Update for the environments that are available
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}"
 
   k6_test:
     runs-on: [self-hosted, ubuntu-20.04]
@@ -75,7 +77,7 @@ jobs:
 
       - name: Validate test file exists
         run: |
-          echo "Checking if test file exists:" 
+          echo "Checking if test file exists:"
           FILE="./${{ github.event.inputs.test-folder-root }}/${{ github.event.inputs.test-file }}"
           if [[ -f $FILE ]]; then
             echo "$FILE exists."

@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v2    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v3    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -29,9 +29,9 @@ jobs:
 
     # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
     outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }}
-      RESOURCE_GROUP: ${{ steps.rgrp.outputs.RESOURCE_GROUP }}
-      AZ_APP_NAME: ${{ steps.stg-acct.outputs.AZ_APP_NAME }}
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
+      RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }}
+      AZ_APP_NAME: ${{ steps.set-variables.outputs.AZ_APP_NAME }}
       OPEN_WINDOW: ${{ steps.get-inputs-from-trigger.OPEN_WINDOW }}
 
     steps:
@@ -48,52 +48,46 @@ jobs:
 
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/map-input-action@v1.0.1
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
-          input: ${{ steps.get-inputs-from-trigger.outputs.ENV_INPUT }}
+          scope: ${{ github.event.inputs.environment }}
+          create-output-variables: true
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        env:
           # TODO:  Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
-          input_map: |
-            { 
-              "dev": ["dev", "d", "development"], 
-              "qa": ["qa", "q"], 
-              "stage": ["stg", "s", "stage"], 
-              "demo": ["o", "demo"], 
-              "uat": ["u", "uat"], 
-              "prod": ["prod", "production", "p"] 
-            }
-          error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}"
 
-      # This variable is used to upload and download blobs from blob storage
-      - name: Set RESOURCE_GROUP
-        uses: im-open/set-variable-based-on-environment@v1.0.0
-        id: rgrp
+      - name: Set Variables
+        id: set-variables
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
-          variable-name: 'RESOURCE_GROUP'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
-          # TODO: For the following resource group inputs, fill in the value if you have the environment and delete the environment if it does not exist
-          dev-value: ''
-          qa-value: ''
-          stage-value: ''
-          demo-value: ''
-          uat-value: ''
-          prod-value: ''
-
-      - uses: im-open/set-variable-based-on-environment@v1.0.0
-        with:
-          variable-name: 'AZ_APP_NAME'
-          current-environment: ${{ steps.clean-env.outputs.mapped_input }}
+          scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
+          create-output-variables: true
+        env:
+          # This variable is used to upload and download blobs from blob storage
+          RESOURCE_GROUP@dev: ''
+          RESOURCE_GROUP@qa: ''
+          RESOURCE_GROUP@stage: ''
+          RESOURCE_GROUP@demo: ''
+          RESOURCE_GROUP@uat: ''
+          RESOURCE_GROUP@prod: ''
           # TODO: For the following app name inputs, fill in the value if you have the environment and delete the environment if it does not exist
-          dev-value: ''
-          qa-value: ''
-          stage-value: ''
-          demo-value: ''
-          uat-value: ''
-          prod-value: ''
+          AZ_APP_NAME@dev: ''
+          AZ_APP_NAME@qa: ''
+          AZ_APP_NAME@stage: ''
+          AZ_APP_NAME@demo: ''
+          AZ_APP_NAME@uat: ''
+          AZ_APP_NAME@prod: ''
 
   swap-slots:
     runs-on: [self-hosted, ubuntu-20.04]
