@@ -27,10 +27,11 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }} # To use this value: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-      AZ_APP_NAME: ${{ steps.set-variables.outputs.AZ_APP_NAME }} # To use this value: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
-      APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }} # To use this value: ${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}
+      # To use these values: ${{ needs.set-vars.outputs.VAR_NAME }}
+      ENVIRONMENT: ${{ steps.set-workflow-vars.outputs.ENVIRONMENT }}
+      RESOURCE_GROUP: ${{ steps.set-workflow-vars.outputs.RESOURCE_GROUP }}
+      AZ_APP_NAME: ${{ steps.set-workflow-vars.outputs.AZ_APP_NAME }}
+      APP_INSIGHTS_NAME: ${{ steps.set-workflow-vars.outputs.APP_INSIGHTS_NAME }}
 
     steps:
       - name: Checkout Repository
@@ -43,35 +44,23 @@ jobs:
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
 
-      - name: Set ENVIRONMENT
-        id: clean-env
+      - name: Set Workflow Variables
+        id: set-workflow-vars
         uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
           custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        # TODO:  For the environments you have, update the value for each scope.  Delete the envrionments you are not using.
         env:
-          # TODO:  Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
+          # This variable is used to normalize the user's environment input and set the environment for jobs in the workflow.
           ENVIRONMENT@dev d development: 'dev'
           ENVIRONMENT@qa q: 'qa'
           ENVIRONMENT@stg s stage: 'stage'
           ENVIRONMENT@o demo: 'demo'
           ENVIRONMENT@u uat: 'uat'
           ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.mapped_input }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
-      # This variable is used to swap slots and annotate app insights
-      - name: Set Variables
-        id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
-        with:
-          scope: ${{ steps.clean-env.outputs.mapped_input }}
-          create-output-variables: true
-        env:
           # This variable is used to swap slots and annotate app insights
           RESOURCE_GROUP@dev: ''
           RESOURCE_GROUP@qa: ''
@@ -93,6 +82,8 @@ jobs:
           APP_INSIGHTS_NAME@demo: ''
           APP_INSIGHTS_NAME@uat: ''
           APP_INSIGHTS_NAME@prod: ''
+
+      - run: echo "The current environment is ${{ steps.set-workflow-vars.outputs.mapped_input }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
@@ -165,6 +156,22 @@ jobs:
       - name: Unzip release asset
         run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
 
+      - name: Set App Configuration and Substitution Values
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        with:
+          scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          create-output-variables: true
+          input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
+        env:
+          # TODO:  Add the values your app needs to be configured with (appsettings.json/octo var substitution/config changes). Envs that aren't used can be deleted.
+          #  - The name of the env (left side of @) (ex: Auth0_Domain).  This can be used in the later variable-substitution and octostache actions for replacement
+          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses set-vars.ENVIRONMENT to match one of the scopes below and these are the values it will have.
+          #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
+          Auth0_Domain@dev: 'wtw-im-dev.auth0.com'
+          Auth0_Domain@qa: 'wtw-im-qa.auth0.com'
+          Auth0_Domain@stage: 'wtw-im-stage.auth0.com'
+          Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
+
       # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
       # https://github.com/im-open/octostache-action
@@ -176,13 +183,13 @@ jobs:
 
       # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
+      # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
       - uses: microsoft/variable-substitution@v1
         with:
           files: '' # TODO: add a comma separated list of files and the patterns, like './MyProj/We*.config, ./MyProj/Nlog.config' (this matches the downloaded asset structure)
         env:
           # TODO:  replace examples with actual substitutions
-          Value1: 'Value1' # Example showing replacement at a root level node
-          Nested.Value.Name: 'Value2' # Example showing replacement at a nested node
+          Auth0.Domain: ${{ env.Auth0_Domain }} # Example showing replacement at a nested node & using the env variable outputted from set-environment-variables-by-scope above
           SecretValue: ${{ secrets.VALUE }} # Example showing replacement with a secret
 
       - name: Zip the published app for faster deployment and uploads
