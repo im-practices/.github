@@ -1,0 +1,6 @@
+{
+    "name": "Deploy - AZ Database",
+    "description": "Template that can be used to deploy database updates. It runs flyway migrations.",
+    "iconName": "im_azure"
+  }
+  

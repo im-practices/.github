@@ -1,0 +1,196 @@
+# Workflow Code: BetrayedCod_v1    DO NOT REMOVE
+
+# Prerequisites
+# 1 - Make sure the az secrets have been added to the environment
+# 2 - Make sure the prod runners have access to the database with a 'azurerm_sql_virtual_network_rule' 
+
+# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+
+name: Deploy Database to Azure
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
+        required: true
+      environment:
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  update for the environments you use
+        required: true
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag  }} # This is the tag that we'll be deploying
+  DB_SERVER_NAME: '' # TODO: Fill in the name of the database server
+  DB_SERVER_PORT: '1433' # TODO: Verify that this is the correct port
+  DB_NAME: '' # TODO: Fill in the name of the database
+  MIGRATIONS_FOLDER: '' # TODO: Add the path to the migrations folder
+  MIGRATIONS_HISTORY_TABLE: 'MigrationHistory' # TODO: Verify this table name
+  TIMEZONE: 'america/denver' # TODO:  Verify timezone
+
+jobs:
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    outputs:
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Verify Tag Exists
+        uses: im-open/verify-git-ref@v1.0.0
+        with:
+          branch-tag-sha: ${{ env.RELEASE_TAG }}
+
+      - name: Set ENVIRONMENT
+        id: clean-env
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        with:
+          scope: ${{ github.event.inputs.environment }}
+          create-output-variables: true
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        env:
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
+
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+
+  # Each env has their own stakeholder approval environment.  If no required reviewers are set for
+  # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  stakeholder-approval:
+    needs: [set-vars]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
+    steps:
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - name: Approval Received
+        run: echo "Stakeholder approval was received"
+
+  # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
+  # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  attestor-approval:
+    needs: [set-vars]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Attestor Approval'
+    steps:
+      - run: |
+          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "Attestor approval was received or no required reviewers were set for this environment."
+
+  # This job needs to run for all environments because deploy-az-db relies
+  # on it but the steps inside this job will only run for the Prod env.
+  validate-tag-for-prod-deploys:
+    needs: [set-vars, stakeholder-approval, attestor-approval]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    steps:
+      # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
+      # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
+      - name: Checkout Repository
+        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        uses: actions/checkout@v2
+        with:
+          ref: 'main' # TODO: verify the name of your default branch
+          fetch-depth: 0
+
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+
+      - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
+        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        with:
+          tag: ${{ env.RELEASE_TAG }}
+
+  deploy-az-db:
+    needs: [set-vars, validate-tag-for-prod-deploys]
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    steps:
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Setup Flyway
+        uses: im-open/setup-flyway@v1.0.0
+        with:
+          version: 7.9.2
+
+      - name: Deploy migrations
+        uses: im-open/run-flyway-command@v1.0.1
+        with:
+          db-server-name: '${{ env.DB_SERVER_NAME }}'
+          db-server-port: '${{ env.DB_SERVER_PORT }}'
+          db-name: '${{ env.DB_NAME }}'
+          migration-files-path: '${{ env.MIGRATIONS_FOLDER }}'
+          flyway-command: 'migrate'
+          migration-history-table: '${{ env.MIGRATIONS_HISTORY_TABLE }}'
+          baseline-version: '0'
+          managed-schemas: 'dbo' # TODO: Update this csv with the schemas that flyway manages (e.g. 'dbo,CustomSchema,OtherSchema')
+          enable-out-of-order: 'false'
+          use-integrated-security: 'false'
+          username: '' # TODO: Add a secret and reference it here
+          password: '' # TODO: Add a secret and reference it here
+
+      - name: Azure logout
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
+  update-deployment-board-and-send-teams-notification:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    needs: [set-vars, deploy-az-db]
+    if: always()
+    steps:
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+
+      - uses: im-open/workflow-conclusion@v1.0.2
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+
+      # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+      - name: Update Deployment Board
+        if: always()
+        uses: im-open/update-deployment-board@v1.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
+          ref: ${{ env.RELEASE_TAG}}
+          deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          timezone: ${{ env.TIMEZONE }}
+
+      - name: Send Status to Teams
+        if: always()
+        uses: im-open/post-status-to-teams-action@v1.0.0
+        with:
+          title: ${{ env.DB_NAME }} Deployment to Azure
+          workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          workflow-type: Deploy
+          teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to this job)
+          timezone: ${{ env.TIMEZONE }}
+          custom-facts: |
+            [
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" }
+            ]
