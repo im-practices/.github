@@ -9,18 +9,17 @@
 
 name: Deploy Database to Azure
 on:
-  push:
   workflow_dispatch:
     inputs:
-      branch-tag-sha:
-        description: The branch, tag or sha of the database that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
+      tag:
+        description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
-        # TODO: Update this description with the correct environments
-        description: 'The environment to deploy to - dev|qa|stage|prod|demo|uat'
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  update for the environments you use
         required: true
+
 env:
-  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
+  RELEASE_TAG: ${{ github.event.inputs.tag  }} # This is the tag that we'll be deploying
   DB_SERVER_NAME: '' # TODO: Fill in the name of the database server
   DB_SERVER_PORT: '1433' # TODO: Verify that this is the correct port
   DB_NAME: '' # TODO: Fill in the name of the database
@@ -33,31 +32,39 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.mapped_input }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     steps:
-      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Verify Tag Exists
+        uses: im-open/verify-git-ref@v1.0.0
+        with:
+          branch-tag-sha: ${{ env.RELEASE_TAG }}
+
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/map-input-action@v1.0.1
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
-          input: 'dev' #${{ github.event.inputs.environment }}
+          scope: ${{ github.event.inputs.environment }}
+          create-output-variables: true
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        env:
           # TODO:  Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
-          input_map: |
-            { 
-              "dev": ["dev", "d", "development"], 
-              "qa": ["qa", "q"], 
-              "stage": ["stg", "s", "stage"], 
-              "demo": ["o", "demo"], 
-              "uat": ["u", "uat"], 
-              "prod": ["prod", "production", "p"] 
-            }
-          error_on_no_match: true
-          custom_error_message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod'
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
 
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
@@ -66,9 +73,20 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
       - name: Approval Received
         run: echo "Stakeholder approval was received"
+
+  # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
+  # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  attestor-approval:
+    needs: [set-vars]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Attestor Approval'
+    steps:
+      - run: |
+          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "Attestor approval was received or no required reviewers were set for this environment."
 
   # This job needs to run for all environments because deploy-az-db relies
   # on it but the steps inside this job will only run for the Prod env.
@@ -85,24 +103,24 @@ jobs:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
         with:
-          tag: ${{ env.GITHUB_REF }}
+          tag: ${{ env.RELEASE_TAG }}
 
   deploy-az-db:
     needs: [set-vars, validate-tag-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
-          ref: ${{ env.GITHUB_REF }}
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: AZ Login
         uses: azure/login@v1
@@ -141,7 +159,7 @@ jobs:
     needs: [set-vars, deploy-az-db]
     if: always()
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - uses: im-open/workflow-conclusion@v1.0.2
         id: conclusion
@@ -156,7 +174,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
           environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
-          ref: ${{ env.GITHUB_REF}}
+          ref: ${{ env.RELEASE_TAG}}
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           timezone: ${{ env.TIMEZONE }}
 
