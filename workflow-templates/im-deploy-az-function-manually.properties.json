@@ -1,5 +1,0 @@
-{
-  "name": "Deploy - AZ Function Code Deploy",
-  "description": "Template that can be used to deploy code to an Azure Function",
-  "iconName": "im_azure"
-}

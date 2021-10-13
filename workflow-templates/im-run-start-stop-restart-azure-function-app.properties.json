@@ -1,5 +1,0 @@
-{
-    "name": "Run - Start, stop or restart azure function app",
-    "description": "Template that can be used to start, stop or restart an azure function app",
-    "iconName": "im_run"
-}
