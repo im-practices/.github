@@ -1,4 +1,8 @@
-# Workflow Code: FuzzyDragon_v9    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v10    DO NOT REMOVE
+
+# Note: Each deployable on-prem site in the repository should have their own copy of this workflow rather than trying to deploy several
+#       on-prem websites with the same workflow.  If the site is deployed as part of a group, the site still needs its own copy of this
+#       workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
 
 # Prerequisites
 # 1 - Make sure the Service account secrets have been added to the environment
@@ -7,9 +11,14 @@
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#       Generally one board should be set up per on-prem site in the repository.
 
+# TODO:  If there are multiple on prem sites in the repo, append the site name to this workflow's file name and update the workflow name below
 name: Deploy On Prem Website
 on:
+  # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
+  #       1. Use the workflow_dispatch trigger
+  #       2. Delete the repository_dispatch trigger and comments below.
   workflow_dispatch:
     inputs:
       tag:
@@ -18,6 +27,25 @@ on:
       environment:
         description: The environment to deploy to.
         required: true
+
+  # TODO: If a repository has multiple deployable artifacts that are deployed together through the 'Deploy Multiple Items' workflow:
+  #       1. Uncomment the repository_dispatch trigger
+  #       2. Delete the workflow_dispatch trigger
+  #       3. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
+  #       4. Under the 'set-vars' job:
+  #          a. Change the outputs.ENVIRONMENT value from "${{ steps.clean-env.outputs.ENVIRONMENT }}" to "${{ github.event.client_payload.environment }}"
+  #          b. Delete the 'Checkout Repository' step
+  #          c. Delete the 'Verify Tag Exists' step
+  #          d. Delete the 'Set ENVIRONMENT' step
+  #          e. Change the echo statement to use "${{ github.event.client_payload.environment }}" when printing the environment
+  #          f. Change the set-variables step's scope from "${{ steps.clean-env.outputs.ENVIRONMENT }}" to "${{ github.event.client_payload.environment }}"
+  #       4. Delete the 'stakeholder-approval' job
+  #       5. Delete the 'attestor-approval' job
+  #       6. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
+  #       7. Under the 'deploy-site' job, update the needs property to be: "needs: [set-vars]"
+  # repository_dispatch:
+  #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
+
 env:
   RELEASE_TAG: ${{ github.event.inputs.tag }}
   TIMEZONE: 'america/denver' # TODO:  Verify timezone
@@ -184,7 +212,7 @@ jobs:
           echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
-  # This job needs to run for all environments because build-deploy relies
+  # This job needs to run for all environments because deploy-site relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
     needs: [set-vars, stakeholder-approval, attestor-approval]
@@ -210,10 +238,10 @@ jobs:
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.RELEASE_TAG }}
+          release-tag: ${{ env.RELEASE_TAG }}
           fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
 
-  build-deploy:
+  deploy-site:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, windows-2019]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
@@ -358,7 +386,7 @@ jobs:
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: [set-vars, deploy-code]
+    needs: [set-vars, deploy-site]
     if: always()
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -371,12 +399,16 @@ jobs:
       # https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
       - name: Update Deployment Board
         if: always()
-        uses: im-open/update-deployment-board@v1.0.2
+        uses: im-open/update-deployment-board@v1.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
           environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.RELEASE_TAG }}
+          ref-type: 'tag'
+          # TODO:  If the repo has multiple deployables and they all use the same tag for releases, add the deployable type here like MFE/API/SVC/BFF/DB etc.
+          #        Delete if the repo has a single deployable or multiple deployables with tags that are versioned independently.
+          #deployable-type: '' # Prefix will be included on the deployment board issue & allows tracking of individual components when they share a tag
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           timezone: ${{ env.TIMEZONE }}
 
