@@ -1,14 +1,23 @@
 # Workflow Code: AmazedPiglet_v2    DO NOT REMOVE
 
+# Note: Each deployable on-prem db in the repository should have their own copy of this workflow rather than trying to deploy several
+#       on-prem databases with the same workflow.  If the db is deployed as part of a group, the db still needs its own copy of this
+#       workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
+
 # Prerequisites
 # 1 - Work with Data Practices to get an account with the same permissions as were used in the service account you used to deploy with previously
 # 2 - Make sure the database login secrets have been added to the environment
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#       Generally one board should be set up per database in the repository.
 
+# TODO:  If there are multiple on prem databases in the repo, append the db name to this workflow's file name and update the workflow name below
 name: Deploy Database to On-Prem Server
 on:
+  # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
+  #       1. Use the workflow_dispatch trigger
+  #       2. Delete the repository_dispatch trigger and comments below.
   workflow_dispatch:
     inputs:
       tag:
@@ -17,6 +26,20 @@ on:
       environment:
         description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  update for the environments you use
         required: true
+
+  # TODO: If a repository has multiple deployable artifacts that are deployed together through the 'Deploy Multiple Items' workflow:
+  #       1. Uncomment the repository_dispatch trigger
+  #       2. Delete the workflow_dispatch trigger
+  #       3. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
+  #       4. Delete the 'set-vars' job
+  #       4. Delete the 'stakeholder-approval' job
+  #       5. Delete the 'attestor-approval' job
+  #       6. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
+  #       7. Replace all instances of "${{ needs.set-vars.outputs.ENVIRONMENT }}" with "${{ github.event.client_payload.environment }}"
+  #       8. Under the 'deploy-on-prem-db' job, delete the needs property
+  #       9. Under the 'update-deployment-board-and-send-teams-notification' job, update the needs property to be: "needs: [deploy-on-prem-db]"
+  # repository_dispatch:
+  #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
 env:
   RELEASE_TAG: ${{ github.event.inputs.tag  }} # This is the tag that we'll be deploying
