@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v9    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v10    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the Service account secrets have been added to the environment
@@ -210,7 +210,7 @@ jobs:
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.RELEASE_TAG }}
+          relese-tag: ${{ env.RELEASE_TAG }}
           fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
 
   build-deploy:
