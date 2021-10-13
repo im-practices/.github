@@ -1,8 +1,8 @@
-# Workflow Code: IrritatedHyena_v3    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v4    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
-name: Swap Azure App Service Slots
+name: Swap Azure App Slots
 
 # This workflow can be kicked off manually and it can also be kicked off automatically from
 # another workflow by using the repository_dispatch event trigger.  This workflow is designed
@@ -19,7 +19,8 @@ on:
         description: Flag indicating whether a pagerduty maintenance window should be opened
         required: true
         default: 'false'
-  # When using repository dispatch, the payload must have an environment property and an open-pagerduty-window property
+  # When using repository dispatch, the payload must have the following properties:
+  # { environment: 'dev|qa|stage|demo|uat|prod', 'open-pagerduty-window': 'true|false'}
   repository_dispatch:
     types: [swap_slots]
 
@@ -74,14 +75,15 @@ jobs:
           scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # This variable is used to upload and download blobs from blob storage
+          # TODO: For the following inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          # This variable is used to swap and delete slots
           RESOURCE_GROUP@dev: ''
           RESOURCE_GROUP@qa: ''
           RESOURCE_GROUP@stage: ''
           RESOURCE_GROUP@demo: ''
           RESOURCE_GROUP@uat: ''
           RESOURCE_GROUP@prod: ''
-          # TODO: For the following app name inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          # This variable is used to swap and delete slots
           AZ_APP_NAME@dev: ''
           AZ_APP_NAME@qa: ''
           AZ_APP_NAME@stage: ''
@@ -102,6 +104,7 @@ jobs:
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
       TARGET_SLOT: 'Production' # TODO:  Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main site, update it here
       SOURCE_SLOT: '' # TODO:  Add the name of the source slot
+      APP_TYPE: 'webapp' # TODO:  If this workflow is for an azure function, change this value to functionapp
 
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
@@ -122,10 +125,10 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
-      # ARM_SUBSCRIPTION_ID is an env-level secret
       - name: Swap
+        # ARM_SUBSCRIPTION_ID is an env-level secret
         run: |
-          az webapp deployment slot swap \
+          az ${{ env.APP_TYPE }} deployment slot swap \
           --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --name ${{ env.AZ_APP_NAME }}  \
@@ -135,7 +138,7 @@ jobs:
       # TODO:  Uncomment if you want to destroy the slot after swap.  Delete if you don't.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - run: |
-      #     az webapp deployment slot delete \
+      #     az ${{ env.APP_TYPE }} deployment slot delete \
       #     --slot ${{ env.SOURCE_SLOT }} \
       #     --name ${{ env.AZ_APP_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
