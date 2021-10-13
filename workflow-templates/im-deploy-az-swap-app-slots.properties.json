@@ -1,0 +1,5 @@
+{
+  "name": "Deploy - Swap Azure App Slots",
+  "description": "Swap deployment slots for your Azure App Service or Azure Function",
+  "iconName": "im_azure"
+}

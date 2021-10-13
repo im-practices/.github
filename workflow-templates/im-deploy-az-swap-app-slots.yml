@@ -1,13 +1,14 @@
-# Workflow Code: DelightedPug_v3    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v4    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
-name: Swap Azure Function Slots
+name: Swap Azure App Slots
 
 # This workflow can be kicked off manually and it can also be kicked off automatically from
 # another workflow by using the repository_dispatch event trigger.  This workflow is designed
 # to know about each of your environments, so the only thing you need to input is the
 # environment where slots will be toggled.
+
 on:
   workflow_dispatch:
     inputs:
@@ -18,7 +19,8 @@ on:
         description: Flag indicating whether a pagerduty maintenance window should be opened
         required: true
         default: 'false'
-  # When using repository dispatch, the payload must have an environment property and an open-pagerduty-window property
+  # When using repository dispatch, the payload must have the following properties:
+  # { environment: 'dev|qa|stage|demo|uat|prod', 'open-pagerduty-window': 'true|false'}
   repository_dispatch:
     types: [swap_slots]
 
@@ -30,7 +32,7 @@ jobs:
     outputs:
       ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
       RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }}
-      AZ_FUNC_NAME: ${{ steps.set-variables.outputs.AZ_FUNC_NAME }}
+      AZ_APP_NAME: ${{ steps.set-variables.outputs.AZ_APP_NAME }}
       OPEN_WINDOW: ${{ steps.get-inputs-from-trigger.OPEN_WINDOW }}
 
     steps:
@@ -66,9 +68,6 @@ jobs:
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}"
 
-      # This variable is used to swap slots and annotate app insights
-      # This variable is used to deploy the app, swap slots, annotate app insights and send a teams notification
-      # This variable is used to annotate app insights
       - name: Set Variables
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.2
@@ -76,20 +75,21 @@ jobs:
           scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # This variable is used to swap slots and annotate app insights
+          # TODO: For the following inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          # This variable is used to swap and delete slots
           RESOURCE_GROUP@dev: ''
           RESOURCE_GROUP@qa: ''
           RESOURCE_GROUP@stage: ''
           RESOURCE_GROUP@demo: ''
           RESOURCE_GROUP@uat: ''
           RESOURCE_GROUP@prod: ''
-          # This variable is used to deploy the app, swap slots, annotate app insights and send a teams notification
-          AZ_FUNC_NAME@dev: ''
-          AZ_FUNC_NAME@qa: ''
-          AZ_FUNC_NAME@stage: ''
-          AZ_FUNC_NAME@demo: ''
-          AZ_FUNC_NAME@uat: ''
-          AZ_FUNC_NAME@prod: ''
+          # This variable is used to swap and delete slots
+          AZ_APP_NAME@dev: ''
+          AZ_APP_NAME@qa: ''
+          AZ_APP_NAME@stage: ''
+          AZ_APP_NAME@demo: ''
+          AZ_APP_NAME@uat: ''
+          AZ_APP_NAME@prod: ''
 
   swap-slots:
     runs-on: [self-hosted, ubuntu-20.04]
@@ -98,15 +98,16 @@ jobs:
     env:
       ENVIRONMENT: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       RESOURCE_GROUP: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-      AZ_FUNC_NAME: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+      AZ_APP_NAME: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
       OPEN_WINDOW: ${{ needs.set-vars.outputs.OPEN_WINDOW }}
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
       TARGET_SLOT: 'Production' # TODO:  Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main site, update it here
       SOURCE_SLOT: '' # TODO:  Add the name of the source slot
+      AZ_APP_TYPE: 'webapp' # TODO:  If this workflow is for an azure function, change this value to functionapp
 
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
 
       - name: Open a PagerDuty Maintenance Window
         if: env.OPEN_WINDOW == 'true'
@@ -127,19 +128,19 @@ jobs:
       - name: Swap
         # ARM_SUBSCRIPTION_ID is an env-level secret
         run: |
-          az functionapp  deployment slot swap \
+          az ${{ env.AZ_APP_TYPE }} deployment slot swap \
           --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
-          --name ${{ env.AZ_FUNC_NAME }}  \
+          --name ${{ env.AZ_APP_NAME }}  \
           --slot ${{ env.SOURCE_SLOT }} \
           --target-slot ${{ env.TARGET_SLOT }}
 
       # TODO:  Uncomment if you want to destroy the slot after swap.  Delete if you don't.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - run: |
-      #     az functionapp  deployment slot delete \
+      #     az ${{ env.AZ_APP_TYPE }} deployment slot delete \
       #     --slot ${{ env.SOURCE_SLOT }} \
-      #     --name ${{ env.AZ_FUNC_NAME }}  \
+      #     --name ${{ env.AZ_APP_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ env.RESOURCE_GROUP }}
 

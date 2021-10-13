@@ -257,14 +257,14 @@ jobs:
           create-output-variables: true
           input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
         env:
-          # TODO:  Add the values your website needs to be configured with (web.config/octo var substitution/config changes). Envs that aren't used can be deleted.
-          #  - The name of the env (left side of @) (ex: Auth0_Domain).  This can be used in the later variable-substitution and octostache actions for replacement
-          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses set-vars.ENVIRONMENT to match one of the scopes below and these are the values it will have.
+          # TODO:  Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
+          #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
+          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of set-vars.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
-          Auth0_Domain@dev: 'wtw-im-dev.auth0.com'
-          Auth0_Domain@qa: 'wtw-im-qa.auth0.com'
-          Auth0_Domain@stage: 'wtw-im-stage.auth0.com'
-          Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
+          # Auth0_Domain@dev: 'wtw-im-dev.auth0.com'
+          # Auth0_Domain@qa: 'wtw-im-qa.auth0.com'
+          # Auth0_Domain@stage demo: 'wtw-im-stage.auth0.com'
+          # Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
 
       # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.

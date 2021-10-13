@@ -1,5 +1,0 @@
-{
-  "name": "Deploy - AZ App Service Code Deploy",
-  "description": "Template that can be used to deploy code to an Azure App Service or slot",
-  "iconName": "im_azure"
-}

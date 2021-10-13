@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v9    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v10    DO NOT REMOVE
 
 # Prerequisites
 # 1 - Make sure the az secrets have been added to the environment
@@ -7,7 +7,7 @@
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
-name: Manually deploy AZ App Service
+name: Manually deploy AZ App
 on:
   workflow_dispatch:
     inputs:
@@ -64,7 +64,7 @@ jobs:
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
-      # This step is separate from the clean-env step above because this uses the normalized ENVIRONMENT output from that step.
+      # This step is separate from the one above because it uses clean-env's normalized ENVIRONMENT output as the scope for each variable below.
       - name: Set Variables
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.2
@@ -157,7 +157,8 @@ jobs:
       AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot.  If this differs per environment, add a new section in the set-vars job above where the value can be set per environment
       ASSET_ZIP: 'published_app.zip' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
       UNZIPPED_ASSET: 'published_app' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
-      DEPLOY_ZIP: 'deploy.zip'
+      DEPLOY_ZIP: 'deploy.zip' # TODO:  remove if this workflow is for an azure function
+      AZ_APP_TYPE: 'webapp' # TODO:  If this workflow is for an azure function, change this value to functionapp
 
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -172,42 +173,43 @@ jobs:
       - name: Unzip release asset
         run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
 
-      - name: Set App Configuration and Substitution Values
+      - name: Set Variables for use with Configuration and Substitution Values
         uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
           scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           create-output-variables: true
           input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
         env:
-          # TODO:  Add the values your app needs to be configured with (appsettings.json/octo var substitution/config changes). Envs that aren't used can be deleted.
-          #  - The name of the env (left side of @) (ex: Auth0_Domain).  This can be used in the later variable-substitution and octostache actions for replacement
-          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses set-vars.ENVIRONMENT to match one of the scopes below and these are the values it will have.
+          # TODO:  Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
+          #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
+          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of set-vars.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
-          Auth0_Domain@dev: 'wtw-im-dev.auth0.com'
-          Auth0_Domain@qa: 'wtw-im-qa.auth0.com'
-          Auth0_Domain@stage: 'wtw-im-stage.auth0.com'
-          Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
+          # Auth0_Domain@dev: 'wtw-im-dev.auth0.com'
+          # Auth0_Domain@qa: 'wtw-im-qa.auth0.com'
+          # Auth0_Domain@stage demo: 'wtw-im-stage.auth0.com'
+          # Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
 
       # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
-      # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
+      # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action can be utilized by this one.
       # https://github.com/im-open/octostache-action
       - uses: im-open/octostache-action@v2.0.0
         with:
           variablesFile: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
           files-with-substitutions: '' # TODO:  Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
-        # env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variablesFile with the same name.
+        env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variablesFile with the same name.
 
       # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
-      # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
+      # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action can be utilized by this one.
       - uses: microsoft/variable-substitution@v1
         with:
-          files: '' # TODO: add a comma separated list of files and the patterns, like './MyProj/We*.config, ./MyProj/Nlog.config' (this matches the downloaded asset structure)
+          files: '' # TODO: add a comma separated list of files/patterns, like './MyProj/We*.config, ./MyProj/Nlog.config' (this matches the downloaded asset structure, not the original file structure)
         env:
           # TODO:  replace examples with actual substitutions
-          Auth0.Domain: ${{ env.Auth0_Domain }} # Example showing replacement at a nested node & using the env variable outputted from set-environment-variables-by-scope above
-          SecretValue: ${{ secrets.VALUE }} # Example showing replacement with a secret
+          # Auth0.Domain: ${{ env.Auth0_Domain }} # Example showing replacement at a nested node (left side) & using the env set in the set-environment-variables-by-scope step above (right side)
+          # SecretValue: ${{ secrets.VALUE }} # Example showing replacement of a root level value (left side) with a secret (right side)
 
+      # TODO:  Remove this zip step if the workflow is for an azure function
       - name: Zip the published app for faster deployment and uploads
         working-directory: ${{ env.UNZIPPED_ASSET }}
         run: zip -r ../${{ env.DEPLOY_ZIP }} .
@@ -231,13 +233,14 @@ jobs:
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - name: Create a deployment slot
       #   run: |
-      #     az webapp deployment slot create \
+      #     az ${{ env.AZ_APP_TYPE }} deployment slot create \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --configuration-source ${{ needs.set-vars.outputs.AZ_APP_NAME }}
 
+      # TODO:  remove this step if this workflow is for an azure function
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
@@ -245,11 +248,19 @@ jobs:
           package: ./${{ env.DEPLOY_ZIP }}
           # slot-name: ${{ env.AZ_SLOT_NAME }}  # TODO:  Uncomment if using slots, delete if not
 
+      # TODO:  remove this step if this workflow is for an azure app service
+      - name: Deploy to Azure Function
+        uses: azure/functions-action@v1.4.4
+        with:
+          app-name: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+          package: ./${{ env.UNZIPPED_ASSET }}
+          # slot-name: ${{ env.AZ_SLOT_NAME }}  # TODO:  Uncomment if using slots, delete if not
+
       # TODO:  Uncomment if using slots and you want to swap them now (as opposed to doing it in another workflow).  Delete this block if you don't.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - name: Swap slots
       #   run: |
-      #     az webapp deployment slot swap \
+      #     az ${{ env.AZ_APP_TYPE }} deployment slot swap \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
@@ -259,7 +270,7 @@ jobs:
       # TODO:  Uncomment if you want to delete the slot.  Delete this block if you don't.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - run: |
-      #     az webapp deployment slot delete \
+      #     az ${{ env.AZ_APP_TYPE }} deployment slot delete \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
@@ -290,12 +301,12 @@ jobs:
           az cache purge
           az account clear
 
-      - name: Delete .zips and folder that contains sensitive info
+      - name: Delete items with potentially sensitive data
         continue-on-error: true
         run: |
           rm -f ${{ env.ASSET_ZIP }}
-          rm -f ${{ env.DEPLOY_ZIP }}
           rm -rf ${{ env.UNZIPPED_ASSET }}
+          rm -f ${{ env.DEPLOY_ZIP }} # TODO:  remove this line if this workflow is for a function
 
       # TODO:  Uncomment if you have a separate workflow for swapping slots and you want to trigger it now.  Delete if you don't.
       # - name: Trigger the Slot Swap

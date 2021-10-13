@@ -1,0 +1,5 @@
+{
+  "name": "Deploy - AZ App Deploy",
+  "description": "Template that can be used to deploy code to an Azure App Service or Function including their slots",
+  "iconName": "im_azure"
+}
