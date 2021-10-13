@@ -158,7 +158,7 @@ jobs:
       ASSET_ZIP: 'published_app.zip' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
       UNZIPPED_ASSET: 'published_app' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
       DEPLOY_ZIP: 'deploy.zip' # TODO:  remove if this workflow is for an azure function
-      APP_TYPE: 'webapp' # TODO:  If this workflow is for an azure function, change this value to functionapp
+      AZ_APP_TYPE: 'webapp' # TODO:  If this workflow is for an azure function, change this value to functionapp
 
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -182,11 +182,11 @@ jobs:
         env:
           # TODO:  Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
-          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of set-vars.ENVIRONMENT to match one of the scopes (envs) below.
+          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of set-vars.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
           # Auth0_Domain@dev: 'wtw-im-dev.auth0.com'
           # Auth0_Domain@qa: 'wtw-im-qa.auth0.com'
-          # Auth0_Domain@stage: 'wtw-im-stage.auth0.com'
+          # Auth0_Domain@stage demo: 'wtw-im-stage.auth0.com'
           # Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
 
       # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
@@ -233,7 +233,7 @@ jobs:
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - name: Create a deployment slot
       #   run: |
-      #     az ${{ env.APP_TYPE }} deployment slot create \
+      #     az ${{ env.AZ_APP_TYPE }} deployment slot create \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
@@ -260,7 +260,7 @@ jobs:
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - name: Swap slots
       #   run: |
-      #     az ${{ env.APP_TYPE }} deployment slot swap \
+      #     az ${{ env.AZ_APP_TYPE }} deployment slot swap \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
@@ -270,7 +270,7 @@ jobs:
       # TODO:  Uncomment if you want to delete the slot.  Delete this block if you don't.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - run: |
-      #     az ${{ env.APP_TYPE }} deployment slot delete \
+      #     az ${{ env.AZ_APP_TYPE }} deployment slot delete \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \

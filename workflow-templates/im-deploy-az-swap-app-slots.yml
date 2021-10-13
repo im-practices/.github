@@ -104,7 +104,7 @@ jobs:
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
       TARGET_SLOT: 'Production' # TODO:  Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main site, update it here
       SOURCE_SLOT: '' # TODO:  Add the name of the source slot
-      APP_TYPE: 'webapp' # TODO:  If this workflow is for an azure function, change this value to functionapp
+      AZ_APP_TYPE: 'webapp' # TODO:  If this workflow is for an azure function, change this value to functionapp
 
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
@@ -128,7 +128,7 @@ jobs:
       - name: Swap
         # ARM_SUBSCRIPTION_ID is an env-level secret
         run: |
-          az ${{ env.APP_TYPE }} deployment slot swap \
+          az ${{ env.AZ_APP_TYPE }} deployment slot swap \
           --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --name ${{ env.AZ_APP_NAME }}  \
@@ -138,7 +138,7 @@ jobs:
       # TODO:  Uncomment if you want to destroy the slot after swap.  Delete if you don't.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - run: |
-      #     az ${{ env.APP_TYPE }} deployment slot delete \
+      #     az ${{ env.AZ_APP_TYPE }} deployment slot delete \
       #     --slot ${{ env.SOURCE_SLOT }} \
       #     --name ${{ env.AZ_APP_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
