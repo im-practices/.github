@@ -1,0 +1,5 @@
+{
+  "name": "Deploy - Deploy Multiple Items at Once",
+  "description": "Template that can be used to deploy multiple items at once instead of individually.",
+  "iconName": "im_azure"
+}
