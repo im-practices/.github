@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v2    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v3    DO NOT REMOVE
 
 # Note: Each deployable on-prem db in the repository should have their own copy of this workflow rather than trying to deploy several
 #       on-prem databases with the same workflow.  If the db is deployed as part of a group, the db still needs its own copy of this
@@ -43,9 +43,7 @@ on:
 
 env:
   RELEASE_TAG: ${{ github.event.inputs.tag  }} # This is the tag that we'll be deploying
-  DB_SERVER_NAME: '' # TODO: Fill in the name of the database server
   DB_SERVER_PORT: '1433' # TODO: Verify that this is the correct port
-  DB_NAME: '' # TODO: Fill in the name of the database
   MIGRATIONS_FOLDER: '' # TODO: Add the path to the migrations folder
   MIGRATIONS_HISTORY_TABLE: 'MigrationHistory' # TODO: Verify this table name
   TIMEZONE: 'america/denver' # TODO:  Verify timezone
@@ -150,12 +148,30 @@ jobs:
         with:
           version: 7.9.2
 
-      - name: Deploy migrations
-        uses: im-open/run-flyway-command@v1.0.1
+      # TODO: Use this for any variables that change per environment
+      - name: Set Database Vars
+        id: db-vars
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
         with:
-          db-server-name: '${{ env.DB_SERVER_NAME }}'
+          scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          create-output-variables: true
+          input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
+        env:
+          DB_NAME@dev: ''
+          DB_NAME@qa: ''
+          DB_NAME@stage demo: ''
+          DB_NAME@prod: ''
+          DB_SERVER_NAME@dev: ''
+          DB_SERVER_NAME@qa: ''
+          DB_SERVER_NAME@stage demo: ''
+          DB_SERVER_NAME@prod: ''
+
+      - name: Deploy migrations
+        uses: im-open/run-flyway-command@v1.2.0
+        with:
+          db-server-name: '${{ steps.db-vars.outputs.DB_SERVER_NAME }}'
           db-server-port: '${{ env.DB_SERVER_PORT }}'
-          db-name: '${{ env.DB_NAME }}'
+          db-name: '${{ steps.db-vars.outputs.DB_NAME }}'
           migration-files-path: '${{ env.MIGRATIONS_FOLDER }}'
           flyway-command: 'migrate'
           migration-history-table: '${{ env.MIGRATIONS_HISTORY_TABLE }}'

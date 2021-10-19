@@ -1,0 +1,5 @@
+{
+    "name": "Run - Flyway Repair",
+    "description": "Template that can be used to run the flyway repair command",
+    "iconName": "im_run"
+}

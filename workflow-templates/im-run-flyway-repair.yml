@@ -1,0 +1,100 @@
+# Workflow Code: SpiritedGnat_v1    DO NOT REMOVE
+
+# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+
+name: Runbook - Flyway Repair
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: The environment the database is in - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
+        required: true
+        default: dev
+
+env:
+  DB_SERVER_PORT: ''
+  MIGRATIONS_HISTORY_TABLE: ''
+  PATH_TO_MIGRATION_FILES: ''
+
+jobs:
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    outputs:
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
+
+    steps:
+      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      - name: Set ENVIRONMENT
+        id: clean-env
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        with:
+          scope: ${{ github.event.inputs.environment }}
+          create-output-variables: true
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        env:
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
+
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}."
+
+  repair-database-migrations:
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    needs: [set-vars]
+    steps:
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}."
+
+      # TODO: If not acting on an azure database, remove this
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
+
+      # TODO: Use this for any variables that change per environment
+      - name: Set Database Vars
+        id: db-vars
+        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        with:
+          scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          create-output-variables: true
+          input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
+        env:
+          DB_NAME@dev: ''
+          DB_NAME@qa: ''
+          DB_NAME@stage demo: ''
+          DB_NAME@prod: ''
+          DB_SERVER_NAME@dev: ''
+          DB_SERVER_NAME@qa: ''
+          DB_SERVER_NAME@stage demo: ''
+          DB_SERVER_NAME@prod: ''
+
+      - name: Flyway repair
+        uses: im-open/run-flyway-command@v1.2.0
+        with:
+          flyway-command: 'repair'
+          db-server-name: ${{ steps.db-vars.outputs.DB_SERVER_NAME }}
+          db-server-port: ${{ env.DB_SERVER_PORT }}
+          db-name: ${{ steps.db-vars.outputs.DB_NAME }}
+          migration-history-table: ${{ env.MIGRATIONS_HISTORY_TABLE }}
+          migration-files-path: ${{ env.PATH_TO_MIGRATION_FILES }}
+          username: '' # TODO: Add the appropriate secret here
+          password: '' # TODO: Add the appropriate secret here
+
+      # TODO: If not acting on an azure database, remove this
+      - name: Azure logout
+        if: always() && steps.login.outcome == 'success'
+        run: |
+          az logout
+          az cache purge
+          az account clear
