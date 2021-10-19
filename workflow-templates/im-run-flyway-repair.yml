@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment the service is in - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
+        description: The environment the database is in - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
         required: true
         default: dev
 
@@ -46,14 +46,14 @@ jobs:
           ENVIRONMENT@u uat: 'uat'
           ENVIRONMENT@prod p production: 'prod'
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The event is ${{ github.event.inputs.eventName }}"
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}."
 
   repair-database-migrations:
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
     needs: [set-vars]
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The event is ${{ github.event.inputs.eventName }}"
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}."
 
       # TODO: If not acting on an azure database, remove this
       - name: AZ Login
