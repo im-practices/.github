@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v3    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v4    DO NOT REMOVE
 
 name: Manual trigger K6 test
 
@@ -42,7 +42,7 @@ jobs:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true

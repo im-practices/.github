@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v11    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v12    DO NOT REMOVE
 
 # Note: Each deployable app service/function in the repository should have their own copy of this workflow rather than trying to deploy several
 #       app services or functions with the same workflow.  If the app is deployed as part of a group, the app still needs its own copy of
@@ -72,7 +72,7 @@ jobs:
 
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
@@ -94,7 +94,7 @@ jobs:
       # This step is separate from the one above because it uses clean-env's normalized ENVIRONMENT output as the scope for each variable below.
       - name: Set Variables
         id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
           create-output-variables: true
@@ -201,7 +201,7 @@ jobs:
         run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
 
       - name: Set Variables for use with Configuration and Substitution Values
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           create-output-variables: true

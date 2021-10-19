@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v5    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v6    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
@@ -45,7 +45,7 @@ jobs:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true

@@ -1,4 +1,4 @@
-# Workflow Code: MercifulLlama_v1    DO NOT REMOVE
+# Workflow Code: MercifulLlama_v2    DO NOT REMOVE
 
 # Note: This workflow is intended to be used with repos that have multiple deployable artifacts which are deployed together.  It is not
 #       intended for repos that have a single deployable or repos with multiple deployable artifacts that are deployed independently.
@@ -40,7 +40,7 @@ jobs:
 
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true

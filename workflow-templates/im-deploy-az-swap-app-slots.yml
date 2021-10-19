@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v4    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v5    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -49,7 +49,7 @@ jobs:
 
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
@@ -70,7 +70,7 @@ jobs:
 
       - name: Set Variables
         id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
           create-output-variables: true

@@ -1,4 +1,4 @@
-# Workflow Code: FrazzledFerret_v3    DO NOT REMOVE
+# Workflow Code: FrazzledFerret_v4    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO:  Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
@@ -50,7 +50,7 @@ jobs:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true

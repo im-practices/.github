@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v3    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v4    DO NOT REMOVE
 
 # Note: Each deployable on-prem db in the repository should have their own copy of this workflow rather than trying to deploy several
 #       on-prem databases with the same workflow.  If the db is deployed as part of a group, the db still needs its own copy of this
@@ -68,7 +68,7 @@ jobs:
 
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
@@ -151,7 +151,7 @@ jobs:
       # TODO: Use this for any variables that change per environment
       - name: Set Database Vars
         id: db-vars
-        uses: im-open/set-environment-variables-by-scope@v1.0.2
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
         with:
           scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           create-output-variables: true
