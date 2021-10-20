@@ -13,11 +13,12 @@ on:
       branch-tag-sha:
         description: The branch, tag or sha of the terraform that has the configuration for the resource(s) to import.
         required: true
-      tf-resource-name:
-        description: The name of the resource to import.
-        requierd: false
-      tf-object-id:
-        description: The id of the object to import.
+      tf-resource-address:
+        description: The address of the resource to import. E.g. module.common.azurerm_mssql_server.server
+        required: true
+      tf-resource-id:
+        description: The id of the resource to import. It should look something like /subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/{provider_name}/{...etc...}.
+        required: true
 
 env:
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }}
@@ -95,11 +96,6 @@ jobs:
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
-      - name: AZ Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1.2.1
         with:
@@ -110,10 +106,4 @@ jobs:
 
       - name: Terraform Import
         # TODO: Add any additional parameters that are needed
-        run: terraform import ${{ github.event.inputs.tf-resource-name }} ${{ github.event.inputs.tf-object-id }}
-
-      - name: Azure logout
-        run: |
-          az logout
-          az cache purge
-          az account clear
+        run: terraform import ${{ github.event.inputs.tf-resource-address }} ${{ github.event.inputs.tf-resource-id }}
