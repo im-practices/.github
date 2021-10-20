@@ -1,0 +1,109 @@
+# Workflow Code: DrearyBuck_v1    DO NOT REMOVE
+
+# TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+
+name: Import Terrafrom State
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: The environment the import should be done in - dev|qa|stage|prod|demo|uat. # TODO:  Update for the environments that are available
+        required: true
+      branch-tag-sha:
+        description: The branch, tag or sha of the terraform that has the configuration for the resource(s) to import.
+        required: true
+      tf-resource-address:
+        description: The address of the resource to import. E.g. module.common.azurerm_mssql_server.server
+        required: true
+      tf-resource-id:
+        description: The id of the resource to import. It should look something like /subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/{provider_name}/{...etc...}.
+        required: true
+
+env:
+  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }}
+  PLAN_STORAGE_CONTAINER: 'tfstate'
+  # The following ARM_* secrets are org-level secrets
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_ENVIRONMENT: 'public'
+  TF_IN_AUTOMATION: 'true'
+  TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
+  # The following SSH_* secrets are org-level secrets
+  SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }}
+  SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
+  SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
+  SSH_DEPLOY_KEY_INFO: |
+    [
+      { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
+      { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
+      { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
+    ]
+
+jobs:
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    outputs:
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+
+    steps:
+      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      - name: Set ENVIRONMENT
+        id: clean-env
+        uses: im-open/set-environment-variables-by-scope@v1.0.3
+        with:
+          scope: ${{ github.event.inputs.environment }}
+          create-output-variables: true
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        env:
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
+
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.   The branch/tag/sha is ${{ env.GITHUB_REF }}."
+
+  tf-import-state:
+    needs: [set-vars]
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO:  Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+
+      # Allows pulling modules from the repo instead of artifactory
+      - name: Setup SSH Keys and known_hosts
+        uses: im-open/setup-deploy-keys@1.0.1
+        with:
+          deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1.2.1
+        with:
+          terraform_version: '${{ env.TF_VERSION }}'
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Import
+        # TODO: Add any additional parameters that are needed
+        run: terraform import ${{ github.event.inputs.tf-resource-address }} ${{ github.event.inputs.tf-resource-id }}
