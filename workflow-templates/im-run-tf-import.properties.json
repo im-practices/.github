@@ -1,0 +1,5 @@
+{
+    "name": "Run - Import Terraform state",
+    "description": "Runs the Terraform import command to import changes into the Terraform state",
+    "iconName": "im_run"
+}
