@@ -1,6 +1,6 @@
-# Workflow Code: TrustingCockroach_v4    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v5    DO NOT REMOVE
 
-name: 'Package Push Nuget Workflow'
+name: 'Build and Publish Nuget package'
 
 # Note: This workflow has a couple of steps that can be used for determining the version:
 # - use package.json value,

@@ -1,6 +1,6 @@
-# Workflow Code: GloomyBadger_v4    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v5    DO NOT REMOVE
 
-name: 'Package Push npm Workflow'
+name: 'Build and Publish npm package'
 
 # Note: This workflow has a couple of steps that can be used for determining the version:
 # - use package.json value,
