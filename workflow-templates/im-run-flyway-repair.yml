@@ -75,7 +75,6 @@ jobs:
         run: |
           sqlUser=$(az keyvault secret show --vault-name "${{ steps.db-vars.outputs.AZURE_KEY_VAULT }}" --name "sqluser" --query value)
           sqlPassword=$(az keyvault secret show --vault-name "${{ steps.db-vars.outputs.AZURE_KEY_VAULT }}" --name "sqlpassword" --query value)
-          echo "::add-mask::$sqlUser"
           echo "::add-mask::$sqlPassword"
           # trim quotes added by az keyvault command
           sqlUser=$(sed -e 's/^"//' -e 's/"$//' <<<"$sqlUser")
