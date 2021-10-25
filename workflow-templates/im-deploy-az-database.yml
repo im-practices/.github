@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
     steps:
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
       - name: Approval Received
         run: echo "Stakeholder approval was received"
 
@@ -124,7 +124,7 @@ jobs:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
@@ -136,7 +136,7 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
     steps:
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -170,6 +170,22 @@ jobs:
           DB_SERVER_NAME@qa: ''
           DB_SERVER_NAME@stage demo: ''
           DB_SERVER_NAME@prod: ''
+          AZURE_KEY_VAULT@dev: ''
+          AZURE_KEY_VAULT@qa: ''
+          AZURE_KEY_VAULT@stage demo: ''
+          AZURE_KEY_VAULT@prod: ''
+
+      # Get the Azure SQL Creds from Key Vault
+      - name: Get Azure SQL Credentials
+        run: |
+          sqlUser=$(az keyvault secret show --vault-name "${{ env.AZURE_KEY_VAULT }}" --name "sqluser" --query value)
+          sqlPassword=$(az keyvault secret show --vault-name "${{ env.AZURE_KEY_VAULT }}" --name "sqlpassword" --query value)
+          echo "::add-mask::$sqlPassword"
+          # trim quotes added by az keyvault command
+          sqlUser=$(sed -e 's/^"//' -e 's/"$//' <<<"$sqlUser")
+          sqlPassword=$(sed -e 's/^"//' -e 's/"$//' <<<"$sqlPassword")
+          echo "SQL_USER=$sqlUser" >> $GITHUB_ENV
+          echo "SQL_PASSWORD=$sqlPassword" >> $GITHUB_ENV
 
       - name: Deploy migrations
         uses: im-open/run-flyway-command@v1.2.0
@@ -184,8 +200,8 @@ jobs:
           managed-schemas: 'dbo' # TODO: Update this csv with the schemas that flyway manages (e.g. 'dbo,CustomSchema,OtherSchema')
           enable-out-of-order: 'false'
           use-integrated-security: 'false'
-          username: '' # TODO: Add a secret and reference it here
-          password: '' # TODO: Add a secret and reference it here
+          username: '${{ env.SQL_USER }}'
+          password: '${{ env.SQL_PASSWORD }}'
 
       - name: Azure logout
         run: |
@@ -198,7 +214,7 @@ jobs:
     needs: [set-vars, deploy-az-db]
     if: always()
     steps:
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - uses: im-open/workflow-conclusion@v1.0.2
         id: conclusion

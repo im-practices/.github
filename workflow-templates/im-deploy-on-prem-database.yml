@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
     steps:
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
       - name: Approval Received
         run: echo "Stakeholder approval was received"
 
@@ -124,7 +124,7 @@ jobs:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.0
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
@@ -136,7 +136,7 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
     steps:
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - name: Checkout Repository
         uses: actions/checkout@v2
