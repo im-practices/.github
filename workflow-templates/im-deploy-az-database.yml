@@ -182,11 +182,9 @@ jobs:
           sqlPassword=$(az keyvault secret show --vault-name "${{ env.AZURE_KEY_VAULT }}" --name "sqlpassword" --query value)
           #echo "::add-mask::$sqlUser"
           echo "::add-mask::$sqlPassword"
-          echo $sqlUser
           # trim quotes added by az keyvault command
           sqlUser=$(sed -e 's/^"//' -e 's/"$//' <<<"$sqlUser")
           sqlPassword=$(sed -e 's/^"//' -e 's/"$//' <<<"$sqlPassword")
-          echo $sqlUser
           echo "SQL_USER=$sqlUser" >> $GITHUB_ENV
           echo "SQL_PASSWORD=$sqlPassword" >> $GITHUB_ENV
 

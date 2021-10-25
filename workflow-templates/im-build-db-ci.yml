@@ -1,5 +1,22 @@
 # Workflow Code: GiddyBuzzard_v4    DO NOT REMOVE
 
+# Note: The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
+#       In addition to that, however, there are three other things this workflow template is set up to do.
+#         1. Create snapshots. Snapshots are create sql object (table, view, sproc, etc.) scripts that show the shape of an object and can be
+#            useful for keeping a historical record in GitHub of the changes to them.
+#         2. Create a backup of the database and store it for later consumption. The backup can then be used in a workflow to circumvent the need
+#            to spin up the database from scratch. Very helpful for decreasing build times. Please note however that this is only a backup of a local database.
+#            It does not take the place of backups that should be happening of Production databases.
+#         3. Create mock sql objects that can be consumed by other database repos' CI processes. A flag on the build database step in this workflow can be set
+#            so that your database's dependencies are downloaded and installed.
+#
+#       The need for creating snapshots and backups in this workflow is not a very common need. They are here in case you need them, but likely you won't.
+#       There are TODO's throughout this template that let you know when something isn't necessary if you don't want snapshots and/or backups created.
+#
+#       Creating mock sql objects is a bit less rare of a need, but only if your database is a sectioned off part of the legacy ExtendHealth monolith. Again,
+#       there will be TODO's showing you where some items can be removed if you don't have any dependencies and/or don't need to create mock objects to be
+#       consumed by others.
+
 name: Build Database CI
 # TODO:  Select the appropriate trigger, if push and pull are both included, two builds will be kicked off when a PR exists and a new commit is pushed to the corresponding branch.
 on:
@@ -14,28 +31,29 @@ env:
   DB_SERVER_NAME: 'localhost'
   DB_SERVER_PORT: '1433'
   DEFAULT_BRANCH: 'main' # TODO:  verify default branch name
-  ARTIFACTORY_RETRIEVAL_URL: 'https://artifacts.mktp.io/artifactory/api/nuget/nuget-all'
+  ARTIFACTORY_RETRIEVAL_URL: 'https://artifacts.mktp.io/artifactory/api/nuget/nuget-all' # TODO: This can be removed if your database doesn't have any dependency objects stored in artifactory
 
-  # The following are all for the snapshot step below and can be removed if it's not used
+  # TODO: The following are all for the snapshot step below and can be removed if it's not used
   SNAPSHOT_PATH: './snapshot' # TODO: Verify this path is correct
   EXCLUDED_DB_SNAPSHOT_OBJECTS: '' # TODO: Add some comma separated values to this
 
-  # These next variables are for backing up the database. Remove if not needed.
+  # TODO: These next variables are for backing up the database. Remove if not needed.
   BACKUP_PATH: '' # TODO: The path on the action runner to put the backup path
   BACKUP_FILENAME: '' # TODO: The name to give the backup file
 
 jobs:
+  # TODO: If you don't need to create snapshots, backups, or mock objects then this whole job can be removed. Make sure to update the 'needs' of later jobs accordingly.
   set-vars:
     runs-on: ubuntu-latest
     outputs:
-      last-commit-is-snapshot: ${{ steps.capture-branch-state.outputs.isSnapshot }} # Can be useful for if logic to skip steps. Remove if this isn't something you need to branch on.
-      current-branch-is-default: ${{ steps.capture-branch-state.outpus.isDefaultBranch }} # Can be useful for if logic to skip steps. Remove if this isn't something you need to branch on.
-      # TODO: This is only needed if your workflow is committing a snapshot and needs to skip running the CI for that commit. Remove this and its usages if not needed.
-      should-skip-remaining-workflow-jobs: ${{ steps.capture-branch-state.outputs.skip }}
-      artifactory-publish-url: ${{ steps.set-artifactory-url.outputs.url }}
+      last-commit-is-snapshot: ${{ steps.capture-branch-state.outputs.isSnapshot }} # TODO: Can be useful for if logic to skip steps. Remove if this isn't something you need to branch on.
+      current-branch-is-default: ${{ steps.capture-branch-state.outpus.isDefaultBranch }} # TODO: Can be useful for if logic to skip steps. Remove if your CI process is the same for all branches.
+      should-skip-remaining-workflow-jobs: ${{ steps.capture-branch-state.outputs.skip }} # TODO: This is only needed if your workflow is committing a snapshot and needs to skip running the CI for that commit. Remove this and its usages if not needed.
+      artifactory-publish-url: ${{ steps.set-artifactory-url.outputs.url }} # TODO: Remove this if you don't need to create mock objects for other repos to consume.
     steps:
       - uses: actions/checkout@v2
 
+      # TODO: Remove this if you don't need to create mock objects for other repos to consume.
       # The outputted url will point to nuget-branch or nuget-master, depending on the current branch
       - name: Set artifactory publish url
         id: set-artifactory-url
@@ -56,6 +74,7 @@ jobs:
 
           echo "::set-output name=url::$ArtifactoryUrl"
 
+      # TODO: Update or remove this if you aren't creating snapshots and/or are doing the same CI process for every branch.
       - name: Capture branch details
         id: capture-branch-state
         shell: pwsh
@@ -82,9 +101,8 @@ jobs:
   # TODO: Remove this linting job if your project doesn't need/want it
   lint-migration-files:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: set-vars
-    # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
-    if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }}
+    needs: set-vars # TODO: Remove this if you deleted the set-vars job
+    if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }} # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
     steps:
       - uses: actions/checkout@v2
 
@@ -105,9 +123,8 @@ jobs:
 
   build-database:
     runs-on: [self-hosted, windows-2019]
-    needs: [set-vars, lint-migration-files]
-    # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
-    if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }}
+    needs: [set-vars, lint-migration-files] # TODO: Remove any jobs you deleted above
+    if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }} # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
     steps:
       - uses: actions/checkout@v2
 
@@ -117,12 +134,12 @@ jobs:
           version: 7.2.0 # This version works with the current version of build-database-ci-action. Newer versions might, but they should be tested.
 
       - name: Build Database
-        uses: im-open/build-database-ci-action@v1.0.5
+        uses: im-open/build-database-ci-action@v1.0.7
         with:
           db-server-name: ${{ env.DB_SERVER_NAME }}
           db-server-port: ${{ env.DB_SERVER_PORT }}
           db-name: ${{ env.DB_NAME }}
-          install-mock-db-objects: true # TODO: Verify this is needed
+          install-mock-db-objects: true # TODO: Remove this if you don't have any dependencies on objects in other repositories (the default value is false)
           mock-db-object-nuget-feed-url: ${{ env.ARTIFACTORY_RETRIEVAL_URL }} # TODO: If install-mock-db-objects is set to false, this can be removed
           drop-db-after-build: false
           run-tests: true # TODO: Remove this if your database doesn't have tests.
@@ -130,10 +147,14 @@ jobs:
           nuget-password: ${{ secrets.ARTIFACTORY_API_KEY }} # TODO: If install-mock-db-objects is set to false, this can be removed
 
       #########################################################################################################################
-      # The previous three steps are all that most builds will need.
-      # They will build your database on the Action Runner and run any tests you have.
-      # The steps that come next aren't going to be needed by every repo, so feel free to remove what is unnecessary for yours.
+      # The previous three steps are all that most builds will need. They will build your database on the Action Runner and run any tests you have.
+      # The following steps are for the three activities mentioned at the start of this template.
+      #   1. Creating snapshots
+      #   2. Creating mock sql objects
+      #   3. Creating a backup
+      # Remove the ones that are unnecessary for your repo's CI process.
       #########################################################################################################################
+
       # The next four steps can be removed if your build doesn't need to create snapshots of database objects.
       # Otherwise they can be uncommented and the TODO's addressed.
       # TODO: Replace what is in this step with what your build needs in order to determine what database objects have changed
@@ -192,9 +213,9 @@ jobs:
       #     git commit -m "Automated Snapshot Commit"
       #     git push -f origin HEAD
 
-      # End of snapshot steps
+      ##### End of snapshot steps #####
 
-      # Remove this if your build doesn't have need of publishing views for tables inside certain schemas
+      # Remove this if you don't need to publish mock sql objects
       # - name: Create and publish views from tables
       #   uses: im-open/sql-view-to-table-generator@v1.0.2
       #   with:
@@ -215,7 +236,7 @@ jobs:
       #     $updateObjectVersionsSQL = "EXEC DBA.usp_UpdateCheckSumForChangedObjectDefinitions;"
       #     Invoke-Sqlcmd -ServerInstance "${{ env.DB_SERVER_NAME }}" -Database "${{ env.DB_NAME }}" $updateObjectVersionsSQL
 
-      # Remove this if your build doesn't need to create/publish backup files
+      # TODO: Remove this if your build doesn't need to create/publish backup files
       # - name: Create and publish backup files
       #   uses: im-open/create-and-publish-db-backup-file@v1.0.0
       #   with:
