@@ -18,8 +18,8 @@ on:
     #        want a package created when a merge to main happens.
     types: [opened, reopened, synchronize, closed]
 
-    # TODO:  If there are multiple projects in the repo, add the path to the nuget package project so changes to those projects don't trigger this workflow
-    #        If the repo only contains the nuget package project, delete the paths:
+    # TODO:  If there are multiple projects in the repo, add the path to the npm package project so changes to those projects don't trigger this workflow
+    #        If the repo only contains the npm package project, delete the paths:
     paths:
       - ''
 
