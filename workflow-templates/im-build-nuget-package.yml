@@ -27,10 +27,7 @@ on:
       - ''
 
 env:
-  DOTNET_VERSION: '' # TODO:  Add the .net version
   TIMEZONE: 'america/denver' # TODO:  Verify timezone
-  NUGET_PROJ_DIR: '' # TODO:  Add the directory containing the nuget package project like, ./src/MyNugetProj
-  NUGET_PROJ_NAME: '' # TODO:  Add the name of the csproj for the nuget package
 
 jobs:
   examine-triggers:
@@ -54,10 +51,30 @@ jobs:
           echo "IS_MERGE_TO_MAIN=true" >> $GITHUB_ENV
           echo "PRERELEASE=false" >> $GITHUB_ENV
 
-  dotnet-build-and-test-nuget-package:
-    runs-on: [self-hosted, ubuntu-20.04]
+  # TODO:  If this repo contains another workflow that validates sam.yaml, this job can be removed.  If removing, update any needs[] that point to this.
+  validate-sam-yaml:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     needs: [examine-triggers]
+    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+
+    outputs:
+      validate: ${{ steps.sam-yaml.outputs.validation-outcome }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Validate SAM.yaml
+        id: sam-yaml
+        uses: im-open/yaml-file-validation@v1.0.2
+        with:
+          yaml-file-path: ./SAM.yml # TODO:  Verify name, case and extension of your sam.yml file
+          schema-file-path: 'SAM'
+
+  build-test-publish:
+    runs-on: [self-hosted, ubuntu-20.04]
+
+    needs: [examine-triggers, validate-sam-yaml]
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
@@ -65,18 +82,27 @@ jobs:
         shell: bash
 
     outputs:
-      coverage: ${{ steps.dotnet_coverage_check.outputs.coverage-outcome }}
-      test: ${{ steps.dotnet_test_check.outputs.test-outcome }}
+      NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
 
     env:
-      CODE_COVERAGE_REPORT_NAME_DOTNET: '<project-name> .Net Code Coverage' # TODO:  Replace <project-name>
+      IS_MERGE_TO_MAIN: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
+      PRERELEASE: ${{ needs.examine-triggers.outputs.PRERELEASE }}
       CODE_COVERAGE_CHECK_NAME_DOTNET: 'dotnet code coverage'
       CODE_COVERAGE_DIR_DOTNET: 'coverage-results/dotnet'
+      CODE_COVERAGE_REPORT_NAME_DOTNET: '<project-name> .Net Code Coverage' # TODO:  Replace <project-name>
+      DOTNET_VERSION: '' # TODO:  Add the .net version
+      NUGET_PROJ_DIR: '' # TODO:  Add the directory containing the nuget package project like, ./src/MyNugetProj
+      NUGET_PROJ_NAME: '' # TODO:  Add the name of the csproj for the nuget package
       NUGET_TEST_PROJECT: '' # TODO:  Add the filename including path of the test project for your nuget package like ./tests/nugetTest/nugetTest.csproj
+      ORGANIZATION: '' # TODO:  Add the github organization of the repo lives in
+      PKG_NAME: '' # TODO:  If dual publishing to artifactory, add the name of the nuget package in Artifactory, otherwise delete
+      # CSPROJ_NAME: '' # TODO:  For older projects that must be built with nuget pack (instead of dotnet pack) add the name of your csproj file, otherwise delete
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # - name: Authenticate with GitHub Packages
@@ -148,65 +174,11 @@ jobs:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
           path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
 
-  # TODO:  If this repo contains another workflow that validates sam.yaml, this job can be removed.  If removing, update any needs[] that point to this.
-  validate-sam-yaml:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    needs: [examine-triggers]
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
-
-    outputs:
-      validate: ${{ steps.sam-yaml.outputs.validation-outcome }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Validate SAM.yaml
-        continue-on-error: true
-        id: sam-yaml
-        uses: im-open/yaml-file-validation@v1.0.2
-        with:
-          yaml-file-path: ./SAM.yml # TODO:  Verify name, case and extension of your sam.yml file
-          schema-file-path: 'SAM'
-
-  build-and-publish-to-gpr:
-    runs-on: [self-hosted, ubuntu-20.04]
-
-    needs:
-      [examine-triggers, dotnet-build-and-test-nuget-package, validate-sam-yaml]
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
-
-    defaults:
-      run:
-        shell: bash
-        working-directory: ${{ env.NUGET_PROJ_DIR }}
-
-    outputs:
-      NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
-
-    env:
-      IS_MERGE_TO_MAIN: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
-      PRERELEASE: ${{ needs.examine-triggers.outputs.PRERELEASE }}
-      ORGANIZATION: '' # TODO:  Add the github organization of the repo lives in
-      PKG_NAME: '' # TODO:  If dual publishing to artifactory, add the name of the nuget package in Artifactory, otherwise delete
-      # CSPROJ_NAME: '' # TODO:  For older projects that must be built with nuget pack (instead of dotnet pack) add the name of your csproj file, otherwise delete
-
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # - name: Authenticate with GitHub Packages
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
-      #   with:
-      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
-
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Check for Test Failures
+        if: steps.dotnet_test_check.outputs.test-outcome != 'Passed' || steps.dotnet_coverage_check.outputs.coverage-outcome != 'Passed'
+        run: |
+          echo "There were test or code coverage failures.  A release will not be created."
+          exit 1
 
       - name: Calculate next version
         id: version
@@ -220,14 +192,18 @@ jobs:
       # TODO:  There are other methods for setting the version besides specifying it here.  You can update the value in the .csproj before building
       #        and remove the -p:PackageVersion prop below, or the version could be passed in from a workflow_dispatch input if desired.
       #        Determine if git-version-lite's version is appropriate to use for the package version.
-      - name: Build and Pack with version from git-version-lite
-        run: dotnet pack --configuration Release -p:PackageVersion=${{ steps.version.outputs.NEXT_VERSION }}
+      - name: Dotnet Pack
+        working-directory: ${{ env.NUGET_PROJ_DIR }}
+        run: dotnet pack --no-build --configuration Release -p:PackageVersion=${{ steps.version.outputs.NEXT_VERSION }}
 
       # TODO:  If this is an older project you may need to use the nuget command directly and add options as applicable.
-      # - run: nuget pack ${{ env.CSPROJ_NAME }} -Build -Properties Configuration=Release;version="${{ steps.version.outputs.NEXT_VERSION }}"
+      # - name: Nuget Pack
+      #   working-directory: ${{ env.NUGET_PROJ_DIR }}
+      #   run: nuget pack ${{ env.CSPROJ_NAME }} -Build -Properties Configuration=Release;version="${{ steps.version.outputs.NEXT_VERSION }}"
 
       # If this version already exists in GitHub Packages, this step will fail.
       - name: Push to GH Packages
+        working-directory: ${{ env.NUGET_PROJ_DIR }}
         run: |
           # Searches for all nuget packages
           nupkg=$(find . -type f -name "*.nupkg")
@@ -241,25 +217,13 @@ jobs:
 
   finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
-    needs:
-      [
-        examine-triggers,
-        dotnet-build-and-test-nuget-package,
-        validate-sam-yaml,
-        build-and-publish-to-gpr,
-      ]
+    needs: [examine-triggers, build-test-publish, validate-sam-yaml]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - uses: im-open/workflow-conclusion@v1.0.1
         id: conclusion
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          additional-conclusions: |
-            [
-              { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-build-and-test-nuget-package.outputs.test }}" },
-              { "name": "dotnet coverage", "conclusion" : "${{ needs.dotnet-build-and-test-nuget-package.outputs.coverage }}" },
-              { "name": "sam.yaml validation", "conclusion" : "${{ needs.validate-sam-yaml.outputs.validate }}" }
-            ]
 
       - name: Send Status to Teams
         if: always()
@@ -276,19 +240,19 @@ jobs:
               { "name": "Workflow", "value": "${{ github.workflow }}" },
               { "name": "Run", "value": "${{ github.run_id }}" },
               { "name": "Actor", "value": "${{ github.actor }}" },
-              { "name": "Version", "value": "${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}" }
+              { "name": "Version", "value": "${{ needs.build-test-publish.outputs.NEXT_VERSION }}" }
             ]
 
-      - name: Comment on PR with version ${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}
+      - name: Comment on PR with version ${{ needs.build-test-publish.outputs.NEXT_VERSION }}
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
           script: |
-            let nextVersion = '${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}';
+            let nextVersion = '${{ needs.build-test-publish.outputs.NEXT_VERSION }}';
             let hasRelease = nextVersion && nextVersion.length > 0;
             let releaseText = hasRelease ? 
-              '[Release - ${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}](${{ env.REPO_URL }}/releases/${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }})' : 
+              '[Release - ${{ needs.build-test-publish.outputs.NEXT_VERSION }}](${{ env.REPO_URL }}/releases/${{ needs.build-test-publish.outputs.NEXT_VERSION }})' : 
               'Release - N/A';
             const commentBody = `
             - [Workflow Run - ${{ steps.conclusion.outputs.workflow_conclusion }}](${{ env.REPO_URL }}/actions/runs/${{ github.run_id }})
