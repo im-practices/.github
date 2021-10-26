@@ -14,7 +14,7 @@ on:
   #   synchronize: The PR's head branch is updated (commits pushed, the base branch changed or the head is updated from the base branch)
   #   closed: A PR is merged or closed (The examine-triggers job makes sure we only run if a merge happened, not when a close happens)
   pull_request:
-    # TODO:  This will create a new nuget package for each push to the PR, determine if that is the desired behavior or if you only
+    # TODO:  This will create a new npm package for each push to the PR, determine if that is the desired behavior or if you only
     #        want a package created when a merge to main happens.
     types: [opened, reopened, synchronize, closed]
 
