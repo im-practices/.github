@@ -1,0 +1,174 @@
+# Workflow Code: GloomyBadger_v5    DO NOT REMOVE
+
+name: 'Build and Publish npm Package'
+
+# TODO:  If there are more than one npm package projects in the repo, duplicate this workflow for each package
+
+# TODO:  Make sure the package.json file has been updated with the appropriate values required for GH Packages
+#        (name, version, repository, publishConfig.registry)
+#        https://github.com/im-practices/git-er-done/blob/main/packages/publish-npm.md
+
+on:
+  # This workflow will run for the PR events:
+  #   opened/reopened: A PR is opened/re-opened,
+  #   synchronize: The PR's head branch is updated (commits pushed, the base branch changed or the head is updated from the base branch)
+  #   closed: A PR is merged or closed (The examine-triggers job makes sure we only run if a merge happened, not when a close happens)
+  pull_request:
+    # TODO:  This will create a new npm package for each push to the PR, determine if that is the desired behavior or if you only
+    #        want a package created when a merge to main happens.
+    types: [opened, reopened, synchronize, closed]
+
+    # TODO:  If there are multiple projects in the repo, add the path to the npm package project so changes to those projects don't trigger this workflow
+    #        If the repo only contains the npm package project, delete the paths:
+    paths:
+      - ''
+
+jobs:
+  examine-triggers:
+    runs-on: ubuntu-latest
+    outputs:
+      CONTINUE_WORKFLOW: ${{ env.CONTINUE_WORKFLOW }}
+      IS_MERGE_TO_MAIN: ${{ env.IS_MERGE_TO_MAIN }}
+      PRERELEASE: ${{ env.PRERELEASE }}
+
+    steps:
+      - run: |
+          echo "CONTINUE_WORKFLOW=true" >> $GITHUB_ENV
+          echo "IS_MERGE_TO_MAIN=false" >> $GITHUB_ENV
+          echo "PRERELEASE=true" >> $GITHUB_ENV
+
+      - if: github.event.action == 'closed' && github.event.pull_request.merged == false
+        run: echo "CONTINUE_WORKFLOW=false" >> $GITHUB_ENV
+
+      - if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  verify default branch name
+        run: |
+          echo "IS_MERGE_TO_MAIN=true" >> $GITHUB_ENV
+          echo "PRERELEASE=false" >> $GITHUB_ENV
+
+  # TODO:  If this repo contains another workflow that validates sam.yaml, this job can be removed.  If removing, update any needs[] that point to this.
+  validate-sam-yaml:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    needs: [examine-triggers]
+    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+
+    outputs:
+      validate: ${{ steps.sam-yaml.outputs.validation-outcome }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Validate SAM.yaml
+        continue-on-error: true
+        id: sam-yaml
+        uses: im-open/yaml-file-validation@v1.0.2
+        with:
+          yaml-file-path: ./SAM.yml # TODO:  Verify name, case and extension of your sam.yml file
+          schema-file-path: 'SAM'
+
+  build-and-publish-to-gpr:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    needs: [examine-triggers, validate-sam-yaml]
+    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: '' # TODO:  Add the path to the npm package project
+
+    outputs:
+      NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 12 # TODO: verify node version
+          registry-url: https://npm.pkg.github.com/
+
+      # TODO:  If the project contains dependencies to other npm packages in GitHub's npm package registry, uncomment this step, otherwise delete
+      # - name: Authenticate with GitHub Packages for Restoring Packages
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
+      #   with:
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
+
+      - name: Calculate next version
+        id: version
+        uses: im-open/git-version-lite@v2.0.0
+        with:
+          calculate-prerelease-version: ${{ env.PRERELEASE }}
+          branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
+          prefix: 'v' # TODO:  verify your prefix, the new ci workflows add v automatically, if you use different things like mfe/db/etc you might need to change this
+          create-ref: ${{ env.IS_MERGE_TO_MAIN }} # TODO:  Remove if you do not want a release created for main.  If deleted, the finish-build comment on pr step should be updated since there is no release.
+
+      - run: npm version ${{ steps.version.outputs.NEXT_VERSION }}
+
+      - run: npm ci
+
+      # TODO:  If you have tests that run for the npm package, add a new run step with the appropriate npm command
+      # - run: npm run tests
+
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+
+  finish-build:
+    if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+    needs: [examine-triggers, validate-sam-yaml, build-and-publish-to-gpr]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    steps:
+      - uses: im-open/workflow-conclusion@v1.0.1
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          additional-conclusions: |
+            [
+              { "name": "sam.yaml validation", "conclusion" : "${{ needs.validate-sam-yaml.outputs.validate }}" }
+            ]
+
+      - name: Send Status to Teams
+        if: always()
+        uses: im-open/post-status-to-teams-action@v1.0.0
+        with:
+          title: '<project-name> Build and Publish to GH Packages' # TODO:  Replace <project-name>
+          workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          workflow-type: Build
+          teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret
+          timezone: ${{ env.TIMEZONE }}
+          custom-facts: |
+            [
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" },
+              { "name": "Version", "value": "${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}" }
+            ]
+
+      - name: Comment on PR with version ${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          script: |
+            let nextVersion = '${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}';
+            let hasRelease = nextVersion && nextVersion.length > 0;
+            let releaseText = hasRelease ? 
+              '[Release - ${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}](${{ env.REPO_URL }}/releases/${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }})' : 
+              'Release - N/A';
+            const commentBody = `
+            - [Workflow Run - ${{ steps.conclusion.outputs.workflow_conclusion }}](${{ env.REPO_URL }}/actions/runs/${{ github.run_id }})
+            - ${releaseText}`;
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+
+      - name: Check for Failures
+        if: steps.conclusion.outputs.workflow_conclusion == 'failure'
+        run: |
+          echo "There were errors in the workflow.  Check the workflow-conclusion step above for more details on what failed."
+          exit 1

@@ -1,0 +1,271 @@
+# Workflow Code: TrustingCockroach_v5    DO NOT REMOVE
+# This workflow will build a project and publish the nuget package to github packages registry.
+
+# TODO:  If there are more than one nuget package projects in the repo, duplicate this workflow for each package
+
+# TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+
+# TODO:  Make sure the .csproj file has been updated with the appropriate values required for GH Packages
+#        (PackageId, Version, RepositoryUrl)
+#        https://github.com/im-practices/git-er-done/blob/main/packages/publish-nuget.md
+
+name: 'Build and Publish Nuget package'
+
+on:
+  # This workflow will run for the PR events:
+  #   opened/reopened: A PR is opened/re-opened,
+  #   synchronize: The PR's head branch is updated (commits pushed, the base branch changed or the head is updated from the base branch)
+  #   closed: A PR is merged or closed (The examine-triggers job makes sure we only run if a merge happened, not when a close happens)
+  pull_request:
+    # TODO:  This will create a new nuget package for each push to the PR, determine if that is the desired behavior or if you only
+    #        want a package created when a merge to main happens.
+    types: [opened, reopened, synchronize, closed]
+
+    # TODO:  If there are multiple projects in the repo, add the path to the nuget package project so changes to those projects don't trigger this workflow
+    #        If the repo only contains the nuget package project, delete the paths:
+    paths:
+      - ''
+
+env:
+  TIMEZONE: 'america/denver' # TODO:  Verify timezone
+
+jobs:
+  examine-triggers:
+    runs-on: ubuntu-latest
+    outputs:
+      CONTINUE_WORKFLOW: ${{ env.CONTINUE_WORKFLOW }}
+      IS_MERGE_TO_MAIN: ${{ env.IS_MERGE_TO_MAIN }}
+      PRERELEASE: ${{ env.PRERELEASE }}
+
+    steps:
+      - run: |
+          echo "CONTINUE_WORKFLOW=true" >> $GITHUB_ENV
+          echo "IS_MERGE_TO_MAIN=false" >> $GITHUB_ENV
+          echo "PRERELEASE=true" >> $GITHUB_ENV
+
+      - if: github.event.action == 'closed' && github.event.pull_request.merged == false
+        run: echo "CONTINUE_WORKFLOW=false" >> $GITHUB_ENV
+
+      - if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  verify default branch name
+        run: |
+          echo "IS_MERGE_TO_MAIN=true" >> $GITHUB_ENV
+          echo "PRERELEASE=false" >> $GITHUB_ENV
+
+  # TODO:  If this repo contains another workflow that validates sam.yaml, this job can be removed.  If removing, update any needs[] that point to this.
+  validate-sam-yaml:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    needs: [examine-triggers]
+    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+
+    outputs:
+      validate: ${{ steps.sam-yaml.outputs.validation-outcome }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Validate SAM.yaml
+        id: sam-yaml
+        uses: im-open/yaml-file-validation@v1.0.2
+        with:
+          yaml-file-path: ./SAM.yml # TODO:  Verify name, case and extension of your sam.yml file
+          schema-file-path: 'SAM'
+
+  build-test-publish:
+    runs-on: [self-hosted, ubuntu-20.04]
+
+    needs: [examine-triggers, validate-sam-yaml]
+    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
+
+    env:
+      IS_MERGE_TO_MAIN: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
+      PRERELEASE: ${{ needs.examine-triggers.outputs.PRERELEASE }}
+      CODE_COVERAGE_CHECK_NAME_DOTNET: 'dotnet code coverage'
+      CODE_COVERAGE_DIR_DOTNET: 'coverage-results/dotnet'
+      CODE_COVERAGE_REPORT_NAME_DOTNET: '<project-name> .Net Code Coverage' # TODO:  Replace <project-name>
+      DOTNET_VERSION: '' # TODO:  Add the .net version
+      NUGET_PROJ_DIR: '' # TODO:  Add the directory containing the nuget package project like, ./src/MyNugetProj
+      NUGET_PROJ_NAME: '' # TODO:  Add the name of the csproj for the nuget package
+      NUGET_TEST_PROJECT: '' # TODO:  Add the filename including path of the test project for your nuget package like ./tests/nugetTest/nugetTest.csproj
+      ORGANIZATION: '' # TODO:  Add the github organization of the repo lives in
+      PKG_NAME: '' # TODO:  If dual publishing to artifactory, add the name of the nuget package in Artifactory, otherwise delete
+      # CSPROJ_NAME: '' # TODO:  For older projects that must be built with nuget pack (instead of dotnet pack) add the name of your csproj file, otherwise delete
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
+      # - name: Authenticate with GitHub Packages
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
+      #   with:
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: dotnet build
+        run: dotnet build ${{ env.NUGET_PROJ_DIR }}/${{ env.NUGET_PROJ_NAME }} --configuration Release
+
+      # TODO:  The test projects need a package reference to coverlet.msbuild for this to output the coverage reports correctly:
+      # <PackageReference Include="coverlet.msbuild" Version="3.1.0" />
+      # TODO:  Filters can be added to exclude certain tests: https://docs.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests?pivots=xunit
+      - name: dotnet test with coverage
+        continue-on-error: true
+        run: dotnet test ${{ env.NUGET_TEST_PROJECT }} --logger trx --no-restore --configuration Release /property:CollectCoverage=True /property:CoverletOutputFormat=opencover
+
+      - name: create status check/comment for test results
+        id: dotnet_test_check
+        uses: im-open/process-dotnet-test-results@v2.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          timezone: ${{ env.TIMEZONE }}
+          # TODO:  Determine if you would like status checks, pr comments or both
+          create-status-check: true
+          create-pr-comment: true
+          # update-comment-if-one-exists: false # TODO: By default this creates one comment and updates it for each run.  Uncomment if you wish to have one new comment for every workflow run.
+
+      - name: create code coverage report
+        uses: im-open/code-coverage-report-generator@4.8.13
+        with:
+          reports: '*/**/coverage.opencover.xml'
+          targetdir: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
+          title: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
+          tag: 'Workflow: ${{ github.workflow }} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}'
+          # TODO:  Add the appropriate filters to each type.
+          # The filters are a ; separated list of items to include(+) or exclude(-).  Wildcards are accepted.
+          # For instance: -xunit*;-Dapper;-*.Tests
+          assemblyfilters: ''
+          filefilters: ''
+          classfilters: ''
+
+      - name: create status check/comment for code coverage results
+        id: dotnet_coverage_check
+        uses: im-open/process-code-coverage-summary@v2.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          summary-file: '${{ env.CODE_COVERAGE_DIR_DOTNET }}/Summary.md'
+          report-name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
+          check-name: ${{ env.CODE_COVERAGE_CHECK_NAME_DOTNET }}
+          # TODO:  Determine if you would like status checks, pr comments or both
+          create-status-check: true
+          create-pr-comment: true
+          # update-comment-if-one-exists: false # TODO: By default this creates one comment and updates it for each run.  Uncomment if you wish to have one new comment for every workflow run.
+          # TODO:  Set the thresholds for branch and line coverage.
+          # When set to 0 the outcome is neutral.  Otherwise line/branch coverage will be a 'failure' if actual coverage < threshold.
+          line-threshold: 0
+          branch-threshold: 0
+
+      - name: upload dotnet code coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
+          path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
+
+      - name: Check for Test Failures
+        if: steps.dotnet_test_check.outputs.test-outcome != 'Passed' || steps.dotnet_coverage_check.outputs.coverage-outcome != 'Passed'
+        run: |
+          echo "There were test or code coverage failures.  A release will not be created."
+          exit 1
+
+      - name: Calculate next version
+        id: version
+        uses: im-open/git-version-lite@v2.0.0
+        with:
+          calculate-prerelease-version: ${{ env.PRERELEASE }}
+          branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
+          prefix: 'v' # TODO:  verify your prefix, the new ci workflows add v automatically, if you use different things like mfe/db/etc you might need to change this
+          create-ref: ${{ env.IS_MERGE_TO_MAIN }} # TODO:  Remove if you do not want a release created for main.  If deleted, the finish-build comment on pr step should be updated since there is no release.
+
+      # TODO:  There are other methods for setting the version besides specifying it here.  You can update the value in the .csproj before building
+      #        and remove the -p:PackageVersion prop below, or the version could be passed in from a workflow_dispatch input if desired.
+      #        Determine if git-version-lite's version is appropriate to use for the package version.
+      - name: Dotnet Pack
+        working-directory: ${{ env.NUGET_PROJ_DIR }}
+        run: dotnet pack --no-build --configuration Release -p:PackageVersion=${{ steps.version.outputs.NEXT_VERSION }}
+
+      # TODO:  If this is an older project you may need to use the nuget command directly and add options as applicable.
+      # - name: Nuget Pack
+      #   working-directory: ${{ env.NUGET_PROJ_DIR }}
+      #   run: nuget pack ${{ env.CSPROJ_NAME }} -Build -Properties Configuration=Release;version="${{ steps.version.outputs.NEXT_VERSION }}"
+
+      # If this version already exists in GitHub Packages, this step will fail.
+      - name: Push to GH Packages
+        working-directory: ${{ env.NUGET_PROJ_DIR }}
+        run: |
+          # Searches for all nuget packages
+          nupkg=$(find . -type f -name "*.nupkg")
+
+          # GITHUB_TOKEN is a special per-job token generated by GH for interacting with the repo    
+          dotnet nuget push "$nupkg" --source "https://nuget.pkg.github.com/${{ env.ORGANIZATION }}/index.json" --api-key ${{ secrets.GITHUB_TOKEN }}
+
+          # TODO:  Remove if you do not wish to dual publish to GH Packages and Artifactory
+          # ARTIFACTORY_API_KEY is an org level secret
+          dotnet nuget push "$nupkg" --source "https://artifacts.mktp.io/artifactory/api/nuget/nuget-master/${{ env.PKG_NAME }}" --api-key ${{ secrets.ARTIFACTORY_API_KEY }}
+
+  finish-build:
+    if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+    needs: [examine-triggers, build-test-publish, validate-sam-yaml]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    steps:
+      - uses: im-open/workflow-conclusion@v1.0.1
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+
+      - name: Send Status to Teams
+        if: always()
+        uses: im-open/post-status-to-teams-action@v1.0.0
+        with:
+          title: '<project-name> Build and Publish to GH Packages' # TODO:  Replace <project-name>
+          workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          workflow-type: Build
+          teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret
+          timezone: ${{ env.TIMEZONE }}
+          custom-facts: |
+            [
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" },
+              { "name": "Version", "value": "${{ needs.build-test-publish.outputs.NEXT_VERSION }}" }
+            ]
+
+      - name: Comment on PR with version ${{ needs.build-test-publish.outputs.NEXT_VERSION }}
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          script: |
+            let nextVersion = '${{ needs.build-test-publish.outputs.NEXT_VERSION }}';
+            let hasRelease = nextVersion && nextVersion.length > 0;
+            let releaseText = hasRelease ? 
+              '[Release - ${{ needs.build-test-publish.outputs.NEXT_VERSION }}](${{ env.REPO_URL }}/releases/${{ needs.build-test-publish.outputs.NEXT_VERSION }})' : 
+              'Release - N/A';
+            const commentBody = `
+            - [Workflow Run - ${{ steps.conclusion.outputs.workflow_conclusion }}](${{ env.REPO_URL }}/actions/runs/${{ github.run_id }})
+            - ${releaseText}`;
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+
+      - name: Check for Failures
+        if: steps.conclusion.outputs.workflow_conclusion == 'failure'
+        run: |
+          echo "There were errors in the workflow.  Check the workflow-conclusion step above for more details on what failed."
+          exit 1

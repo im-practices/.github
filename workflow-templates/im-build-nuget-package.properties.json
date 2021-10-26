@@ -1,5 +1,5 @@
 {
-  "name": "Deploy - Deploy Nuget Package to GitHub Packages",
+  "name": "Build and Publish - Push a Nuget Package to GitHub Packages",
   "description": "Template that can be used to build and publish a Nuget package to GitHub's Nuget Package Registry",
-  "iconName": "im_deploy"
+  "iconName": "im_build"
 }
