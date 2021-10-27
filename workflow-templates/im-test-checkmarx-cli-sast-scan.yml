@@ -13,6 +13,7 @@ on:
     # See the following site for help creating the right cron syntax: https://crontab.guru/
     # The cron job is specified in UTC.
     # 04:05 on Tuesday UTC
+    # TODO:  If keeping this trigger, change the day/time because they run our self-hosted runners
     - cron: 5 4 * * 2
   repository_dispatch:
     types: [run_checkmarx]
@@ -29,7 +30,7 @@ jobs:
         if: github.event_name == 'repository_dispatch'
         with:
           ref: ${{ github.event.client_payload.ref }}
-      
+
       - uses: actions/checkout@v2
         if: github.event_name == 'workflow_dispatch'
         with:
@@ -67,5 +68,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: Checkmarx Report 
+          name: Checkmarx Report
           path: ${{ steps.scan.outputs.report-path }}
