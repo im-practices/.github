@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v9    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v10    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -29,9 +29,10 @@ jobs:
       PRERELEASE: ${{ env.PRERELEASE }}
 
     steps:
-      - run: echo "CONTINUE_WORKFLOW=true" >> $GITHUB_ENV
-      - run: echo "IS_MERGE_TO_MAIN=false" >> $GITHUB_ENV
-      - run: echo "PRERELEASE=true" >> $GITHUB_ENV
+      - run: |
+          echo "CONTINUE_WORKFLOW=true" >> $GITHUB_ENV
+          echo "IS_MERGE_TO_MAIN=false" >> $GITHUB_ENV
+          echo "PRERELEASE=true" >> $GITHUB_ENV
 
       - if: github.event.action == 'closed' && github.event.pull_request.merged == false
         run: echo "CONTINUE_WORKFLOW=false" >> $GITHUB_ENV
@@ -101,8 +102,8 @@ jobs:
       - name: dotnet build
         run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release
 
-      # TODO:  The test projects need a package reference to coverlet.msbuild for this to output the coverage reports correctly:
-      # <PackageReference Include="coverlet.msbuild" Version="3.1.0" />
+      # TODO:  The TEST projects need a package reference to coverlet.msbuild for this to output the coverage reports correctly:
+      #        <PackageReference Include="coverlet.msbuild" Version="3.1.0" />
       # TODO:  Filters can be added to exclude certain tests: https://docs.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests?pivots=xunit
       - name: dotnet test with coverage
         continue-on-error: true
@@ -117,7 +118,7 @@ jobs:
           # TODO:  Determine if you would like status checks, pr comments or both
           create-status-check: true
           create-pr-comment: true
-          # update-comment-if-one-exists: false # TODO: By default this creates one comment and updates it for each run.  Uncomment if you wish to have one new comment for every workflow run.
+          # update-comment-if-one-exists: false # TODO: By default this action creates one comment and updates it for each subsequent workflow run.  Uncomment if you wish to have one new comment for every workflow run.
 
       - name: create code coverage report
         uses: im-open/code-coverage-report-generator@4.8.13
@@ -125,7 +126,7 @@ jobs:
           reports: '*/**/coverage.opencover.xml'
           targetdir: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
           title: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
-          tag: 'Workflow: ${{ github.workflow }} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}' #TODO:  Verify the tag to add
+          tag: 'Workflow: ${{ github.workflow }} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}'
           # TODO:  Add the appropriate filters to each type.
           # The filters are a ; separated list of items to include(+) or exclude(-).  Wildcards are accepted.
           # For instance: -xunit*;-Dapper;-*.Tests
@@ -144,7 +145,7 @@ jobs:
           # TODO:  Determine if you would like status checks, pr comments or both
           create-status-check: true
           create-pr-comment: true
-          # update-comment-if-one-exists: false # TODO: By default this creates one comment and updates it for each run.  Uncomment if you wish to have one new comment for every workflow run.
+          # update-comment-if-one-exists: false # TODO: By default this action creates one comment and updates it for each subsequent workflow run.  Uncomment if you wish to have one new comment for every workflow run.
           # TODO:  Set the thresholds for branch and line coverage.
           # When set to 0 the outcome is neutral.  Otherwise line/branch coverage will be a 'failure' if actual coverage < threshold.
           line-threshold: 0
@@ -177,7 +178,7 @@ jobs:
       CODE_COVERAGE_DIR_JEST: 'coverage-results/jest'
       JEST_TEST_DIR: '' # TODO: Add the path to dir containing the package.json file that knows how to run the jest tests.  Like ./src/MyApp.Bff/FrontEnd
       JEST_TEST_RESULTS_FILE: 'jest-results.json'
-      JEST_TEST_REPORT_NAME: 'Jest Tests' # TODO: You may want to give this a more descriptive name like 'Jest Tests (MyApp FrontEnd)'
+      JEST_TEST_REPORT_NAME: 'Jest Tests'
 
     steps:
       - uses: actions/checkout@v2
@@ -194,7 +195,9 @@ jobs:
       - name: jest test with coverage
         continue-on-error: true
         working-directory: ${{ env.JEST_TEST_DIR }}
-        run: npm run test -- --outputFile=${{ env.JEST_TEST_RESULTS_FILE }} # TODO:  If your script for running jest is named something besides 'test' update it here
+        # TODO:  If your script in package.json for running jest is named something besides 'test' update it here
+        # TODO:  If your script in package.json does not include the --coverage or --json flags, add them to the script in package.json
+        run: npm run test -- --outputFile=${{ env.JEST_TEST_RESULTS_FILE }}
 
       - name: create status check/comment for jest test results
         id: jest_test_check
@@ -207,7 +210,7 @@ jobs:
           # TODO:  Determine if you would like status checks, pr comments or both
           create-status-check: true
           create-pr-comment: true
-          # update-comment-if-one-exists: false # TODO: By default this creates one comment and updates it for each run.  Uncomment if you wish to have one new comment for every workflow run.
+          # update-comment-if-one-exists: false # TODO: By default this action creates one comment and updates it for each subsequent workflow run.  Uncomment if you wish to have one new comment for every workflow run.
 
       - name: create code coverage report
         uses: im-open/code-coverage-report-generator@4.8.13
@@ -297,7 +300,7 @@ jobs:
 
     steps:
       # We don't want to create a release if there were test/build failures, so check the conclusion
-      - name: Check job/step status to this point
+      - name: Check workflow status to this point
         uses: im-open/workflow-conclusion@v1.0.1
         id: conclusion
         with:
@@ -315,7 +318,7 @@ jobs:
       - name: Do not create a release if there have been failures
         if: steps.conclusion.outputs.workflow_conclusion != 'success'
         run: |
-          echo "The workflow was not successful up to this point.  A release will not be created.  Check the previous step for more details."
+          echo "The workflow was not successful up to this point.  A release will not be created.  Check the 'Check workflow status to this point' step above for more details on what failed."
           exit 1
 
       - name: Checkout Repository
@@ -328,8 +331,6 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
-
       # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
@@ -337,24 +338,19 @@ jobs:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
 
-      # TODO:  If there are multiple deployables, duplicate this step once per deployable project and update the PROJECT_ROOT/PUBLISHED_APP variables.
+      # TODO:  If there are multiple deployables, duplicate this step once per deployable project and update the PROJECT_ROOT, PUBLISHED_APP and DEPLOY_ZIP variables with the updated names.
       - name: Build and Publish
         working-directory: ${{ env.PROJECT_ROOT }}
         run: |
           dotnet build --configuration Release
           dotnet publish -c Release -o ./${{ env.PUBLISHED_APP }} --no-restore
-
-      # TODO:  If there are multiple deployables, duplicate this step once per deployable project and update the PROJECT_ROOT/PUBLISHED_APP/DEPLOY_ZIP variables.
-      - name: Zip the published app
-        working-directory: ${{ env.PROJECT_ROOT }}
-        run: |
           (cd ${{ env.PUBLISHED_APP }} && zip -r ../${{ env.DEPLOY_ZIP }} .)
 
-      # TODO: If you have different tags per deployable in your repository:
+      # TODO: If you have multiple deployables in the repo and each deployable has it's own tag:
       #       1 - Duplicate this step once per deployable
       #       2 - Update the ID so the NEXT_VERSION can be referenced elsewhere
       #       3 - Uncomment and add a value for the prefix (mfe/db/site/api/etc) so the deployable's tag can be incremented.
-      #       4 - Add another output to this job for each new version you've added
+      #       4 - At the top of this job, add a NEXT_VERSION with the appropriate prefix/suffix for the deployable
       - name: Calculate next version
         id: version
         uses: im-open/git-version-lite@v2.0.0
@@ -363,10 +359,15 @@ jobs:
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
           # prefix: '' # TODO:  If you prefix your tags like (mfe/db/etc) uncomment and add that value here
 
+      # TODO:  If you have multiple deployables and there are different tags for each deployable:
+      #        1 - Duplicate the 'Create Release with published_artifacts' step, once per deployable
+      #        2 - Remove the ID
+      #        3 - Update the step where tag-name gets its value from.  steps.version should be updated to the new deployable-specific id set above
+      #        4 - Update the PROJECT_ROOT and DEPLOY_ZIP variables to use the deployable-specific value
+
       # WARNING!!! This will upload the published artifacts to the release.  If you have done any transformations
       # on the config files and included sensitive information (that isn't already present in committed files)
       # that sensitive info will be available to download by anyone with read access to this repo.
-      # TODO:  If you have different tags per deployable in your repository, you may need to create multiple releases
       - name: Create Release with published_artifacts
         id: create_release
         uses: im-open/create-release@v2.0.0
@@ -375,14 +376,15 @@ jobs:
           delete-existing-release: true # Handy when you hit 're-run jobs' on a workflow run
           tag-name: ${{ steps.version.outputs.NEXT_VERSION }}
           prerelease: ${{ env.PRERELEASE }}
-          # TODO:  if there are multiple deployables that are created, delete these three items.
+          # TODO:  if there are multiple deployables that use the same tag (and release), delete these three items.
+          #        If there is only a single deployable, or multiple deployables that have different tags keep these items.
           asset-path: ${{ env.PROJECT_ROOT }}/${{ env.DEPLOY_ZIP }}
           asset-name: ${{ env.DEPLOY_ZIP }}
           asset-content-type: application/zip
 
-      # TODO:  If you have multiple deployables, duplicate this action once per deployable.  It will upload
-      #        each release asset individually.  Ensure the variables (PROJECT_ROOT, DEPLOY_ZIP) are updated with the
-      #        appropriate var names
+      # TODO:  If you have multiple deployables that use the same tag (and release), duplicate this action once per deployable.  It will upload
+      #        each release asset individually.  Ensure the variables (PROJECT_ROOT, DEPLOY_ZIP) are updated with the appropriate PROJECT_ROOT and DEPLOY_ZIP
+      #        If there is only a single deployable, or multiple deployables that have different tags delete this step.
       # - name: Upload Release Asset for <site/api/mfe/etc>
       #   uses: im-open/upload-release-asset@v1.0.0
       #   github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
@@ -469,8 +471,7 @@ jobs:
           exit 1
       # NOTE:  Currently this is not working and WTW needs needs to whitelist our actions runners in order to initiate a scan
       # TODO:  Delete if you have other triggers for checkmarx scans
-      # TODO: Uncomment once this workflow has been merged to master at least once.
-      # The repository_dispatch event won't work until the checkmarx workflow is in main.
+      # TODO:  Uncomment once this workflow has been merged to master at least once.  The repository_dispatch event won't work until the checkmarx workflow is in main.
       # - name: Kick off Checkmarx if workflow succeeded
       #   if: steps.conclusion.outputs.workflow_conclusion == 'success'
       #   uses: actions/github-script@v4
