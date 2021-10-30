@@ -1,9 +1,9 @@
-# Workflow Code: FrazzledFerret_v4    DO NOT REMOVE
+# Workflow Code: FrazzledFerret_v5    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO:  Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
-name: Unlock Terrafrom State
+name: Unlock Terraform State
 on:
   workflow_dispatch:
     inputs:

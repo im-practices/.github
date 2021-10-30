@@ -1,9 +1,9 @@
-# Workflow Code: DrearyBuck_v1    DO NOT REMOVE
+# Workflow Code: DrearyBuck_v2    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
-name: Import Terrafrom State
+name: Import Terraform State
 on:
   workflow_dispatch:
     inputs:

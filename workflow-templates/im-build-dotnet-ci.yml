@@ -1,8 +1,12 @@
-# Workflow Code: LoathsomeSnipe_v10    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v11    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 # TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+
+# TODO:  If your project contains a .npmrc file that points to any of our im-* orgs as a registry you have two options:
+#        1 - Remove the .npmrc file completely and ensure you are using the im-open/authenticate-with-gh-package-registries action in each job that needs to authenticate
+#        2 - Supply a READ_PKG_TOKEN environment variable to each step that might use the .npmrc file for authentication with GH Packages (dotnet build, setup node, npm ci, etc)
 
 name: .Net Core CI
 
@@ -353,7 +357,7 @@ jobs:
       #       4 - At the top of this job, add a NEXT_VERSION with the appropriate prefix/suffix for the deployable
       - name: Calculate next version
         id: version
-        uses: im-open/git-version-lite@v2.0.0
+        uses: im-open/git-version-lite@v2.0.1
         with:
           calculate-prerelease-version: ${{ env.PRERELEASE }}
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
