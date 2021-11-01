@@ -10,7 +10,7 @@ on:
     types: [storyteller]
 
 env:
-  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }}
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
   SASS_PROJECT_NAME: '' # TODO:  Enter the project name that contains the sass to be compiled or delete if not needed.
   SOLUTION_FILE: '' # TODO:  Enter location and name of solution file like .\src\EnrollmentStatusConsumers.sln
   STORYTELLER_PROJECT_PATH: '' # TODO:  Enter path to the storyteller project like .\src\ExceptionsResolutionManager.StoryTeller

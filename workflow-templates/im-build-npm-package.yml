@@ -24,7 +24,7 @@ on:
       - ''
 
 env:
-  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }}
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
 
 jobs:
   examine-triggers:

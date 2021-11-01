@@ -15,7 +15,7 @@ on:
     types: [opened, reopened, synchronize, closed]
 
 env:
-  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }}
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
   DOTNET_VERSION: '' # TODO:  Add the .net version
   SOLUTION_FILE: '' # TODO:  Fill in the path and name of the solution file
   REPO_URL: 'https://github.com/${{ github.repository }}'
