@@ -19,6 +19,7 @@ on:
     types: [postman]
 
 env:
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }}
   PACKAGE_JSON_DIR: '' # TODO:  Add the directory containing package.json
   POSTMAN_NPM_SCRIPT_NAME: '' # TODO: Add postman npm script name
   POSTMAN_RESULTS_NAME: '' # TODO:  Add the name of the results file, set in npm script
@@ -43,10 +44,6 @@ jobs:
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
-
-      # TODO:  If your project contains a .npmrc file that points to any of our im-* orgs as a registry you have two options:
-      #        1 - Remove the .npmrc file completely and ensure you are using the im-open/authenticate-with-gh-package-registries action in each job that needs to authenticate
-      #        2 - Supply a READ_PKG_TOKEN environment variable to each step that might use the .npmrc file for authentication with GH Packages (dotnet build, setup node, npm ci, etc)
 
       - name: Restore npm packages
         run: npm install

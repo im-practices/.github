@@ -4,10 +4,6 @@
 
 # TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
 
-# TODO:  If your project contains a .npmrc file that points to any of our im-* orgs as a registry you have two options:
-#        1 - Remove the .npmrc file completely and ensure you are using the im-open/authenticate-with-gh-package-registries action in each job that needs to authenticate
-#        2 - Supply a READ_PKG_TOKEN environment variable to each step that might use the .npmrc file for authentication with GH Packages (dotnet build, setup node, npm ci, etc)
-
 name: .Net Core CI
 
 on:
@@ -19,6 +15,7 @@ on:
     types: [opened, reopened, synchronize, closed]
 
 env:
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }}
   DOTNET_VERSION: '' # TODO:  Add the .net version
   SOLUTION_FILE: '' # TODO:  Fill in the path and name of the solution file
   REPO_URL: 'https://github.com/${{ github.repository }}'
