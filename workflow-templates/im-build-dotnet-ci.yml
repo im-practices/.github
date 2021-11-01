@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v10    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v11    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -15,6 +15,7 @@ on:
     types: [opened, reopened, synchronize, closed]
 
 env:
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
   DOTNET_VERSION: '' # TODO:  Add the .net version
   SOLUTION_FILE: '' # TODO:  Fill in the path and name of the solution file
   REPO_URL: 'https://github.com/${{ github.repository }}'
@@ -353,7 +354,7 @@ jobs:
       #       4 - At the top of this job, add a NEXT_VERSION with the appropriate prefix/suffix for the deployable
       - name: Calculate next version
         id: version
-        uses: im-open/git-version-lite@v2.0.0
+        uses: im-open/git-version-lite@v2.0.1
         with:
           calculate-prerelease-version: ${{ env.PRERELEASE }}
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty

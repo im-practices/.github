@@ -20,6 +20,7 @@ on:
   workflow_dispatch:
 
 env:
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
   JS_APP_DIR: '' # TODO:  Set to the directory containing the js app and tests like src/MyApp.Bff/FrontEnd.
   SOLUTION_FILE: '' # TODO:  Set to name (not including path) of solution file.
   DOTNET_VERSION: '' # TODO:  Add the .net version

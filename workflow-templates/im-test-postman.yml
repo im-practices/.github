@@ -19,6 +19,7 @@ on:
     types: [postman]
 
 env:
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
   PACKAGE_JSON_DIR: '' # TODO:  Add the directory containing package.json
   POSTMAN_NPM_SCRIPT_NAME: '' # TODO: Add postman npm script name
   POSTMAN_RESULTS_NAME: '' # TODO:  Add the name of the results file, set in npm script

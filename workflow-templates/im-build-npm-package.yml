@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v5    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v6    DO NOT REMOVE
 
 name: 'Build and Publish npm Package'
 
@@ -22,6 +22,9 @@ on:
     #        If the repo only contains the npm package project, delete the paths:
     paths:
       - ''
+
+env:
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
 
 jobs:
   examine-triggers:
@@ -81,6 +84,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v2
         with:
@@ -96,12 +101,12 @@ jobs:
 
       - name: Calculate next version
         id: version
-        uses: im-open/git-version-lite@v2.0.0
+        uses: im-open/git-version-lite@v2.0.1
         with:
           calculate-prerelease-version: ${{ env.PRERELEASE }}
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
-          prefix: 'v' # TODO:  verify your prefix, the new ci workflows add v automatically, if you use different things like mfe/db/etc you might need to change this
-          create-ref: ${{ env.IS_MERGE_TO_MAIN }} # TODO:  Remove if you do not want a release created for main.  If deleted, the finish-build comment on pr step should be updated since there is no release.
+          prefix: 'none' # TODO:  verify your prefix, the new ci workflows add v automatically but npm packages typically won't have a prefix
+          create-ref: ${{ env.IS_MERGE_TO_MAIN }}
 
       - run: npm version ${{ steps.version.outputs.NEXT_VERSION }}
 
