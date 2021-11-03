@@ -342,9 +342,9 @@ jobs:
       # TODO: If you have multiple deployables in the repo and each deployable has it's own tag:
       #       1 - Duplicate this step once per deployable
       #       2 - Duplicate the following Build and Publish step, changing it to build one deployable at a time instead of the whole solution.
-      #       2 - Update the ID so the NEXT_VERSION can be referenced elsewhere
-      #       3 - Uncomment and add a value for the prefix (mfe/db/site/api/etc) so the deployable's tag can be incremented.
-      #       4 - At the top of this job, add a NEXT_VERSION with the appropriate prefix/suffix for the deployable
+      #       3 - Update the ID so the NEXT_VERSION can be referenced elsewhere
+      #       4 - Uncomment and add a value for the prefix (mfe/db/site/api/etc) so the deployable's tag can be incremented.
+      #       5 - At the top of this job, add a NEXT_VERSION with the appropriate prefix/suffix for the deployable
       - name: Calculate next version
         id: version
         uses: im-open/git-version-lite@v2.0.1
