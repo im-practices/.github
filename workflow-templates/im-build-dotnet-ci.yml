@@ -356,21 +356,12 @@ jobs:
       # TODO:  If there are multiple deployables, duplicate this step once per deployable project and update the PROJECT_ROOT, PUBLISHED_APP and DEPLOY_ZIP variables with the updated names.
       - name: Build and Publish
         working-directory: ${{ env.PROJECT_ROOT }}
+        shell: pwsh # On a Windows build runner, the 'zip' commandline tool isn't available. Use PowerShell instead.
         run: |
-          VERSION_ONLY=${NEXT_VERSION#?}; # Removes a leading 'v'. Use a different expression to strip a tag-prefix if you've specified one.
+          $VERSION_ONLY = ($env:NEXT_VERSION).substring(1)  # Removes the leading 'v'. TODO: Use a different expression to strip a tag-prefix if you've specified one.
           dotnet build --configuration Release /p:Version=$VERSION_ONLY
           dotnet publish --configuration Release --no-build -o ./${{ env.PUBLISHED_APP }}
-          (cd ${{ env.PUBLISHED_APP }} && zip -r ../${{ env.DEPLOY_ZIP }} .)
-
-      # TODO:  On a Windows build runner, the 'zip' commandline tool isn't available. Use PowerShell instead
-      # - name: Build and Publish
-      #   working-directory: ${{ env.PROJECT_ROOT }}
-      #   shell: pwsh
-      #   run: |
-      #     $VERSION_ONLY = ($env:NEXT_VERSION).substring(1) # Removes a leading 'v'. Use a different expression to strip a tag-prefix if you've specified one.
-      #     dotnet build --configuration Release /p:Version=$VERSION_ONLY
-      #     dotnet publish --configuration Release --no-build -o ./${{ env.PUBLISHED_APP }}
-      #     Compress-Archive -Path ./${{ env.PUBLISHED_APP }}/* -DestinationPath ${{ env.DEPLOY_ZIP }}
+          Compress-Archive -Path ./${{ env.PUBLISHED_APP }}/* -DestinationPath ${{ env.DEPLOY_ZIP }}
 
       # TODO:  If you have multiple deployables and there are different tags for each deployable:
       #        1 - Duplicate the 'Create Release with published_artifacts' step, once per deployable
