@@ -10,7 +10,7 @@
 #        https://github.com/im-practices/git-er-done/blob/main/packages/publish-nuget.md
 
 # TODO:  This workflow uses the elevated GH_PACKAGES_TOKEN secret to read/write/delete packages.  It is at the organization level but only
-#        available to select repos.  To use this let a member of the SWAT team know and it can be enabled for your repository.
+#        available to select repos.  To use this let a member of the SWAT team or Infra-Purple know and it can be enabled for your repository.
 
 name: 'Build and Publish Nuget package'
 
@@ -30,7 +30,7 @@ on:
       - ''
 
 env:
-  READ_PKG_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }} # This is an org-level secret # TODO: this env can be removed if the project does not contain an .npmrc/nuget.config file that needs this value
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret # TODO: this env can be removed if the project does not contain an .npmrc/nuget.config file that needs this value
   TIMEZONE: 'america/denver' # TODO:  Verify timezone
   REPO_URL: 'https://github.com/${{ github.repository }}'
 
@@ -113,7 +113,7 @@ jobs:
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
-      #     read-pkg-token: ${{ secrets.GH_PACKAGES_TOKEN }}  # This is an org-level secret, it has write permissions for packages.
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }}  # This is an org-level secret, it has write permissions for packages.
       #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
 
       - name: Setup .NET Core

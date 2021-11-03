@@ -9,7 +9,7 @@ name: 'Build and Publish npm Package'
 #        https://github.com/im-practices/git-er-done/blob/main/packages/publish-npm.md
 
 # TODO:  This workflow uses the elevated GH_PACKAGES_TOKEN secret to read/write/delete packages.  It is at the organization level but only
-#        available to select repos.  To use this let a member of the SWAT team know and it can be enabled for your repository.
+#        available to select repos.  To use this let a member of the SWAT team or Infra-Purple know and it can be enabled for your repository.
 on:
   # This workflow will run for the PR events:
   #   opened/reopened: A PR is opened/re-opened,
@@ -26,7 +26,7 @@ on:
       - ''
 
 env:
-  READ_PKG_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }} # This is an org-level secret # TODO: this env can be removed if the project does not contain an .npmrc file that needs this value
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret # TODO: this env can be removed if the project does not contain an .npmrc file that needs this value
   TIMEZONE: 'america/denver'
   REPO_URL: 'https://github.com/${{ github.repository }}'
 
@@ -108,7 +108,7 @@ jobs:
       # - name: Authenticate with GitHub Packages for Restoring Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
       #   with:
-      #     read-pkg-token: ${{ secrets.GH_PACKAGES_TOKEN }} # This is an org-level secret, it has write permissions for packages.
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
 
       - name: Calculate next version
@@ -128,6 +128,9 @@ jobs:
 
       # TODO:  If you have tests that run for the npm package, add a new run step with the appropriate npm command
       # - run: npm run tests
+
+      - name: reset .npmrc for publishing
+        run: npm set //npm.pkg.github.com/:_authToken '${{ secrets.GITHUB_TOKEN }}'
 
       - run: npm publish
         env:
