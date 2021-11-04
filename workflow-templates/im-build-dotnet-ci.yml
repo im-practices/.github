@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v12    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v13    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -18,8 +18,8 @@ env:
   READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
   DOTNET_VERSION: '' # TODO:  Add the .net version
   SOLUTION_FILE: '' # TODO:  Fill in the path and name of the solution file
-  REPO_URL: 'https://github.com/${{ github.repository }}'
-  TIMEZONE: 'america/denver' # TODO:  Verify timezone
+  REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+  TIMEZONE: America/Denver # TODO:  Verify timezone
 
 jobs:
   examine-triggers:
@@ -108,7 +108,7 @@ jobs:
       # TODO:  Filters can be added to exclude certain tests: https://docs.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests?pivots=xunit
       - name: dotnet test with coverage
         continue-on-error: true
-        run: dotnet test ${{ env.SOLUTION_FILE }} --logger trx --no-restore --configuration Release /property:CollectCoverage=True /property:CoverletOutputFormat=opencover
+        run: dotnet test ${{ env.SOLUTION_FILE }} --logger trx --no-build --configuration Release /property:CollectCoverage=True /property:CoverletOutputFormat=opencover
 
       - name: create status check/comment for test results
         id: dotnet_test_check
@@ -339,19 +339,12 @@ jobs:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
 
-      # TODO:  If there are multiple deployables, duplicate this step once per deployable project and update the PROJECT_ROOT, PUBLISHED_APP and DEPLOY_ZIP variables with the updated names.
-      - name: Build and Publish
-        working-directory: ${{ env.PROJECT_ROOT }}
-        run: |
-          dotnet build --configuration Release
-          dotnet publish -c Release -o ./${{ env.PUBLISHED_APP }} --no-restore
-          (cd ${{ env.PUBLISHED_APP }} && zip -r ../${{ env.DEPLOY_ZIP }} .)
-
       # TODO: If you have multiple deployables in the repo and each deployable has it's own tag:
       #       1 - Duplicate this step once per deployable
-      #       2 - Update the ID so the NEXT_VERSION can be referenced elsewhere
-      #       3 - Uncomment and add a value for the prefix (mfe/db/site/api/etc) so the deployable's tag can be incremented.
-      #       4 - At the top of this job, add a NEXT_VERSION with the appropriate prefix/suffix for the deployable
+      #       2 - Duplicate the following Build and Publish step, changing it to build one deployable at a time instead of the whole solution.
+      #       3 - Update the ID so the NEXT_VERSION can be referenced elsewhere
+      #       4 - Uncomment and add a value for the prefix (mfe/db/site/api/etc) so the deployable's tag can be incremented.
+      #       5 - At the top of this job, add a NEXT_VERSION with the appropriate prefix/suffix for the deployable
       - name: Calculate next version
         id: version
         uses: im-open/git-version-lite@v2.0.1
@@ -359,6 +352,16 @@ jobs:
           calculate-prerelease-version: ${{ env.PRERELEASE }}
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
           # tag-prefix: '' # TODO:  If you prefix your tags like (mfe/db/etc) uncomment and add that value here
+
+      # TODO:  If there are multiple deployables, duplicate this step once per deployable project and update the PROJECT_ROOT, PUBLISHED_APP and DEPLOY_ZIP variables with the updated names.
+      - name: Build and Publish
+        working-directory: ${{ env.PROJECT_ROOT }}
+        shell: pwsh # On a Windows build runner, the 'zip' commandline tool isn't available. Use PowerShell instead.
+        run: |
+          $VERSION_ONLY = ($env:NEXT_VERSION).substring(1)  # Removes the leading 'v'. TODO: Use a different expression to strip a tag-prefix if you've specified one.
+          dotnet build --configuration Release /p:Version=$VERSION_ONLY
+          dotnet publish --configuration Release --no-build -o ./${{ env.PUBLISHED_APP }}
+          Compress-Archive -Path ./${{ env.PUBLISHED_APP }}/* -DestinationPath ${{ env.DEPLOY_ZIP }}
 
       # TODO:  If you have multiple deployables and there are different tags for each deployable:
       #        1 - Duplicate the 'Create Release with published_artifacts' step, once per deployable
@@ -428,6 +431,7 @@ jobs:
 
       - name: Send Status to Teams
         if: always()
+        continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.0.0
         with:
           title: '<project-name> CI Build' # TODO:  Replace <project-name>
@@ -446,19 +450,20 @@ jobs:
 
       - name: Comment on PR with version ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v4
+        continue-on-error: true
+        uses: actions/github-script@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
           script: |
             let nextVersion = '${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}';
             let hasRelease = nextVersion && nextVersion.length > 0;
-            let releaseText = hasRelease ? 
-              '[Release - ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}](${{ env.REPO_URL }}/releases/${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }})' : 
+            let releaseText = hasRelease ?
+              '[Release - ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}](${{ env.REPO_URL }}/releases/${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }})' :
               'Release - N/A';
             const commentBody = `
             - [Workflow Run - ${{ steps.conclusion.outputs.workflow_conclusion }}](${{ env.REPO_URL }}/actions/runs/${{ github.run_id }})
             - ${releaseText}`;
-            github.issues.createComment({
+            github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -475,11 +480,11 @@ jobs:
       # TODO:  Uncomment once this workflow has been merged to master at least once.  The repository_dispatch event won't work until the checkmarx workflow is in main.
       # - name: Kick off Checkmarx if workflow succeeded
       #   if: steps.conclusion.outputs.workflow_conclusion == 'success'
-      #   uses: actions/github-script@v4
+      #   uses: actions/github-script@v5
       #   with:
       #     github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org-level secret
       #     script: |
-      #       github.repos.createDispatchEvent({
+      #       github.rest.repos.createDispatchEvent({
       #         owner: context.repo.owner,
       #         repo: context.repo.repo,
       #         event_type: 'run_checkmarx',
