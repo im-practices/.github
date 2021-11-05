@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v8    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v9    DO NOT REMOVE
 # This workflow will build a project and publish the nuget package to github packages registry.
 
 # TODO:  If there are more than one nuget package projects in the repo, duplicate this workflow for each package
@@ -121,8 +121,11 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: dotnet build
+      - name: dotnet build nuget project
         run: dotnet build ${{ env.NUGET_PROJ_DIR }}/${{ env.NUGET_PROJ_NAME }} --configuration Release
+
+      - name: dotnet build test project
+        run: dotnet build ${{ env.NUGET_TEST_PROJECT }} --configuration Release
 
       # TODO:  The test projects need a package reference to coverlet.msbuild for this to output the coverage reports correctly:
       # <PackageReference Include="coverlet.msbuild" Version="3.1.0" />
@@ -295,8 +298,7 @@ jobs:
             if (nextVersion && nextVersion.length > 0) {
               tagText =  isMergeToMain ? 
                 `- [Tag - ${nextVersion}](${{ env.REPO_URL }}/releases/tag/${nextVersion})` : 
-                `- Next Version - ${nextVersion}`; 
-            `;
+                `- Next Version - ${nextVersion}`;
             }
 
             const commentBody = `
