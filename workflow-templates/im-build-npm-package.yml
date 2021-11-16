@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v8    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v9    DO NOT REMOVE
 
 name: 'Build and Publish npm Package'
 
@@ -113,7 +113,7 @@ jobs:
 
       - name: Calculate next version
         id: version
-        uses: im-open/git-version-lite@v2.0.1
+        uses: im-open/git-version-lite@v2.0.4
         with:
           calculate-prerelease-version: ${{ env.PRERELEASE }}
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
