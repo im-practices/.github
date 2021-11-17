@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v4    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v5    DO NOT REMOVE
 
 name: Manual trigger K6 test
 
@@ -63,7 +63,7 @@ jobs:
 
   k6_test:
     runs-on: [self-hosted, ubuntu-20.04]
-
+    needs: [set-vars]
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
 
