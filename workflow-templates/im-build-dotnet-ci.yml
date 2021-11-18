@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v14    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v15    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -265,7 +265,7 @@ jobs:
       - name: Validate SAM.yaml
         continue-on-error: true
         id: sam-yaml
-        uses: im-open/yaml-file-validation@v1.0.2
+        uses: im-open/yaml-file-validation@v1.0.4
         with:
           yaml-file-path: ./SAM.yml # TODO:  Verify name, case and extension of your sam.yml file
           schema-file-path: 'SAM'

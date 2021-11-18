@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v9    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v10    DO NOT REMOVE
 
 name: 'Build and Publish npm Package'
 
@@ -71,7 +71,7 @@ jobs:
       - name: Validate SAM.yaml
         continue-on-error: true
         id: sam-yaml
-        uses: im-open/yaml-file-validation@v1.0.2
+        uses: im-open/yaml-file-validation@v1.0.4
         with:
           yaml-file-path: ./SAM.yml # TODO:  Verify name, case and extension of your sam.yml file
           schema-file-path: 'SAM'
@@ -206,9 +206,9 @@ jobs:
             let tagText = '- Tag - N/A';
             let testPackageText = '';
             if (nextVersion && nextVersion.length > 0) {
-              tagText =  isMergeToMain ? 
-                `- [Tag - ${nextVersion}](${{ env.REPO_URL }}/releases/tag/${nextVersion})` : 
-                `- Next Version - ${nextVersion}`; 
+              tagText =  isMergeToMain ?
+                `- [Tag - ${nextVersion}](${{ env.REPO_URL }}/releases/tag/${nextVersion})` :
+                `- Next Version - ${nextVersion}`;
               testPackageText = `- To test this version try running:
               \`\`\`bash
               npm install @<org>/<package-name>@${nextVersion} # TODO:  Replace <org>/<package-name> with actual values
