@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v5    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v6    DO NOT REMOVE
 
 # Note: Each deployable on-prem service in the repository should have their own copy of this workflow rather than trying to deploy several
 #       on-prem service with the same workflow.  If the service is deployed as part of a group, the service still needs its own copy of this
@@ -273,11 +273,11 @@ jobs:
       # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
       # https://github.com/im-open/octostache-action
-      - uses: im-open/octostache-action@v2.0.0
+      - uses: im-open/octostache-action@v2.0.1
         with:
-          variablesFile: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
+          variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
           files-with-substitutions: '' # TODO:  Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
-        # env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variablesFile with the same name.
+        # env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variables-file with the same name.
 
       # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
