@@ -71,7 +71,7 @@ jobs:
 
       - name: Validate SAM.yaml
         id: sam-yaml
-        uses: im-open/yaml-file-validation@v1.0.3
+        uses: im-open/yaml-file-validation@v1.0.4
         with:
           yaml-file-path: ./SAM.yml # TODO:  Verify name, case and extension of your sam.yml file
           schema-file-path: 'SAM'
