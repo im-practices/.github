@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v3    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v4    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -66,6 +66,7 @@ jobs:
 
       # TODO: If not acting on an azure database, remove this
       - name: AZ Login
+        id: login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
