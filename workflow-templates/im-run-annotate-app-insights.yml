@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v6    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v7    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -86,6 +86,7 @@ jobs:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The event is ${{ github.event.inputs.eventName }}"
 
       - name: AZ Login
+        id: login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret

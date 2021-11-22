@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v6    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v7    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
@@ -78,6 +78,7 @@ jobs:
           ref: ${{ env.GITHUB_REF }}
 
       - name: AZ Login
+        id: login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
@@ -106,3 +107,10 @@ jobs:
           ref: ${{ env.GITHUB_REF }}
           deploy-status: ${{ job.status }}
           timezone: 'america/denver' # TODO:  Verify timezone
+
+      - name: Azure logout
+        if: always() && steps.login.outcome == 'success'
+        run: |
+          az logout
+          az cache purge
+          az account clear
