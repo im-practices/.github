@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # See https://github.com/im-open/git-version for more details around how to increment major/minor/patch through commit messages
+      # See https://github.com/im-open/git-version-lite for more details around how to increment major/minor/patch through commit messages
       - name: Increment the version
         uses: im-open/git-version-lite@v2.0.4
         with:
