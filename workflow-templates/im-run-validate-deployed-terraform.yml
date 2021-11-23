@@ -1,4 +1,4 @@
-# Workflow Code: ShinySQUIRREL_v6    DO NOT REMOVE
+# Workflow Code: ShinySQUIRREL_v7    DO NOT REMOVE
 
 # Pre-requisites
 # This workflow relies on a Deployment Board being set up to determine what should be currently deployed to the environment
@@ -143,7 +143,7 @@ jobs:
 
       - name: Trigger PagerDuty when there are changes
         if: steps.plan.outputs.exitcode == '2'
-        uses: im-open/create-pagerduty-incident@v1.0.0
+        uses: im-open/create-pagerduty-incident@v1.0.2
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
