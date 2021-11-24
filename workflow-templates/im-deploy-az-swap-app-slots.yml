@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v5    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v6    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -49,7 +49,7 @@ jobs:
 
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.3
+        uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
@@ -70,7 +70,7 @@ jobs:
 
       - name: Set Variables
         id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.0.3
+        uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
           scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
           create-output-variables: true
@@ -112,7 +112,7 @@ jobs:
       - name: Open a PagerDuty Maintenance Window
         if: env.OPEN_WINDOW == 'true'
         id: open-window
-        uses: im-open/open-pagerduty-maintenance-window@v1.0.2
+        uses: im-open/open-pagerduty-maintenance-window@v1.0.3
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
@@ -153,7 +153,7 @@ jobs:
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && env.OPEN_WINDOW == 'true' && steps.open-window.outcome == 'success'
-        uses: im-open/close-pagerduty-maintenance-window@v1.0.1
+        uses: im-open/close-pagerduty-maintenance-window@v1.0.2
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
