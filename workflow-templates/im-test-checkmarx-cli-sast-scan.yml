@@ -1,4 +1,4 @@
-# Workflow Code: EnthralledOyster_v3    DO NOT REMOVE
+# Workflow Code: EnthralledOyster_v4    DO NOT REMOVE
 
 name: Checkmarx CLI SAST Scan
 
@@ -38,7 +38,7 @@ jobs:
 
       - name: Run the Scan
         id: scan
-        uses: im-open/checkmarx-cli-sast-scan@v1.0.0
+        uses: im-open/checkmarx-cli-sast-scan@v1.0.1
         with:
           checkmarx-server-url: ${{ secrets.CHECKMARX_URL }} # This is an org-level secret
           checkmarx-username: ${{ secrets.CHECKMARX_USERNAME }} # This is an org-level secret

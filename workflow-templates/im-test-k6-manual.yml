@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v5    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v6    DO NOT REMOVE
 
 name: Manual trigger K6 test
 
@@ -42,7 +42,7 @@ jobs:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.3
+        uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
@@ -71,7 +71,7 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Setup K6
-        uses: im-open/setup-k6-perf-testing@v1.0.0
+        uses: im-open/setup-k6-perf-testing@v1.0.1
         with:
           version: ${{ github.event.inputs.k6-version }}
 

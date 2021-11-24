@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v5    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v6    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -33,7 +33,7 @@ jobs:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.3
+        uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
@@ -74,7 +74,7 @@ jobs:
       # TODO: Use this for any variables that change per environment
       - name: Set Database Vars
         id: db-vars
-        uses: im-open/set-environment-variables-by-scope@v1.0.3
+        uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
           scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           create-output-variables: true
@@ -106,12 +106,12 @@ jobs:
           echo "SQL_PASSWORD=$sqlPassword" >> $GITHUB_ENV
 
       - name: Install Flyway
-        uses: im-open/setup-flyway@v1.0.1
+        uses: im-open/setup-flyway@v1.0.2
         with:
           version: 7.9.2
 
       - name: Flyway repair
-        uses: im-open/run-flyway-command@v1.2.0
+        uses: im-open/run-flyway-command@v1.2.1
         with:
           flyway-command: 'repair'
           db-server-name: ${{ steps.db-vars.outputs.DB_SERVER_NAME }}

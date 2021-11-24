@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v7    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v8    DO NOT REMOVE
 
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
@@ -37,7 +37,7 @@ jobs:
       # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       - name: Set ENVIRONMENT
         id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.3
+        uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
@@ -58,7 +58,7 @@ jobs:
 
       - name: Set Variables
         id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.0.3
+        uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
           scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
           create-output-variables: true
@@ -92,7 +92,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
       - name: annotate
-        uses: im-open/create-app-insights-annotation@v1.0.0
+        uses: im-open/create-app-insights-annotation@v1.0.1
         with:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
           resourceGroupName: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
