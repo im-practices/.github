@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       branch-tag-sha:
-        description: The branch, tag or sha of the terraform that should be deployed to the Dev environment.
+        description: The branch, tag or sha of the files that should be deployed to the Dev environment.
         required: true
       environment:
         description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available

@@ -1,0 +1,87 @@
+# Workflow Code: ScornfulFlamingo_v1   DO NOT REMOVE
+
+# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+
+name: Delete Azure Blob
+
+# TODO:  Evaluate the appropriate triggers
+on:
+  workflow_dispatch:
+    inputs:
+      storage-account-name:
+        description: The name of the storage account where the blob to delete lives
+        required: true
+      container-name:
+        description: The name of the storage account container where the blob to delete lives
+        required: true
+      blob-name:
+        description: The name of the blob to delete
+        required: true
+      environment:
+        description: The environment to delete the blob from - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
+        required: true
+
+jobs:
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    outputs:
+      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
+
+    steps:
+      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+      - name: Set ENVIRONMENT
+        id: clean-env
+        uses: im-open/set-environment-variables-by-scope@v1.0.4
+        with:
+          scope: ${{ github.event.inputs.environment }}
+          create-output-variables: true
+          error-on-no-match: true
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+        env:
+          # TODO:  Update for the environments your project contains
+          # The value array contains the environments it will match and the corresponding key is
+          # the environment it will output if one of the values was found.  It is case insensitive.
+          ENVIRONMENT@dev d development: 'dev'
+          ENVIRONMENT@qa q: 'qa'
+          ENVIRONMENT@stg s stage: 'stage'
+          ENVIRONMENT@o demo: 'demo'
+          ENVIRONMENT@u uat: 'uat'
+          ENVIRONMENT@prod p production: 'prod'
+
+      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}."
+
+  delete-blob:
+    runs-on: [self-hosted, ubuntu-20.04]
+
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }} # TODO:  Verify the environment
+
+    steps:
+      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}."
+
+      - name: AZ Login
+        id: login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
+
+      # This call uses RBAC (--auth-mode login) to delete files from the azure storage account.
+      # No other key or connection string is needed. In order to delete files from a stg account
+      # the SP that authenticates in the step above needs an additional permission (Storage
+      # Blob Data Contributor).  Without that permission, this call will not succeed.
+      # https://docs.microsoft.com/en-us/azure/storage/blobs/assign-azure-role-data-access?tabs=portal
+      - name: Delete Blob
+        run: |
+          az storage blob delete \
+            --auth-mode login \
+            --account-name '${{ github.event.inputs.storage-account-name }}' \
+            --container-name '${{ github.event.inputs.container-name }}' \
+            --name '${{ github.event.inputs.blob-name }}'
+
+      - name: Azure logout
+        if: always() && steps.login.outcome == 'success'
+        run: |
+          az logout
+          az cache purge
+          az account clear

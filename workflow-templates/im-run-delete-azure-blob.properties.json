@@ -1,0 +1,5 @@
+{
+    "name": "Run - Delete Azure Blob",
+    "description": "Template that can be used to delete a blob from an Azure Storage Account",
+    "iconName": "im_azure"
+}
