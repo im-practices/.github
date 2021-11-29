@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v8    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v9    DO NOT REMOVE
 
 # Note: Each deployable on-prem service in the repository should have their own copy of this workflow rather than trying to deploy several
 #       on-prem service with the same workflow.  If the service is deployed as part of a group, the service still needs its own copy of this
@@ -323,7 +323,7 @@ jobs:
       - name: Register Service
         id: register
         if: steps.deploy.outcome == 'success'
-        uses: im-open/register-windows-service@initial-release
+        uses: im-open/register-windows-service@v1.0.1
         with:
           service-name: '${{ needs.set-vars.outputs.SERVICE_NAME }}'
           deployment-path: '${{ needs.set-vars.outputs.SERVICE_PATH }}\\win-service.exe'
