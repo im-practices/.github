@@ -1,25 +1,22 @@
-# Workflow Code: DrearyBuck_v4    DO NOT REMOVE
+# Workflow Code: GratefulTermite_v1    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
-name: Import Terraform State
+name: Taint Terraform Resource
 on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment the import should be done in - dev|qa|stage|prod|demo|uat. # TODO:  Update for the environments that are available
+        description: The environment the taint should be done in - dev|qa|stage|prod|demo|uat. # TODO:  Update for the environments that are available
         required: true
+      # This is required because a tf init has to be performed before the terraform taint command
       branch-tag-sha:
-        description: The branch, tag or sha of the terraform that has the configuration for the resource(s) to import.
+        description: The branch, tag or sha of the terraform that has the configuration for the resource to taint.
         required: true
       tf-resource-address:
-        description: The address of the resource to import. E.g. module.common.azurerm_mssql_server.server
+        description: The address of the resource to taint. E.g. module.my-module.azurerm_mssql_server.server
         required: true
-      tf-resource-id:
-        description: The id of the resource to import. It should look something like /subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/{provider_name}/{...etc...}.
-        required: true
-
 env:
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }}
   # The following ARM_* secrets are org-level secrets
@@ -71,7 +68,7 @@ jobs:
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.   The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
-  tf-import-state:
+  tf-taint-resource:
     needs: [set-vars]
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
@@ -89,7 +86,7 @@ jobs:
 
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
 
-      # Allows pulling modules from the repo instead of artifactory
+      # Allows pulling modules from the respective github repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
         uses: im-open/setup-deploy-keys@1.0.3
         with:
@@ -100,9 +97,11 @@ jobs:
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
+      # A terraform init is required before a terraform taint can be run
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Import
-        # TODO: Add any additional parameters that are needed
-        run: terraform import ${{ github.event.inputs.tf-resource-address }} ${{ github.event.inputs.tf-resource-id }}
+      - name: Terraform Taint
+        # TODO: Add any additional parameters that are needed (-allow-missing, -lock=false, -lock-timeout=90s)
+        #       https://www.terraform.io/docs/cli/commands/taint.html#usage
+        run: terraform taint ${{ github.event.inputs.tf-resource-address }}

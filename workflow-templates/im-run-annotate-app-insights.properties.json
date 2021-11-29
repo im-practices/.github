@@ -1,5 +1,5 @@
 {
     "name": "Run - Annotate App Insights",
     "description": "Template that can be used to annotate Azure App Insights",
-    "iconName": "im_run"
+    "iconName": "im_azure"
 }

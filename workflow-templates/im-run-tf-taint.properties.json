@@ -1,0 +1,5 @@
+{
+    "name": "Run - Taint Terraform Resource",
+    "description": "Runs the taint command on the provided resource in the terraform state",
+    "iconName": "im_tf"
+}
