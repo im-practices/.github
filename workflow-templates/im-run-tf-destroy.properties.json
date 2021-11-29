@@ -1,0 +1,5 @@
+{
+    "name": "Run - Terraform Destroy",
+    "description": "Destroys all remote objects managed by a terraform configuration",
+    "iconName": "im_tf"
+}
