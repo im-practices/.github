@@ -29,12 +29,14 @@ The templates in this repository fall into one of the following categories:
   - [ ] The `name` field has a category prefix (Build, Deploy, Test, Run)
     - This is included so templates are easier to identify when looking for workflows to add
   - [ ] The `iconName` field contains one of the [SVGs](#svgs) listed below
+    - im_azure
     - im_build
-    - im_deploy
-    - im_test
-    - im_run
-    - im_tf
     - im_checkmarx
+    - im_deploy    
+    - im_run
+    - im_test
+    - im_tf
+    
 - For new `.yml` files ensure:
   - [ ] The file contains the appropriate `im-<build|deploy|test|run>-` prefix
   - [ ] Clearly mark what needs to be customized or populated by the user
@@ -57,8 +59,7 @@ The templates in this repository fall into one of the following categories:
       - Not Expected: `runs-on: [ubuntu-latest]`
     - [ ] Outside of script blocks, use single `'` instead of double `"`
     - [ ] For any secrets, document whether it is an org, repo or environment level secret
-    
-  
+      
 
 [add a workflow]: https://docs.github.com/en/actions/guides/setting-up-continuous-integration-using-workflow-templates
 [Sharing workflows with your organization]: https://docs.github.com/en/actions/learn-github-actions/sharing-workflows-with-your-organization
