@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v11    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v12    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
@@ -58,7 +58,7 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@1.0.3
+        uses: im-open/setup-deploy-keys@v1.0.3
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
