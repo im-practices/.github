@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v12    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v13    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
@@ -107,7 +107,6 @@ jobs:
           timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [
-              { "name": "Event", "value": "${{ github.event_name }}" },
               { "name": "Workflow", "value": "${{ github.workflow }}" },
               { "name": "Run", "value": "${{ github.run_id }}" },
               { "name": "Actor", "value": "${{ github.actor }}" }

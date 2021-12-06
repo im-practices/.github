@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v17    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v18    DO NOT REMOVE
 
 # Note: Each deployable app service/function in the repository should have their own copy of this workflow rather than trying to deploy several
 #       app services or functions with the same workflow.  If the app is deployed as part of a group, the app still needs its own copy of
@@ -391,8 +391,21 @@ jobs:
           timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [
-              { "name": "Event", "value": "${{ github.event_name }}" },
               { "name": "Workflow", "value": "${{ github.workflow }}" },
               { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" }
+            ]
+
+      - name: Send Status to Deployment Notifications Channel for Prod Deploys
+        if: always() && needs.set-vars.outputs.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
+        uses: im-open/post-status-to-teams-action@v1.0.2
+        with:
+          title: ${{ needs.set-vars.outputs.AZ_APP_NAME }} Deployment to Azure # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
+          workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          workflow-type: Deploy
+          teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret
+          timezone: ${{ env.TIMEZONE }}
+          custom-facts: |
+            [
               { "name": "Actor", "value": "${{ github.actor }}" }
             ]
