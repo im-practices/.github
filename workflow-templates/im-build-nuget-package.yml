@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v14    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v15    DO NOT REMOVE
 # This workflow will build a project and publish the nuget package to github packages registry.
 
 # TODO:  If there are more than one nuget package projects in the repo, duplicate this workflow for each package
@@ -276,7 +276,6 @@ jobs:
           timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [
-              { "name": "Event", "value": "${{ github.event_name }}" },
               { "name": "Workflow", "value": "${{ github.workflow }}" },
               { "name": "Run", "value": "${{ github.run_number }}" },
               { "name": "Actor", "value": "${{ github.actor }}" },

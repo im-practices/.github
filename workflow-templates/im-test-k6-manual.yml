@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v6    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v7    DO NOT REMOVE
 
 name: Manual trigger K6 test
 
@@ -22,11 +22,11 @@ on:
         required: false
         default: '' # TODO: Set default paramaters to run on every K6 test. IE. --vus 1 -i 1 --insecure-skip-tls-verify -out JSON="./k6-output.json" --out influxdb="http://influxdb:8086/k6" --config "/scripts/config/dev-config.json"
       k6-version:
-        description: 'K6 version'
+        description: 'K6 version.  Versions lower than 0.32.0 will not work with this action.  Do not include the "v" prefix.'
         required: true
         default: '' # TODO: Set default version of k6. IE. 0.33.0
       run-stress-step:
-        description: 'Run k6 stress test optimized step. [true, false]'
+        description: 'Run k6 stress test optimized step. [true, false].  The optimized step allows more connections and transactions.'
         required: false
         default: 'false'
 
@@ -44,7 +44,7 @@ jobs:
         id: clean-env
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
-          scope: ${{ github.event.inputs.environment }}
+          scope: ${{ github.event.inputs.env-to-test }}
           create-output-variables: true
           error-on-no-match: true
           custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
@@ -86,13 +86,15 @@ jobs:
             exit 1
           fi
 
+      # Depending on the flag set above one of these run k6 steps will execute.  The difference between these two
+      # steps is the number of open connections it configures.  The stress step allows more connections on the OS.
       - name: Run local k6 test
         if: ${{ github.event.inputs.run-stress-step != 'true' }}
         working-directory: ${{ github.event.inputs.test-folder-root }}
         run: |
           k6 run ${{ github.event.inputs.test-file }} ${{ github.event.inputs.k6-extra-params }} -e RUN_ENV=${{ needs.set-vars.outputs.ENVIRONMENT }}
 
-      - name: Run local k6 stress test
+      - name: Run local k6 as a stress test
         if: ${{ github.event.inputs.run-stress-step == 'true' }}
         working-directory: ${{ github.event.inputs.test-folder-root }}
         run: |
