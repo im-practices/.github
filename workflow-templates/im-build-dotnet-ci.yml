@@ -88,12 +88,13 @@ jobs:
 
       # TODO: This can be removed if your database doesn't have database object dependencies that it needs to download and install in order to build and run tests.
       - name: Install and run dependency scripts
-        uses: im-open/install-and-run-db-dependency-scripts@1.2.0
+        uses: im-open/install-and-run-db-dependency-scripts@v1.1.0
         with:
           db-server-name: '${{ env.DB_SERVER_NAME }},${{ env.DB_SERVER_PORT }}'
           db-name: '${{ env.DB_NAME }}'
           username: '${{ env.SQL_LOGIN_USERNAME }}'
           password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }} # This is an org-level secret
+          # TODO: Fill in this list with real values.
           dependency-list: >-
             [
             {
