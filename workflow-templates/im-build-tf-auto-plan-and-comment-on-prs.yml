@@ -1,13 +1,13 @@
 # Workflow Code: DeterminedPorcupine_v8    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
-# TODO:  Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Automatically run tf plan and comment on PR
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-    # TODO:  Verify the paths where changes should trigger this workflow.  This can be removed entirely if all changes should trigger the workflow.
+    # TODO: Verify the paths where changes should trigger this workflow.  This can be removed entirely if all changes should trigger the workflow.
     paths:
       - 'common/**'
       - 'dev/**'
@@ -35,7 +35,7 @@ jobs:
       ARM_ENVIRONMENT: 'public'
       TF_IN_AUTOMATION: 'true'
       TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
-      TF_WORKING_DIR: './${{ matrix.environment }}' # TODO:  Verify this directory structure would be correct for your repository
+      TF_WORKING_DIR: './${{ matrix.environment }}' # TODO: Verify this directory structure would be correct for your repository
       # The following SSH_* secrets are org-level secrets
       SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }}
       SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
@@ -79,8 +79,8 @@ jobs:
         run: terraform fmt -check -recursive
         continue-on-error: true
 
-      # TODO:  Remove the pagerduty token if not configuring pagerduty.  If using pagerduty verify 'pagerduty_token' is the name of the variable that tf expects
-      # TODO:  Add any other secrets that would be required for a tf plan to succeed.  Since this is a multi-line command every line except the last will need a \ on the end of it
+      # TODO: Remove the pagerduty token if not configuring pagerduty.  If using pagerduty verify 'pagerduty_token' is the name of the variable that tf expects
+      # TODO: Add any other secrets that would be required for a tf plan to succeed.  Since this is a multi-line command every line except the last will need a \ on the end of it
       # PAGERDUTY_API_KEY is an org level secret
       - name: Terraform Plan
         id: plan

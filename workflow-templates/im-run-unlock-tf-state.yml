@@ -1,7 +1,7 @@
 # Workflow Code: FrazzledFerret_v8    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
-# TODO:  Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Unlock Terraform State
 on:
@@ -11,7 +11,7 @@ on:
         description: The lock ID that needs to be removed.  Terraform provides this value (lock info.ID) in the message indicating there was an error acquiring the state lock.
         required: true
       environment:
-        description: The environment the lock should be removed in - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
+        description: The environment the lock should be removed in - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
         required: true
       branch-tag-sha:
         description: The branch, tag or sha of the terraform that is currently in the environment where the lock is.  This is needed to do a terraform init with the appropriate code.
@@ -54,9 +54,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -76,7 +76,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO:  Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
+        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO: Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
 
     steps:
       - name: Checkout Repository

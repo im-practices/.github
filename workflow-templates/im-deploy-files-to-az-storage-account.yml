@@ -5,7 +5,7 @@
 
 name: Deploy Files to Azure Storage
 
-# TODO:  Evaluate the appropriate triggers
+# TODO: Evaluate the appropriate triggers
 on:
   workflow_dispatch:
     inputs:
@@ -13,14 +13,14 @@ on:
         description: The branch, tag or sha of the files that should be deployed to the Dev environment.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
         required: true
 
 env:
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha }}
-  STORAGE_ACCOUNT_NAME: '' # TODO:  Add the appropriate storage account name
-  TARGET_CONTAINER: '' # TODO:  Add the appropriate target container in the stg account
-  SOURCE_DIRECTORY: '' # TODO:  Add the appropriate source directory
+  STORAGE_ACCOUNT_NAME: '' # TODO: Add the appropriate storage account name
+  TARGET_CONTAINER: '' # TODO: Add the appropriate target container in the stg account
+  SOURCE_DIRECTORY: '' # TODO: Add the appropriate source directory
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
 
 jobs:
@@ -50,9 +50,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -67,7 +67,7 @@ jobs:
   deploy-to-azure:
     runs-on: [self-hosted, ubuntu-20.04]
 
-    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }} # TODO:  Verify the environment
+    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }} # TODO: Verify the environment
 
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
@@ -106,7 +106,7 @@ jobs:
           board-number: ${{ env.DEPLOY_BOARD_NUM }}
           ref: ${{ env.GITHUB_REF }}
           deploy-status: ${{ job.status }}
-          timezone: 'america/denver' # TODO:  Verify timezone
+          timezone: 'america/denver' # TODO: Verify timezone
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'

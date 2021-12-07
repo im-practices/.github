@@ -13,7 +13,7 @@ on:
         required: true
         default: restart
       environment:
-        description: The environment the app is in - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
+        description: The environment the app is in - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
         required: true
         default: prod
 
@@ -36,9 +36,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -70,8 +70,8 @@ jobs:
           APP_NAME@demo: ''
           APP_NAME@uat: ''
           APP_NAME@prod: ''
-          # TODO:  If this workflow is restarting a slot update these values, otherwise delete this section.
-          # TODO:  If the slot has the same name in all environments, delete this section and populate the env.SLOT_NAME in the job below with the single value
+          # TODO: If this workflow is restarting a slot update these values, otherwise delete this section.
+          # TODO: If the slot has the same name in all environments, delete this section and populate the env.SLOT_NAME in the job below with the single value
           # SLOT_NAME@dev: ''
           # SLOT_NAME@qa: ''
           # SLOT_NAME@stage: ''
@@ -88,8 +88,8 @@ jobs:
       ENVIRONMENT: ${{ needs.set-vars.outputs.ENVIRONMENT }}
       APP_NAME: ${{ needs.set-vars.outputs.APP_NAME }}
       RESOURCE_GROUP: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-      AZ_APP_TYPE: 'webapp' # TODO:  If this workflow is for an azure function change the value to 'functionapp'
-      # SLOT_NAME: ${{ needs.set-vars.outputs.SLOT_NAME }} # TODO:  Uncomment if restarting slots, delete if not
+      AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function change the value to 'functionapp'
+      # SLOT_NAME: ${{ needs.set-vars.outputs.SLOT_NAME }} # TODO: Uncomment if restarting slots, delete if not
 
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
@@ -115,7 +115,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
-      # TODO:  if you wish to perform any of the following actions on a slot, append the following to each of the commands: --slot ${{ env.SLOT_NAME }}
+      # TODO: if you wish to perform any of the following actions on a slot, append the following to each of the commands: --slot ${{ env.SLOT_NAME }}
 
       - name: start
         if: steps.clean-action.outputs.ACTION == 'start'

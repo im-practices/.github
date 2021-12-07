@@ -12,12 +12,12 @@ on:
         description: The branch, tag or sha of the terraform that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
         required: true
 
 env:
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
-  TIMEZONE: 'america/denver' # TODO:  Verify timezone
+  TIMEZONE: 'america/denver' # TODO: Verify timezone
   PLAN_STORAGE_CONTAINER: 'tfstate'
   # The following ARM_* secrets are org-level secrets
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
@@ -66,9 +66,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -140,13 +140,13 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
     env:
-      PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ needs.set-vars.outputs.ENVIRONMENT }} environment from GitHub Actions' # TODO:  Verify this description
-      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
+      PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ needs.set-vars.outputs.ENVIRONMENT }} environment from GitHub Actions' # TODO: Verify this description
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
 
     defaults:
       run:
         shell: bash
-        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO:  Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
+        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO: Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
 
     outputs:
       tf_plan_name: ${{ steps.upload.outputs.tf_plan_name }}
@@ -190,8 +190,8 @@ jobs:
         id: init
         run: terraform init
 
-      # TODO:  Remove the pagerduty token if not configuring pagerduty.  If using pagerduty verify 'pagerduty_token' is the name of the variable that tf accepts as the variable
-      # TODO:  Add any other secrets that would be required for a tf plan to succeed.  Since this is a multi-line command every line except the last will need a \ on the end of it
+      # TODO: Remove the pagerduty token if not configuring pagerduty.  If using pagerduty verify 'pagerduty_token' is the name of the variable that tf accepts as the variable
+      # TODO: Add any other secrets that would be required for a tf plan to succeed.  Since this is a multi-line command every line except the last will need a \ on the end of it
       # PAGERDUTY_API_KEY is an org-level secret
       # This will run a plan and output it to a file.  The file is then uploaded to azure storage so it can be used later in the apply.
       - name: Terraform Plan
@@ -234,7 +234,7 @@ jobs:
   tf-plan-manual-approval:
     needs: [set-vars, tf-plan]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: 'Terraform Approval' # TODO:  Add required reviewers to this environment in GitHub.  This should be anyone who can review a terraform plan and proceed with the deployment
+    environment: 'Terraform Approval' # TODO: Add required reviewers to this environment in GitHub.  This should be anyone who can review a terraform plan and proceed with the deployment
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
@@ -249,7 +249,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO:  Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
+        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO: Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
 
     steps:
       - name: Checkout Repository
@@ -344,7 +344,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.0.2
         with:
-          title: Deploying <project-name> Terraform to Azure to ${{ needs.set-vars.outputs.ENVIRONMENT }} # TODO:  Replace <project-name> with your project
+          title: Deploying <project-name> Terraform to Azure to ${{ needs.set-vars.outputs.ENVIRONMENT }} # TODO: Replace <project-name> with your project
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)

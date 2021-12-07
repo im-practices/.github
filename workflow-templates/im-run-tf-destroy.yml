@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment the destroy should be run against - dev|qa|stage|prod|demo|uat. # TODO:  Update for the environments that are available
+        description: The environment the destroy should be run against - dev|qa|stage|prod|demo|uat. # TODO: Update for the environments that are available
         required: true
       # This is required because a tf init has to be performed before the terraform destroy command
       branch-tag-sha:
@@ -52,9 +52,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -74,7 +74,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO:  Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
+        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO: Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
 
     steps:
       - name: Checkout Repository

@@ -12,7 +12,7 @@
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 #       Generally one board should be set up per app service/function in the repository.
 
-# TODO:  If there are multiple app service/functions in the repo, append the project name to this workflow's file name and update the workflow name below
+# TODO: If there are multiple app service/functions in the repo, append the project name to this workflow's file name and update the workflow name below
 name: Manually deploy AZ App
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
@@ -24,7 +24,7 @@ on:
         description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  update for the environments you use
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO: update for the environments you use
         required: true
 
   # TODO: If a repository has multiple deployable artifacts that are deployed together through the 'Deploy Multiple Items' workflow:
@@ -47,7 +47,7 @@ on:
 
 env:
   RELEASE_TAG: ${{ github.event.inputs.tag }} # This is the tag that we'll be deploying
-  TIMEZONE: 'america/denver' # TODO:  Verify timezone
+  TIMEZONE: 'america/denver' # TODO: Verify timezone
 
 jobs:
   set-vars:
@@ -78,9 +78,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -182,11 +182,11 @@ jobs:
       PAGERDUTY_WINDOW_IN_MIN: 30
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions'
       TARGET_SLOT: 'Production'
-      AZ_SLOT_NAME: '' # TODO:  If using slots, set this to the name of the azure deployment slot.  If this differs per environment, add a new section in the set-vars job above where the value can be set per environment
+      AZ_SLOT_NAME: '' # TODO: If using slots, set this to the name of the azure deployment slot.  If this differs per environment, add a new section in the set-vars job above where the value can be set per environment
       ASSET_ZIP: 'published_app.zip' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
       UNZIPPED_ASSET: 'published_app' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
-      DEPLOY_ZIP: 'deploy.zip' # TODO:  remove if this workflow is for an azure function
-      AZ_APP_TYPE: 'webapp' # TODO:  If this workflow is for an azure function, change this value to functionapp
+      DEPLOY_ZIP: 'deploy.zip' # TODO: remove if this workflow is for an azure function
+      AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function, change this value to functionapp
 
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -206,9 +206,9 @@ jobs:
         with:
           scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           create-output-variables: true
-          input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
+          input-file: '' # TODO: if you have an input file with your variable substitutions, add them here
         env:
-          # TODO:  Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
+          # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
           #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of set-vars.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
@@ -217,27 +217,27 @@ jobs:
           # Auth0_Domain@stage demo: 'wtw-im-stage.auth0.com'
           # Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
 
-      # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
+      # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action can be utilized by this one.
       # https://github.com/im-open/octostache-action
       - uses: im-open/octostache-action@v2.1.1
         with:
           variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
-          files-with-substitutions: '' # TODO:  Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
+          files-with-substitutions: '' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
         env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variables-file with the same name.
 
-      # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
+      # TODO: If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action can be utilized by this one.
       - uses: microsoft/variable-substitution@v1
         with:
           files: '' # TODO: add a comma separated list of files/patterns, like './MyProj/We*.config, ./MyProj/Nlog.config' (this matches the downloaded asset structure, not the original file structure)
         env:
-          # TODO:  replace examples with actual substitutions
+          # TODO: replace examples with actual substitutions
           # Auth0.Domain: ${{ env.Auth0_Domain }} # Example showing replacement at a nested node (left side) & using the env set in the set-environment-variables-by-scope step above (right side)
           # SecretValue: ${{ secrets.VALUE }} # Example showing replacement of a root level value (left side) with a secret (right side)
 
-      # TODO:  Remove this zip step if the workflow is for an azure function
+      # TODO: Remove this zip step if the workflow is for an azure function
       - name: Zip the published app for faster deployment and uploads
         working-directory: ${{ env.UNZIPPED_ASSET }}
         run: zip -r ../${{ env.DEPLOY_ZIP }} .
@@ -257,7 +257,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
-      # TODO:  Uncomment if you want to create a slot to deploy to.  Delete if you have a permanent slot or do not wish to use slots.
+      # TODO: Uncomment if you want to create a slot to deploy to.  Delete if you have a permanent slot or do not wish to use slots.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - name: Create a deployment slot
       #   run: |
@@ -268,23 +268,23 @@ jobs:
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --configuration-source ${{ needs.set-vars.outputs.AZ_APP_NAME }}
 
-      # TODO:  remove this step if this workflow is for an azure function
+      # TODO: remove this step if this workflow is for an azure function
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
           package: ./${{ env.DEPLOY_ZIP }}
-          slot-name: ${{ env.AZ_SLOT_NAME }} # TODO:  Delete if not using slots
+          slot-name: ${{ env.AZ_SLOT_NAME }} # TODO: Delete if not using slots
 
-      # TODO:  remove this step if this workflow is for an azure app service
+      # TODO: remove this step if this workflow is for an azure app service
       - name: Deploy to Azure Function
         uses: azure/functions-action@v1.4.4
         with:
           app-name: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
           package: ./${{ env.UNZIPPED_ASSET }}
-          slot-name: ${{ env.AZ_SLOT_NAME }} # TODO:  Delete if not using slots
+          slot-name: ${{ env.AZ_SLOT_NAME }} # TODO: Delete if not using slots
 
-      # TODO:  Uncomment if using slots and you want to swap them now (as opposed to doing it in another workflow).  Delete this block if you don't.
+      # TODO: Uncomment if using slots and you want to swap them now (as opposed to doing it in another workflow).  Delete this block if you don't.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - name: Swap slots
       #   run: |
@@ -295,7 +295,7 @@ jobs:
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --target-slot ${{ env.TARGET_SLOT }}
 
-      # TODO:  Uncomment if you want to delete the temporary slot.  Delete this block if you don't.
+      # TODO: Uncomment if you want to delete the temporary slot.  Delete this block if you don't.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - run: |
       #     az ${{ env.AZ_APP_TYPE }} deployment slot delete \
@@ -334,9 +334,9 @@ jobs:
         run: |
           rm -f ${{ env.ASSET_ZIP }}
           rm -rf ${{ env.UNZIPPED_ASSET }}
-          rm -f ${{ env.DEPLOY_ZIP }} # TODO:  remove this line if this workflow is for a function
+          rm -f ${{ env.DEPLOY_ZIP }} # TODO: remove this line if this workflow is for a function
 
-      # TODO:  Uncomment if you have a separate workflow for swapping slots and you want to trigger it now.  Delete if you don't.
+      # TODO: Uncomment if you have a separate workflow for swapping slots and you want to trigger it now.  Delete if you don't.
       #        A dispatch event like this could also trigger other workflows that do things like smoke tests
       # - name: Trigger the Slot Swap
       #   uses: actions/github-script@v4
@@ -346,7 +346,7 @@ jobs:
       #       github.repos.createDispatchEvent({
       #         owner: context.repo.owner,
       #         repo: context.repo.repo,
-      #         event_type: "swap_slots", # TODO:  verify the other workflow has a repository_dispatch event that accepts the swap_slots type.
+      #         event_type: "swap_slots", # TODO: verify the other workflow has a repository_dispatch event that accepts the swap_slots type.
       #         client_payload: {
       #           environment: "${{ needs.set-vars.outputs.ENVIRONMENT }}"
       #         }
@@ -374,7 +374,7 @@ jobs:
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.RELEASE_TAG }}
           ref-type: 'tag'
-          # TODO:  If the repo has multiple deployables and they all use the same tag for releases, add the deployable type here like MFE/API/SVC/BFF/DB etc.
+          # TODO: If the repo has multiple deployables and they all use the same tag for releases, add the deployable type here like MFE/API/SVC/BFF/DB etc.
           #        Delete if the repo has a single deployable or multiple deployables with tags that are versioned independently.
           #deployable-type: '' # Prefix will be included on the deployment board issue & allows tracking of individual components when they share a tag
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}

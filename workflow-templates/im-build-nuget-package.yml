@@ -1,15 +1,15 @@
 # Workflow Code: TrustingCockroach_v16    DO NOT REMOVE
 # This workflow will build a project and publish the nuget package to github packages registry.
 
-# TODO:  If there are more than one nuget package projects in the repo, duplicate this workflow for each package
+# TODO: If there are more than one nuget package projects in the repo, duplicate this workflow for each package
 
-# TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+# TODO: If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
 
-# TODO:  Make sure the .csproj file has been updated with the appropriate values required for GH Packages
+# TODO: Make sure the .csproj file has been updated with the appropriate values required for GH Packages
 #        (PackageId, Version, RepositoryUrl)
 #        https://github.com/im-practices/git-er-done/blob/main/packages/publish-nuget.md
 
-# TODO:  This workflow uses the elevated GH_PACKAGES_TOKEN secret to read/write/delete packages.  It is at the organization level but only
+# TODO: This workflow uses the elevated GH_PACKAGES_TOKEN secret to read/write/delete packages.  It is at the organization level but only
 #        available to select repos.  To use this let a member of the SWAT team or Infra-Purple know and it can be enabled for your repository.
 
 name: 'Build and Publish Nuget package'
@@ -20,18 +20,18 @@ on:
   #   synchronize: The PR's head branch is updated (commits pushed, the base branch changed or the head is updated from the base branch)
   #   closed: A PR is merged or closed (The examine-triggers job makes sure we only run if a merge happened, not when a close happens)
   pull_request:
-    # TODO:  This will create a new nuget package for each push to the PR, determine if that is the desired behavior or if you only
+    # TODO: This will create a new nuget package for each push to the PR, determine if that is the desired behavior or if you only
     #        want a package created when a merge to main happens.
     types: [opened, reopened, synchronize, closed]
 
-    # TODO:  If there are multiple projects in the repo, add the path to the nuget package project so changes to those projects don't trigger this workflow
+    # TODO: If there are multiple projects in the repo, add the path to the nuget package project so changes to those projects don't trigger this workflow
     #        If the repo only contains the nuget package project, delete the paths:
     paths:
       - ''
 
 env:
   READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret # TODO: this env can be removed if the project does not contain an .npmrc/nuget.config file that needs this value
-  TIMEZONE: 'america/denver' # TODO:  Verify timezone
+  TIMEZONE: 'america/denver' # TODO: Verify timezone
   REPO_URL: 'https://github.com/${{ github.repository }}'
 
 jobs:
@@ -51,12 +51,12 @@ jobs:
       - if: github.event.action == 'closed' && github.event.pull_request.merged == false
         run: echo "CONTINUE_WORKFLOW=false" >> $GITHUB_ENV
 
-      - if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO:  verify default branch name
+      - if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO: verify default branch name
         run: |
           echo "IS_MERGE_TO_MAIN=true" >> $GITHUB_ENV
           echo "PRERELEASE=false" >> $GITHUB_ENV
 
-  # TODO:  If this repo contains another workflow that validates sam.yaml, this job can be removed.  If removing, update any needs[] that point to this.
+  # TODO: If this repo contains another workflow that validates sam.yaml, this job can be removed.  If removing, update any needs[] that point to this.
   validate-sam-yaml:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
@@ -73,7 +73,7 @@ jobs:
         id: sam-yaml
         uses: im-open/yaml-file-validation@v1.0.5
         with:
-          yaml-file-path: ./SAM.yml # TODO:  Verify name, case and extension of your sam.yml file
+          yaml-file-path: ./SAM.yml # TODO: Verify name, case and extension of your sam.yml file
           schema-file-path: 'SAM'
 
   build-test-publish:
@@ -93,14 +93,14 @@ jobs:
       PRERELEASE: ${{ needs.examine-triggers.outputs.PRERELEASE }}
       CODE_COVERAGE_CHECK_NAME_DOTNET: 'dotnet code coverage'
       CODE_COVERAGE_DIR_DOTNET: 'coverage-results/dotnet'
-      CODE_COVERAGE_REPORT_NAME_DOTNET: '<project-name> .Net Code Coverage' # TODO:  Replace <project-name>
-      DOTNET_VERSION: '' # TODO:  Add the .net version
-      NUGET_PROJ_DIR: '' # TODO:  Add the directory containing the nuget package project like, ./src/MyNugetProj
-      NUGET_PROJ_NAME: '' # TODO:  Add the name of the csproj for the nuget package
-      NUGET_TEST_PROJECT: '' # TODO:  Add the filename including path of the test project for your nuget package like ./tests/nugetTest/nugetTest.csproj
-      ORGANIZATION: '' # TODO:  Add the github organization of the repo lives in
-      PKG_NAME: '' # TODO:  If dual publishing to artifactory, add the name of the nuget package in Artifactory, otherwise delete
-      # CSPROJ_NAME: '' # TODO:  For older projects that must be built with nuget pack (instead of dotnet pack) add the name of your csproj file, otherwise delete
+      CODE_COVERAGE_REPORT_NAME_DOTNET: '<project-name> .Net Code Coverage' # TODO: Replace <project-name>
+      DOTNET_VERSION: '' # TODO: Add the .net version
+      NUGET_PROJ_DIR: '' # TODO: Add the directory containing the nuget package project like, ./src/MyNugetProj
+      NUGET_PROJ_NAME: '' # TODO: Add the name of the csproj for the nuget package
+      NUGET_TEST_PROJECT: '' # TODO: Add the filename including path of the test project for your nuget package like ./tests/nugetTest/nugetTest.csproj
+      ORGANIZATION: '' # TODO: Add the github organization of the repo lives in
+      PKG_NAME: '' # TODO: If dual publishing to artifactory, add the name of the nuget package in Artifactory, otherwise delete
+      # CSPROJ_NAME: '' # TODO: For older projects that must be built with nuget pack (instead of dotnet pack) add the name of your csproj file, otherwise delete
 
     steps:
       - name: Checkout Repository
@@ -108,12 +108,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
+      # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.5
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }}  # This is an org-level secret
-      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
+      #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
@@ -126,9 +126,9 @@ jobs:
       - name: dotnet build test project
         run: dotnet build ${{ env.NUGET_TEST_PROJECT }} --configuration Release
 
-      # TODO:  The test projects need a package reference to coverlet.msbuild for this to output the coverage reports correctly:
+      # TODO: The test projects need a package reference to coverlet.msbuild for this to output the coverage reports correctly:
       # <PackageReference Include="coverlet.msbuild" Version="3.1.0" />
-      # TODO:  Filters can be added to exclude certain tests: https://docs.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests?pivots=xunit
+      # TODO: Filters can be added to exclude certain tests: https://docs.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests?pivots=xunit
       - name: dotnet test with coverage
         continue-on-error: true
         run: dotnet test ${{ env.NUGET_TEST_PROJECT }} --logger trx --no-restore --configuration Release /property:CollectCoverage=True /property:CoverletOutputFormat=opencover
@@ -139,7 +139,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
           timezone: ${{ env.TIMEZONE }}
-          # TODO:  Determine if you would like status checks, pr comments or both
+          # TODO: Determine if you would like status checks, pr comments or both
           create-status-check: true
           create-pr-comment: true
           # update-comment-if-one-exists: false # TODO: By default this creates one comment and updates it for each run.  Uncomment if you wish to have one new comment for every workflow run.
@@ -151,7 +151,7 @@ jobs:
           targetdir: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
           title: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
           tag: 'Workflow: ${{ github.workflow }} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}'
-          # TODO:  Add the appropriate filters to each type.
+          # TODO: Add the appropriate filters to each type.
           # The filters are a ; separated list of items to include(+) or exclude(-).  Wildcards are accepted.
           # For instance: -xunit*;-Dapper;-*.Tests
           assemblyfilters: ''
@@ -166,11 +166,11 @@ jobs:
           summary-file: '${{ env.CODE_COVERAGE_DIR_DOTNET }}/Summary.md'
           report-name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
           check-name: ${{ env.CODE_COVERAGE_CHECK_NAME_DOTNET }}
-          # TODO:  Determine if you would like status checks, pr comments or both
+          # TODO: Determine if you would like status checks, pr comments or both
           create-status-check: true
           create-pr-comment: true
           # update-comment-if-one-exists: false # TODO: By default this creates one comment and updates it for each run.  Uncomment if you wish to have one new comment for every workflow run.
-          # TODO:  Set the thresholds for branch and line coverage.
+          # TODO: Set the thresholds for branch and line coverage.
           # When set to 0 the outcome is neutral.  Otherwise line/branch coverage will be a 'failure' if actual coverage < threshold.
           line-threshold: 0
           branch-threshold: 0
@@ -193,16 +193,16 @@ jobs:
         with:
           calculate-prerelease-version: ${{ env.PRERELEASE }}
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
-          tag-prefix: 'none' # TODO:  verify your prefix, the new ci workflows add v automatically but nuget packages typically won't have a prefix
+          tag-prefix: 'none' # TODO: verify your prefix, the new ci workflows add v automatically but nuget packages typically won't have a prefix
 
-      # TODO:  There are other methods for setting the version besides specifying it here.  You can update the value in the .csproj before building
+      # TODO: There are other methods for setting the version besides specifying it here.  You can update the value in the .csproj before building
       #        and remove the -p:PackageVersion prop below, or the version could be passed in from a workflow_dispatch input if desired.
       #        Determine if git-version-lite's version is appropriate to use for the package version.
       - name: Dotnet Pack
         working-directory: ${{ env.NUGET_PROJ_DIR }}
         run: dotnet pack --no-build --configuration Release -p:PackageVersion=${{ steps.version.outputs.NEXT_VERSION }}
 
-      # TODO:  If this is an older project you may need to use the nuget command directly and add options as applicable.
+      # TODO: If this is an older project you may need to use the nuget command directly and add options as applicable.
       # - name: Nuget Pack
       #   working-directory: ${{ env.NUGET_PROJ_DIR }}
       #   run: nuget pack ${{ env.CSPROJ_NAME }} -Build -Properties Configuration=Release;version="${{ steps.version.outputs.NEXT_VERSION }}"
@@ -217,7 +217,7 @@ jobs:
           # GITHUB_TOKEN is a special per-job token generated by GH for interacting with the repo
           dotnet nuget push "$nupkg" --source "https://nuget.pkg.github.com/${{ env.ORGANIZATION }}/index.json" --api-key ${{ secrets.GITHUB_TOKEN }}
 
-          # TODO:  Remove the remaining items in this run step if you do not wish to publish to Artifactory
+          # TODO: Remove the remaining items in this run step if you do not wish to publish to Artifactory
           isMergeToMain=${{ env.IS_MERGE_TO_MAIN }}
           if [ "$isMergeToMain" == "true" ]; then
             nugetFeed='nuget-master'
@@ -246,10 +246,10 @@ jobs:
         uses: im-open/delete-branch-package-versions@v1.0.2
         with:
           github-token: ${{ secrets.GH_PACKAGES_TOKEN }} # This is a special org-level secret that needs to be authorized for this repo
-          organization: '' # TODO:  Add the organization this repo is in
+          organization: '' # TODO: Add the organization this repo is in
           branch-name: ${{ github.head_ref }}
           package-type: 'nuget'
-          package-name: '' # TODO:  Add the name of the package (the base name without any versions, like IdentityCient or Mktp.Logging)
+          package-name: '' # TODO: Add the name of the package (the base name without any versions, like IdentityCient or Mktp.Logging)
 
   finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
@@ -269,7 +269,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.0.2
         with:
-          title: 'Build and Publish <project-name> to GH Packages' # TODO:  Replace <project-name>
+          title: 'Build and Publish <project-name> to GH Packages' # TODO: Replace <project-name>
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Build
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret

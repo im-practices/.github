@@ -18,7 +18,7 @@
 #       consumed by others.
 
 name: Build Database CI
-# TODO:  Select the appropriate trigger, if push and pull are both included, two builds will be kicked off when a PR exists and a new commit is pushed to the corresponding branch.
+# TODO: Select the appropriate trigger, if push and pull are both included, two builds will be kicked off when a PR exists and a new commit is pushed to the corresponding branch.
 on:
   # This workflow will run for the PR events:
   # opened/reopened: A PR is opened/re-opened,
@@ -30,7 +30,7 @@ env:
   DB_NAME: '' # TODO: Fill in your repo's database name
   DB_SERVER_NAME: 'localhost'
   DB_SERVER_PORT: '1433'
-  DEFAULT_BRANCH: 'main' # TODO:  verify default branch name
+  DEFAULT_BRANCH: 'main' # TODO: verify default branch name
   ARTIFACTORY_RETRIEVAL_URL: 'https://artifacts.mktp.io/artifactory/api/nuget/nuget-all' # TODO: This can be removed if your database doesn't have any dependency objects stored in artifactory
 
   # TODO: The following are all for the snapshot step below and can be removed if it's not used
