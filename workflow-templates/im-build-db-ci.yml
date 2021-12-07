@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v7    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v8    DO NOT REMOVE
 
 # Note: The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #       In addition to that, however, there are three other things this workflow template is set up to do.
