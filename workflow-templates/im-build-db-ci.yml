@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v6    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v7    DO NOT REMOVE
 
 # Note: The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #       In addition to that, however, there are three other things this workflow template is set up to do.
@@ -31,7 +31,10 @@ env:
   DB_SERVER_NAME: 'localhost'
   DB_SERVER_PORT: '1433'
   DEFAULT_BRANCH: 'main' # TODO: verify default branch name
+  ARTIFACTORY_URL: 'https://artifacts.mktp.io/artifactory/api/nuget/nuget-all' # TODO: This is used when grabbing dependency scripts and when publishing dependency scripts for others to use. Remove if that isn't something your repo needs to do.
   ARTIFACTORY_RETRIEVAL_URL: 'https://artifacts.mktp.io/artifactory/api/nuget/nuget-all' # TODO: This can be removed if your database doesn't have any dependency objects stored in artifactory
+  FLYWAY_MANAGED_SCHEMAS: 'dbo' # TODO: update this comma separated value with all of the schemas that Flyway manages. E.g. dbo,MyCustomSchema,AnotherSchema
+  SQL_LOGIN_USERNAME: 'SA' # The default SA account SQL Server comes with
 
   # TODO: The following are all for the snapshot step below and can be removed if it's not used
   SNAPSHOT_PATH: './snapshot' # TODO: Verify this path is correct
@@ -133,21 +136,213 @@ jobs:
         with:
           version: 7.2.0 # This version works with the current version of build-database-ci-action. Newer versions might, but they should be tested.
 
-      - name: Build Database
-        uses: im-open/build-database-ci-action@v2.0.1
+      # TODO: This can be removed if your database doesn't have database object dependencies that it needs to download and install in order to build and run tests.
+      - name: Install and run dependency scripts
+        uses: im-open/install-and-run-db-dependency-scripts@1.2.0
         with:
-          db-server-name: ${{ env.DB_SERVER_NAME }}
-          db-server-port: ${{ env.DB_SERVER_PORT }}
-          db-name: ${{ env.DB_NAME }}
-          install-mock-db-objects: true # TODO: Remove this if you don't have any dependencies on objects in other repositories (the default value is false)
-          mock-db-object-nuget-feed-url: ${{ env.ARTIFACTORY_RETRIEVAL_URL }} # TODO: If install-mock-db-objects is set to false, this can be removed
-          drop-db-after-build: false
-          run-tests: true # TODO: Remove this if your database doesn't have tests.
-          nuget-username: ${{ secrets.ARTIFACTORY_USERNAME }} # TODO: If install-mock-db-objects is set to false, this can be removed
-          nuget-password: ${{ secrets.ARTIFACTORY_API_KEY }} # TODO: If install-mock-db-objects is set to false, this can be removed
-          # If you need to run this job on Windows runners, then remove db-username and db-password so integrated security will be utilized
-          db-username: sa
-          db-password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }}
+          db-server-name: '${{ env.DB_SERVER_NAME }},${{ env.DB_SERVER_PORT }}'
+          db-name: '${{ env.DB_NAME }}'
+          username: '${{ env.SQL_LOGIN_USERNAME }}'
+          password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }} # This is an org-level secret
+          dependency-list: >-
+            [
+            {
+            'version': '1.0.0',
+            'packageName': 'Some_Dependency',
+            'nugetUrl': '${{ env.ARTIFACTORY_URL }}/Path/To/Some_Dependency.1.0.0.nupkg'
+            },
+            {
+            'version': '1.0.0',
+            'packageName': 'Some_Other_Dependency',
+            'nugetUrl': '${{ env.ARTIFACTORY_URL }}/Path/To/Some_Other_Dependency.1.0.0.nupkg'
+            }
+            ]
+
+      - name: Run Migration Scripts
+        uses: im-open/run-flyway-command@v1.3.0
+        with:
+          db-server-name: '${{ env.DB_SERVER_NAME }}'
+          db-server-port: '${{ env.DB_SERVER_PORT }}'
+          db-name: '${{ env.DB_NAME }}'
+          migration-files-path: '${{ env.MIGRATIONS_PATH }}'
+          flyway-command: 'migrate'
+          migration-history-table: 'MigrationHistory' # TODO: Update this if your flyway migration history table is something different
+          managed-schemas: '${{ env.FLYWAY_MANAGED_SCHEMAS }}'
+          validate-migrations: 'true'
+          use-integrated-security: 'false' # Integrated Security only works on Windows runners
+          username: '${{ env.SQL_LOGIN_USERNAME }}' # If using integrated security the only place this is used is in the migration history table
+          password: '${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }}' # This is an org-level secret
+
+      # Run the migration scripts containing the tSQLt tests
+      - name: Set up the tests
+        uses: im-open/run-flyway-command@v1.3.0
+        with:
+          db-server-name: '${{ env.DB_SERVER_NAME }}'
+          db-server-port: '${{ env.DB_SERVER_PORT }}'
+          db-name: '${{ env.DB_NAME }}'
+          migration-files-path: '' # TODO: Add the path to your testing migration scripts here
+          flyway-command: 'migrate'
+          migration-history-table: 'TestingHistory'
+          managed-schemas: '${{ env.FLYWAY_MANAGED_SCHEMAS }}'
+          validate-migrations: 'true'
+          use-integrated-security: 'false' # Integrated Security only works on Windows runners
+          username: '${{ env.SQL_LOGIN_USERNAME }}' # If using integrated security the only place this is used is in the migration history table
+          password: '${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }}' # This is an org-level secret
+
+      # TODO: The following schema binding steps are necessary for some teams' tests.
+      #       Remove the steps if your tests do not require schema binding to be off.
+      # NOTE: The following step uses the DBA.usp_ToggleSchemaBindingBatch stored procedure.
+      #       If your project doesn't have this sproc, remove the three schema binding steps.
+      - name: Output toggle schema binding queries for test objects
+        id: schema-binding-queries
+        shell: pwsh
+        run: |
+          $fakeTablePattern = "tSQLt.FakeTable\s+(@TableName\s*=\s*)?N?'([^']+)'"
+          $objectNames = (
+            Get-ChildItem ./src/TempTests/*.sql -File -Recurse |
+            Where-Object { $_.Name.StartsWith("R__") } |
+            ForEach-Object {
+              Get-Content -Raw $_.FullName |
+              Select-String -Pattern $fakeTablePattern -AllMatches |
+              ForEach-Object { $_.Matches } |
+              ForEach-Object { $_.Groups[2].Value }
+            } |
+            Sort-Object |
+            Get-Unique
+          )
+          $objectNames = $objectNames -join ','
+          Write-Output $objectNames
+
+          if (-Not [string]::IsNullOrEmpty($objectNames))
+          {
+            $setStatements = "
+              SET NOEXEC OFF;
+              SET ANSI_NULL_DFLT_ON ON;
+              SET ANSI_NULLS ON;
+              SET ANSI_PADDING ON;
+              SET ANSI_WARNINGS ON;
+              SET ARITHABORT ON;
+              SET CONCAT_NULL_YIELDS_NULL ON;
+              SET QUOTED_IDENTIFIER ON;
+              SET XACT_ABORT ON;"
+
+            $getToggleQuery = "
+              $setStatements
+              DECLARE @unbindSql VARCHAR(MAX);
+              DECLARE @rebindSql VARCHAR(MAX);
+
+              BEGIN TRY
+                EXEC DBA.usp_ToggleSchemaBindingBatch @objectList = N'$objectNames', @mode = 'VARIABLE', @isSchemaBoundOnly = 1, @unbindSql = @unbindSql OUTPUT, @rebindSql = @rebindSql OUTPUT;
+                SELECT @unbindSql as unbindSql, @rebindSql as rebindSql;
+              END TRY
+              BEGIN CATCH
+                THROW;
+              END CATCH;"
+
+            $toggleQueryTimeout = 120
+
+            Write-Output "Getting schemabinding toggle queries"
+            $toggleschemabinding = Invoke-Sqlcmd -ServerInstance "${{ env.DB_SERVER_NAME }},${{ env.DB_SERVER_PORT }}" -Database "${{ env.DB_NAME }}" -Query "$getToggleQuery" -QueryTimeout $toggleQueryTimeout -MaxCharLength 150000
+            Write-Output "Setting removeSchemaBindingSql"
+            $removeSchemaBindingSql = "
+              $setStatements
+              BEGIN TRY
+                BEGIN TRANSACTION;
+                " + $toggleschemabinding.unbindSql + "
+                COMMIT TRANSACTION;
+              END TRY
+              BEGIN CATCH
+                IF (@@TRANCOUNT > 0)
+                BEGIN
+                  ROLLBACK TRANSACTION;
+                END;
+                
+                THROW;
+                RETURN;
+              END CATCH;"
+            
+            Write-Output "Setting restoreSchemaBindingSql"
+            $restoreSchemaBindingSql = "
+              $setStatements
+              BEGIN TRY
+                BEGIN TRANSACTION;
+                " + $toggleschemabinding.rebindSql + "
+                COMMIT TRANSACTION;
+              END TRY
+              BEGIN CATCH
+                IF (@@TRANCOUNT > 0)
+                BEGIN
+                  ROLLBACK TRANSACTION;
+                END;
+
+                THROW;
+                RETURN;
+              END CATCH;"
+
+            # Substitute newline characters so we can output them
+            $removeSchemaBindingSql = $removeSchemaBindingSql.Replace("%", "%25")
+            $removeSchemaBindingSql = $removeSchemaBindingSql.Replace("`n", "%0A")
+            $removeSchemaBindingSql = $removeSchemaBindingSql.Replace("`r", "%0D")
+            $removeSchemaBindingSql = $removeSchemaBindingSql.Replace('"', '`"')
+
+            $restoreSchemaBindingSql = $restoreSchemaBindingSql.Replace("%", "%25")
+            $restoreSchemaBindingSql = $restoreSchemaBindingSql.Replace("`n", "%0A")
+            $restoreSchemaBindingSql = $restoreSchemaBindingSql.Replace("`r", "%0D")
+            $restoreSchemaBindingSql = $restoreSchemaBindingSql.Replace('"', '`"')
+
+            echo "::set-output name=remove_schema_binding_query::$removeSchemaBindingSql"
+            echo "::set-output name=restore_schema_binding_query::$restoreSchemaBindingSql"
+          }
+
+      # TODO: Remove this if you don't need to toggle schema binding for tests
+      - name: Toggle off schema binding for objects that need it
+        shell: pwsh
+        run: |
+          $removeSchemaBindingSql = "${{ steps.schema-binding-queries.outputs.remove_schema_binding_query }}"
+          if (-Not [string]::IsNullOrEmpty($removeSchemaBindingSql))
+          { 
+            Invoke-Sqlcmd -ServerInstance "${{ env.DB_SERVER_NAME }},${{ env.DB_SERVER_PORT }}" -Database "${{ env.DB_NAME }}" -Query "$removeSchemaBindingSql" -QueryTimeout 120
+          }
+
+      - name: Run tSqlt tests
+        id: run-tests
+        uses: im-open/tsqlt-test-runner@initial-implementation # v1.0.0
+        with:
+          db-server-name: '${{ env.DB_SERVER_NAME }}'
+          db-server-port: '${{ env.DB_SERVER_PORT }}'
+          db-name: '${{ env.DB_NAME }}'
+          query-timeout: '120' # 2 minutes
+          use-integrated-security: 'false'
+          db-username: '${{ env.SQL_LOGIN_USERNAME }}'
+          db-password: '${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }}' # This is an org-level secret
+
+      # TODO: Remove this if you don't need to toggle schema binding for tests
+      - name: Toggle schema binding back on
+        shell: pwsh
+        run: |
+          $restoreSchemaBindingSql = "${{ steps.schema-binding-queries.outputs.restore_schema_binding_query }}"
+          if (-Not [string]::IsNullOrEmpty($restoreSchemaBindingSql))
+          { 
+            Invoke-Sqlcmd -ServerInstance "${{ env.DB_SERVER_NAME }},${{ env.DB_SERVER_PORT }}" -Database "${{ env.DB_NAME }}" -Query "$restoreSchemaBindingSql" -QueryTimeout 120
+          }
+
+      # Load seed data for integration tests
+      # TODO: Remove this if you don't have integration tests or don't have seed data they rely on
+      - name: Load seed data into the database
+        uses: im-open/run-flyway-command@v1.3.0
+        with:
+          db-server-name: '${{ env.DB_SERVER_NAME }}'
+          db-server-port: '${{ env.DB_SERVER_PORT }}'
+          db-name: '${{ env.DB_NAME }}'
+          migration-files-path: '' # TODO: Add the path to your seed data migration scripts
+          flyway-command: 'migrate'
+          migration-history-table: 'SeedDataHistory'
+          managed-schemas: '${{ env.FLYWAY_MANAGED_SCHEMAS }}'
+          validate-migrations: 'true'
+          use-integrated-security: 'false' # Integrated Security only works on Windows runners
+          username: '${{ env.SQL_LOGIN_USERNAME }}' # If using integrated security the only place this is used is in the migration history table
+          password: '${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }}' # This is an org-level secret
+
 
       #########################################################################################################################
       # The previous three steps are all that most builds will need. They will build your database on the Action Runner and run any tests you have.
