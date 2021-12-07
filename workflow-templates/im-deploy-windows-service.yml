@@ -12,7 +12,7 @@
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 #       Generally one board should be set up per windows service in the repository.
 
-# TODO:  If there are multiple on prem services in the repo, append the service name to this workflow's file name and update the workflow name below
+# TODO: If there are multiple on prem services in the repo, append the service name to this workflow's file name and update the workflow name below
 name: Deploy On Prem Windows Service
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
@@ -47,7 +47,7 @@ on:
 
 env:
   RELEASE_TAG: ${{ github.event.inputs.tag }}
-  TIMEZONE: 'america/denver' # TODO:  Verify timezone
+  TIMEZONE: 'america/denver' # TODO: Verify timezone
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
         uses: im-open/map-input-action@v1.0.3
         with:
           input: ${{ github.event.inputs.environment }}
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           input_map: |
@@ -94,7 +94,7 @@ jobs:
               "prod": ["prod", "production", "p"]
             }
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
@@ -108,56 +108,56 @@ jobs:
           scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # TODO:  Fill in the windows-server and remove the environments that are not used.
+          # TODO: Fill in the windows-server and remove the environments that are not used.
           WINDOWS_SERVER@dev: ''
           WINDOWS_SERVER@qa: ''
           WINDOWS_SERVER@stage: ''
           WINDOWS_SERVER@demo: ''
           WINDOWS_SERVER@uat: ''
           WINDOWS_SERVER@prod: ''
-          # TODO:  Fill in the service-name and remove the environments that are not used.
+          # TODO: Fill in the service-name and remove the environments that are not used.
           SERVICE_NAME@dev: ''
           SERVICE_NAME@qa: ''
           SERVICE_NAME@stage: ''
           SERVICE_NAME@demo: ''
           SERVICE_NAME@uat: ''
           SERVICE_NAME@prod: ''
-          # TODO:  Fill in the service-path and remove the environments that are not used.
+          # TODO: Fill in the service-path and remove the environments that are not used.
           SERVICE_PATH@dev: ''
           SERVICE_PATH@qa: ''
           SERVICE_PATH@stage: ''
           SERVICE_PATH@demo: ''
           SERVICE_PATH@uat: ''
           SERVICE_PATH@prod: ''
-          # TODO:  Fill in the windows-server-service-user for WinRm access to the Windows machine and remove the environments that are not used.
+          # TODO: Fill in the windows-server-service-user for WinRm access to the Windows machine and remove the environments that are not used.
           WINDOWS_SERVER_SERVICE_USER@dev: ''
           WINDOWS_SERVER_SERVICE_USER@qa: ''
           WINDOWS_SERVER_SERVICE_USER@stage: ''
           WINDOWS_SERVER_SERVICE_USER@demo: ''
           WINDOWS_SERVER_SERVICE_USER@uat: ''
           WINDOWS_SERVER_SERVICE_USER@prod: ''
-          # TODO:  Fill in the windows-server-service-password for WinRm access to the Windows machine and remove the environments that are not used.
+          # TODO: Fill in the windows-server-service-password for WinRm access to the Windows machine and remove the environments that are not used.
           WINDOWS_SERVER_SERVICE_PASSWORD@dev: ''
           WINDOWS_SERVER_SERVICE_PASSWORD@qa: ''
           WINDOWS_SERVER_SERVICE_PASSWORD@stage: ''
           WINDOWS_SERVER_SERVICE_PASSWORD@demo: ''
           WINDOWS_SERVER_SERVICE_PASSWORD@uat: ''
           WINDOWS_SERVER_SERVICE_PASSWORD@prod: ''
-          # TODO:  Fill in the windows-server-cert-path for WinRm access to the Windows machine and remove the environments that are not used.
+          # TODO: Fill in the windows-server-cert-path for WinRm access to the Windows machine and remove the environments that are not used.
           WINDOWS_SERVER_CERT_PATH@dev: ''
           WINDOWS_SERVER_CERT_PATH@qa: ''
           WINDOWS_SERVER_CERT_PATH@stage: ''
           WINDOWS_SERVER_CERT_PATH@demo: ''
           WINDOWS_SERVER_CERT_PATH@uat: ''
           WINDOWS_SERVER_CERT_PATH@prod: ''
-          # TODO:  Fill in the service-user-name for that the windows service uses remove if using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          # TODO: Fill in the service-user-name for that the windows service uses remove if using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
           SERVICE_USER_NAME@dev: ''
           SERVICE_USER_NAME@qa: ''
           SERVICE_USER_NAME@stage: ''
           SERVICE_USER_NAME@demo: ''
           SERVICE_USER_NAME@uat: ''
           SERVICE_USER_NAME@prod: ''
-          # TODO:  Fill in the service-user-secret for that the windows service uses remove if using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          # TODO: Fill in the service-user-secret for that the windows service uses remove if using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
           SERVICE_USER_SECRET@dev: ''
           SERVICE_USER_SECRET@qa: ''
           SERVICE_USER_SECRET@stage: ''
@@ -223,8 +223,8 @@ jobs:
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     env:
-      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
-      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO: Verify this PD Maintenance Window Description
       ASSET_ZIP: 'published_app.zip' # TODO: Verify that this wasn't changed in the CI build.  This is the value in that workflow by default.
       UNZIPPED_ASSET: 'published_app'
       DEPLOY_ZIP: 'deploy.zip'
@@ -259,9 +259,9 @@ jobs:
         with:
           scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           create-output-variables: true
-          input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
+          input-file: '' # TODO: if you have an input file with your variable substitutions, add them here
         env:
-          # TODO:  Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
+          # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
           #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of set-vars.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
@@ -270,22 +270,22 @@ jobs:
           # Auth0_Domain@stage demo: 'wtw-im-stage.auth0.com'
           # Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
 
-      # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
+      # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
       # https://github.com/im-open/octostache-action
       - uses: im-open/octostache-action@v2.1.1
         with:
           variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
-          files-with-substitutions: '' # TODO:  Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
+          files-with-substitutions: '' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
         # env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variables-file with the same name.
 
-      # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
+      # TODO: If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
       - uses: microsoft/variable-substitution@v1
         with:
           files: '' # TODO: add a comma separated list of files and the patterns, like './src/MyProj/We*.config, ./src/MyProj/Nlog.config'
         env:
-          # TODO:  replace examples with actual substitutions
+          # TODO: replace examples with actual substitutions
           Value1: 'Value1' # Example showing replacement at a root level node
           Nested.Value.Name: 'Value2' # Example showing replacement at a nested node
           SecretValue: ${{ secrets.VALUE }} # Example showing replacement with a secret
@@ -328,8 +328,8 @@ jobs:
           service-name: '${{ needs.set-vars.outputs.SERVICE_NAME }}'
           deployment-path: '${{ needs.set-vars.outputs.SERVICE_PATH }}\\win-service.exe'
           server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
-          service-credential-user: ${{ needs.set-vars.outputs.SERVICE_USER_NAME }} # TODO:  If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
-          service-credential-password: ${{ needs.set-vars.outputs.SERVICE_USER_SECRET }} # TODO:  If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          service-credential-user: ${{ needs.set-vars.outputs.SERVICE_USER_NAME }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          service-credential-password: ${{ needs.set-vars.outputs.SERVICE_USER_SECRET }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
           service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
           service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
           server-public-key: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
@@ -382,7 +382,7 @@ jobs:
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.RELEASE_TAG }}
           ref-type: 'tag'
-          # TODO:  If the repo has multiple deployables and they all use the same tag for releases, add the deployable type here like MFE/API/SVC/BFF/DB etc.
+          # TODO: If the repo has multiple deployables and they all use the same tag for releases, add the deployable type here like MFE/API/SVC/BFF/DB etc.
           #        Delete if the repo has a single deployable or multiple deployables with tags that are versioned independently.
           #deployable-type: '' # Prefix will be included on the deployment board issue & allows tracking of individual components when they share a tag
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
@@ -397,7 +397,7 @@ jobs:
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           timezone: ${{ env.TIMEZONE }}
-          # TODO:  Verify the custom facts you want included
+          # TODO: Verify the custom facts you want included
           custom-facts: |
             [
               { "name": "Workflow", "value": "${{ github.workflow }}" },

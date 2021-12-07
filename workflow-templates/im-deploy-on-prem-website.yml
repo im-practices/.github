@@ -13,7 +13,7 @@
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 #       Generally one board should be set up per on-prem site in the repository.
 
-# TODO:  If there are multiple on prem sites in the repo, append the site name to this workflow's file name and update the workflow name below
+# TODO: If there are multiple on prem sites in the repo, append the site name to this workflow's file name and update the workflow name below
 name: Deploy On Prem Website
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
@@ -48,7 +48,7 @@ on:
 
 env:
   RELEASE_TAG: ${{ github.event.inputs.tag }}
-  TIMEZONE: 'america/denver' # TODO:  Verify timezone
+  TIMEZONE: 'america/denver' # TODO: Verify timezone
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
@@ -87,9 +87,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -111,77 +111,77 @@ jobs:
           scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # TODO:  Fill in the iis-server and remove the environments that are not used.
+          # TODO: Fill in the iis-server and remove the environments that are not used.
           IIS_SERVER@dev: ''
           IIS_SERVER@qa: ''
           IIS_SERVER@stage: ''
           IIS_SERVER@demo: ''
           IIS_SERVER@uat: ''
           IIS_SERVER@prod: ''
-          # TODO:  Fill in the website-name and remove the environments that are not used.
+          # TODO: Fill in the website-name and remove the environments that are not used.
           WEBSITE_NAME@dev: ''
           WEBSITE_NAME@qa: ''
           WEBSITE_NAME@stage: ''
           WEBSITE_NAME@demo: ''
           WEBSITE_NAME@uat: ''
           WEBSITE_NAME@prod: ''
-          # TODO:  Fill in the app-pool-name and remove the environments that are not used.
+          # TODO: Fill in the app-pool-name and remove the environments that are not used.
           APP_POOL_NAME@dev: ''
           APP_POOL_NAME@qa: ''
           APP_POOL_NAME@stage: ''
           APP_POOL_NAME@demo: ''
           APP_POOL_NAME@uat: ''
           APP_POOL_NAME@prod: ''
-          # TODO:  Fill in the website-host-header and remove the environments that are not used.
+          # TODO: Fill in the website-host-header and remove the environments that are not used.
           WEBSITE_HOST_HEADER@dev: ''
           WEBSITE_HOST_HEADER@qa: ''
           WEBSITE_HOST_HEADER@stage: ''
           WEBSITE_HOST_HEADER@demo: ''
           WEBSITE_HOST_HEADER@uat: ''
           WEBSITE_HOST_HEADER@prod: ''
-          # TODO:  Fill in the website-path and remove the environments that are not used.
+          # TODO: Fill in the website-path and remove the environments that are not used.
           WEBSITE_PATH@dev: ''
           WEBSITE_PATH@qa: ''
           WEBSITE_PATH@stage: ''
           WEBSITE_PATH@demo: ''
           WEBSITE_PATH@uat: ''
           WEBSITE_PATH@prod: ''
-          # TODO:  Fill in the website-cert-path and remove the environments that are not used.
+          # TODO: Fill in the website-cert-path and remove the environments that are not used.
           WEBSITE_CERT_PATH@dev: ''
           WEBSITE_CERT_PATH@qa: ''
           WEBSITE_CERT_PATH@stage: ''
           WEBSITE_CERT_PATH@demo: ''
           WEBSITE_CERT_PATH@uat: ''
           WEBSITE_CERT_PATH@prod: ''
-          # TODO:  Fill in the website-cert-friendly-name and remove the environments that are not used.
+          # TODO: Fill in the website-cert-friendly-name and remove the environments that are not used.
           WEBSITE_CERT_FRIENDLY_NAME@dev: ''
           WEBSITE_CERT_FRIENDLY_NAME@qa: ''
           WEBSITE_CERT_FRIENDLY_NAME@stage: ''
           WEBSITE_CERT_FRIENDLY_NAME@demo: ''
           WEBSITE_CERT_FRIENDLY_NAME@uat: ''
           WEBSITE_CERT_FRIENDLY_NAME@prod: ''
-          # TODO:  Fill in the website-cert-password and remove the environments that are not used.
+          # TODO: Fill in the website-cert-password and remove the environments that are not used.
           WEBSITE_CERT_PASSWORD@dev: ''
           WEBSITE_CERT_PASSWORD@qa: ''
           WEBSITE_CERT_PASSWORD@stage: ''
           WEBSITE_CERT_PASSWORD@demo: ''
           WEBSITE_CERT_PASSWORD@uat: ''
           WEBSITE_CERT_PASSWORD@prod: ''
-          # TODO:  Fill in the iis-server-service-user for WinRm access to the IIS Server and remove the environments that are not used.
+          # TODO: Fill in the iis-server-service-user for WinRm access to the IIS Server and remove the environments that are not used.
           IIS_SERVER_SERVICE_USER@dev: ''
           IIS_SERVER_SERVICE_USER@qa: ''
           IIS_SERVER_SERVICE_USER@stage: ''
           IIS_SERVER_SERVICE_USER@demo: ''
           IIS_SERVER_SERVICE_USER@uat: ''
           IIS_SERVER_SERVICE_USER@prod: ''
-          # TODO:  Fill in the iis-server-service-password for WinRm access to the IIS Server and remove the environments that are not used.
+          # TODO: Fill in the iis-server-service-password for WinRm access to the IIS Server and remove the environments that are not used.
           IIS_SERVER_SERVICE_PASSWORD@dev: ''
           IIS_SERVER_SERVICE_PASSWORD@qa: ''
           IIS_SERVER_SERVICE_PASSWORD@stage: ''
           IIS_SERVER_SERVICE_PASSWORD@demo: ''
           IIS_SERVER_SERVICE_PASSWORD@uat: ''
           IIS_SERVER_SERVICE_PASSWORD@prod: ''
-          # TODO:  Fill in the iis-server-cert-path for WinRm access to the IIS Server and remove the environments that are not used.
+          # TODO: Fill in the iis-server-cert-path for WinRm access to the IIS Server and remove the environments that are not used.
           IIS_SERVER_CERT_PATH@dev: ''
           IIS_SERVER_CERT_PATH@qa: ''
           IIS_SERVER_CERT_PATH@stage: ''
@@ -247,8 +247,8 @@ jobs:
     environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     env:
-      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
-      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO: Verify this PD Maintenance Window Description
       ASSET_ZIP: 'published_app.zip' # TODO: Verify that this wasn't changed in the CI build.  This is the value in that workflow by default.
       UNZIPPED_ASSET: 'published_app'
       DEPLOY_ZIP: 'deploy.zip'
@@ -283,9 +283,9 @@ jobs:
         with:
           scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           create-output-variables: true
-          input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
+          input-file: '' # TODO: if you have an input file with your variable substitutions, add them here
         env:
-          # TODO:  Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
+          # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
           #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of set-vars.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
@@ -294,22 +294,22 @@ jobs:
           # Auth0_Domain@stage demo: 'wtw-im-stage.auth0.com'
           # Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
 
-      # TODO:  If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
+      # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
       # https://github.com/im-open/octostache-action
       - uses: im-open/octostache-action@v2.1.1
         with:
           variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
-          files-with-substitutions: '' # TODO:  Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
+          files-with-substitutions: '' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
         # env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variables-file with the same name.
 
-      # TODO:  If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
+      # TODO: If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
       - uses: microsoft/variable-substitution@v1
         with:
           files: '' # TODO: add a comma separated list of files and the patterns, like './src/MyProj/We*.config, ./src/MyProj/Nlog.config'
         env:
-          # TODO:  replace examples with actual substitutions
+          # TODO: replace examples with actual substitutions
           Value1: 'Value1' # Example showing replacement at a root level node
           Nested.Value.Name: 'Value2' # Example showing replacement at a nested node
           SecretValue: ${{ secrets.VALUE }} # Example showing replacement with a secret
@@ -406,7 +406,7 @@ jobs:
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.RELEASE_TAG }}
           ref-type: 'tag'
-          # TODO:  If the repo has multiple deployables and they all use the same tag for releases, add the deployable type here like MFE/API/SVC/BFF/DB etc.
+          # TODO: If the repo has multiple deployables and they all use the same tag for releases, add the deployable type here like MFE/API/SVC/BFF/DB etc.
           #        Delete if the repo has a single deployable or multiple deployables with tags that are versioned independently.
           #deployable-type: '' # Prefix will be included on the deployment board issue & allows tracking of individual components when they share a tag
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
@@ -421,7 +421,7 @@ jobs:
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           timezone: ${{ env.TIMEZONE }}
-          # TODO:  Verify the custom facts you want included
+          # TODO: Verify the custom facts you want included
           custom-facts: |
             [
               { "name": "Workflow", "value": "${{ github.workflow }}" },

@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment the database is in - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
+        description: The environment the database is in - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
         required: true
         default: dev
       branch-tag-sha:
@@ -38,9 +38,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -78,7 +78,7 @@ jobs:
         with:
           scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           create-output-variables: true
-          input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
+          input-file: '' # TODO: if you have an input file with your variable substitutions, add them here
         env:
           DB_NAME@dev: ''
           DB_NAME@qa: ''

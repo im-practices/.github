@@ -2,7 +2,7 @@
 
 name: Run StoryTeller
 
-# TODO:  Verify Triggers
+# TODO: Verify Triggers
 on:
   pull_request:
   workflow_dispatch:
@@ -11,11 +11,11 @@ on:
 
 env:
   READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-  SASS_PROJECT_NAME: '' # TODO:  Enter the project name that contains the sass to be compiled or delete if not needed.
-  SOLUTION_FILE: '' # TODO:  Enter location and name of solution file like .\src\EnrollmentStatusConsumers.sln
-  STORYTELLER_PROJECT_PATH: '' # TODO:  Enter path to the storyteller project like .\src\ExceptionsResolutionManager.StoryTeller
-  STORYTELLER_RESULTS_PATH: '.\st-results\index.htm' # TODO:  Verify output location for ST results
-  CHROMEDRIVER_PATH: '.\packages\selenium.webdriver.chromedriver' # TODO:  Verify the location of chromedriver or delete if not needed.
+  SASS_PROJECT_NAME: '' # TODO: Enter the project name that contains the sass to be compiled or delete if not needed.
+  SOLUTION_FILE: '' # TODO: Enter location and name of solution file like .\src\EnrollmentStatusConsumers.sln
+  STORYTELLER_PROJECT_PATH: '' # TODO: Enter path to the storyteller project like .\src\ExceptionsResolutionManager.StoryTeller
+  STORYTELLER_RESULTS_PATH: '.\st-results\index.htm' # TODO: Verify output location for ST results
+  CHROMEDRIVER_PATH: '.\packages\selenium.webdriver.chromedriver' # TODO: Verify the location of chromedriver or delete if not needed.
 
 jobs:
   run-storyteller:
@@ -23,14 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # TODO:  If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+      # TODO: If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
 
-      # TODO:  If you are using any nuget/npm packages from GitHub Packages uncomment this step
+      # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # - name: Authenticate with GitHub Packages
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0.5
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: 'im-client,im-enrollment,im-practices' # TODO:  Verify list of orgs packages will be pulled from
+      #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
 
       - name: npm install
         run: |
@@ -44,7 +44,7 @@ jobs:
           echo "Doing paket restore"
           ./.paket/paket.exe restore
 
-      # TODO:  Uncomment if the project contains this step and adjust anything if necessary
+      # TODO: Uncomment if the project contains this step and adjust anything if necessary
       # - name: compile-sass
       #   shell: bash
       #   run: node-sass ${{ env.SCSS_LOCATION }} -o ${{ env.OUTPUT_LOCATION }} --include-path ${{ env.INCLUDE_PATH }}
@@ -65,7 +65,7 @@ jobs:
             exit 1
           }
 
-      # TODO:  Uncomment if the project needs chromedriver copied over
+      # TODO: Uncomment if the project needs chromedriver copied over
       # - name: Copy ChromeDriver
       #   shell: powershell
       #   run: |
@@ -85,9 +85,9 @@ jobs:
       #         exit 1
       #     }
 
-      # TODO:  Add any additional setup steps that may be required for your project to run, like setting up a db
+      # TODO: Add any additional setup steps that may be required for your project to run, like setting up a db
 
-      # TODO:  If not using chrome driver remove --profile chrome at the end of the command
+      # TODO: If not using chrome driver remove --profile chrome at the end of the command
       - name: Run Storyteller
         shell: cmd
         run: |

@@ -14,7 +14,7 @@ on:
         description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  update for the environments you use
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO: update for the environments you use
         required: true
 
 env:
@@ -45,9 +45,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -126,9 +126,9 @@ jobs:
       # request has been received.  If your use case is to have one streamlined deployment completely finish before starting the next one, the
       # 'start deployment' block below should be copied to the bottom of the workflow that acts as a gate to the next deployment workflow.
 
-      # TODO:  Add a 'start deployment' block for each item that needs to be deployed
+      # TODO: Add a 'start deployment' block for each item that needs to be deployed
 
-      - name: Start Deployment for <deployable-name> # TODO:  Add the name of the deployable
+      - name: Start Deployment for <deployable-name> # TODO: Add the name of the deployable
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org-level secret #TODO:  make sure im-pipeline-bot has at least write access to your repo

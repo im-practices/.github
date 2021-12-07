@@ -12,7 +12,7 @@
 # TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 #       Generally one board should be set up per database in the repository.
 
-# TODO:  If there are multiple az databases in the repo, append the db name to this workflow's file name and update the workflow name below
+# TODO: If there are multiple az databases in the repo, append the db name to this workflow's file name and update the workflow name below
 name: Deploy Database to Azure
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
@@ -24,7 +24,7 @@ on:
         description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO:  update for the environments you use
+        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO: update for the environments you use
         required: true
 
   # TODO: If a repository has multiple deployable artifacts that are deployed together through the 'Deploy Multiple Items' workflow:
@@ -46,7 +46,7 @@ env:
   DB_SERVER_PORT: '1433' # TODO: Verify that this is the correct port
   MIGRATIONS_FOLDER: '' # TODO: Add the path to the migrations folder
   MIGRATIONS_HISTORY_TABLE: 'MigrationHistory' # TODO: Verify this table name
-  TIMEZONE: 'america/denver' # TODO:  Verify timezone
+  TIMEZONE: 'america/denver' # TODO: Verify timezone
 
 jobs:
   set-vars:
@@ -73,9 +73,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -160,7 +160,7 @@ jobs:
         with:
           scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
           create-output-variables: true
-          input-file: '' # TODO:  if you have an input file with your variable substitutions, add them here
+          input-file: '' # TODO: if you have an input file with your variable substitutions, add them here
         env:
           DB_NAME@dev: ''
           DB_NAME@qa: ''
@@ -231,7 +231,7 @@ jobs:
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.RELEASE_TAG}}
           ref-type: 'tag'
-          # TODO:  If the repo has multiple deployables and they all use the same tag for releases, add the deployable type here like MFE/API/SVC/BFF/DB etc.
+          # TODO: If the repo has multiple deployables and they all use the same tag for releases, add the deployable type here like MFE/API/SVC/BFF/DB etc.
           #        Delete if the repo has a single deployable or multiple deployables with tags that are versioned independently.
           #deployable-type: '' # Prefix will be included on the deployment board issue & allows tracking of individual components when they share a tag
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}

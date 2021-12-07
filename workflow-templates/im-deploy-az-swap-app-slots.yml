@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment where slots are being swapped - dev|qa|stage|prod|demo|uat # TODO:  Update for the environments that are available
+        description: The environment where slots are being swapped - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
         required: true
       open-pagerduty-window:
         description: Flag indicating whether a pagerduty maintenance window should be opened
@@ -54,9 +54,9 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
           error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO:  Update for the environments that are available
+          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
         env:
-          # TODO:  Update for the environments your project contains
+          # TODO: Update for the environments your project contains
           # The value array contains the environments it will match and the corresponding key is
           # the environment it will output if one of the values was found.  It is case insensitive.
           ENVIRONMENT@dev d development: 'dev'
@@ -100,11 +100,11 @@ jobs:
       RESOURCE_GROUP: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
       AZ_APP_NAME: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
       OPEN_WINDOW: ${{ needs.set-vars.outputs.OPEN_WINDOW }}
-      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO:  Verify the length of your PD Maintenance Window
-      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO:  Verify this PD Maintenance Window Description
-      TARGET_SLOT: 'Production' # TODO:  Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main site, update it here
-      SOURCE_SLOT: '' # TODO:  Add the name of the source slot
-      AZ_APP_TYPE: 'webapp' # TODO:  If this workflow is for an azure function, change this value to functionapp
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO: Verify this PD Maintenance Window Description
+      TARGET_SLOT: 'Production' # TODO: Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main site, update it here
+      SOURCE_SLOT: '' # TODO: Add the name of the source slot
+      AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function, change this value to functionapp
 
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
@@ -135,7 +135,7 @@ jobs:
           --slot ${{ env.SOURCE_SLOT }} \
           --target-slot ${{ env.TARGET_SLOT }}
 
-      # TODO:  Uncomment if you want to destroy the slot after swap.  Delete if you don't.
+      # TODO: Uncomment if you want to destroy the slot after swap.  Delete if you don't.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - run: |
       #     az ${{ env.AZ_APP_TYPE }} deployment slot delete \

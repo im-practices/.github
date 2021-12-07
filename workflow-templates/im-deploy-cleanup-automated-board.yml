@@ -28,8 +28,8 @@ jobs:
     strategy:
       matrix:
         include:
-          # TODO:  If the repo has more than one project board, include another set (- board-number through sha-threshold) below
-          - board-number: 1 # TODO:  verify the number of your board
+          # TODO: If the repo has more than one project board, include another set (- board-number through sha-threshold) below
+          - board-number: 1 # TODO: verify the number of your board
             branch-strategy: '' # age|number
             branch-threshold: '' # positive whole number representing max age in days or number of inactive releases to keep
             tag-strategy: '' # age|number
