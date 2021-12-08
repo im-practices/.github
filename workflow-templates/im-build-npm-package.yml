@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v13    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v14    DO NOT REMOVE
 
 name: 'Build and Publish npm Package'
 
@@ -179,7 +179,7 @@ jobs:
 
       - name: Send Status to Teams
         if: always()
-        uses: im-open/post-status-to-teams-action@v1.0.2
+        uses: im-open/post-status-to-teams-action@v1.0.3
         with:
           title: 'Build and Publish <project-name> to GH Packages' # TODO: Replace <project-name>
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
