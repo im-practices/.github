@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v19    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v20    DO NOT REMOVE
 
 # TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 # TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
@@ -80,6 +80,8 @@ jobs:
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.4
