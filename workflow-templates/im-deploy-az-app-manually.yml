@@ -93,6 +93,8 @@ jobs:
       - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       # This step is separate from the one above because it uses clean-env's normalized ENVIRONMENT output as the scope for each variable below.
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.4
@@ -203,6 +205,8 @@ jobs:
           unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
           sudo chmod -R +rw ./${{ env.UNZIPPED_ASSET }}/
 
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables for use with Configuration and Substitution Values
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:

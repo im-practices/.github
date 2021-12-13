@@ -80,6 +80,8 @@ jobs:
 
       - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.4

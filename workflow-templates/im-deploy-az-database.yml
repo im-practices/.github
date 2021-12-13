@@ -154,6 +154,8 @@ jobs:
           version: 7.9.2
 
       # TODO: Use this for any variables that change per environment
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Database Vars
         id: db-vars
         uses: im-open/set-environment-variables-by-scope@v1.0.4
