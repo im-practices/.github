@@ -136,27 +136,23 @@ jobs:
       - name: Build Database
         uses: im-open/build-database-ci-action@v3.0.0
         with:
+          # TODO: These parameters are the most commonly used. They tell the action to create the repo's database on the Action Runner,
+          #       validate and run the repo's migration scripts, run tests, and seed data into the database for future needs (like integration tests).
+          #       There is more configuration for the action that can happen though, and more it can do.
+          #       See https://github.com/im-open/build-database-ci-action for detailed documentation and examples.
           db-server-name: ${{ env.DB_SERVER_NAME }}
           db-name: ${{ env.DB_NAME }}
+          create-database-file: '' # TODO: Add the path to the create database file (often called Initialization.sql)
           migration-files-path: '' # TODO: Add the path to the directory with your migration files
-          # TODO: The parameters above are the bare minimum needed to use the action. Below are listed the optional parameters you may need to use.
-          #       Uncomment the ones you need and fill out the additional TODO's.
-          # db-server-port: 1433 # TODO: This is the default value in the action. Delete this if you don't need to change it.
-          # use-integrated-security: false # TODO: This is the default value in the action. Delete this if you don't need to change it.
-          # db-username: 'sa' # The default system administrator account that comes with SQL Server. This is the only account set up in our self hosted Action Runners' SQL Server instances.
-          # db-password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }} # This is an org level secret. It is the password for the sa account.
-          # install-mock-db-objects: true
-          # mock-db-object-dependency-list: '' # TODO: Add a json list of objects specifying your dependencies. The format is [{"version":"1.0.0","packageName":"dbo.Something","nugetUrl":"https://nuget.pkg.github.com/my-org/my-repo/dbo.Something.nupkg"}]
-          # incremental: false # TODO: This is the default value in the action. Delete this if you don't need to change it.
-          # create-database-file: '' # TODO: Add the path to the create database file (often called Initialization.sql)
-          # run-tests: true
-          # test-files-path: '' # TODO: Add the path to the directory with your test files
-          # test-timeout: '' # TODO: Add the time, in seconds, to wait for all the tests to run before timing out. The default is 300. Delete if 300 is fine or if you aren't running tests.
-          # drop-db-after-build: false # TODO: This is the default value in the action. Delete this if you don't need to change it.
-          # should-validate-migrations: false  # TODO: This is the default value in the action. Delete this if you don't need to change it.
-          # seed-data: true
-          # seed-data-files-path: '' # TODO: Add the path to the directory with your seed data files
-          # managed-schemas: dbo  # TODO: This is the default value in the action. If you need to change it add commas between the schemas (i.e. dbo,OtherSchema), otherwise delete this line.
+          should-validate-migrations: true # This will make flyway validate the migration scripts before running them
+          run-tests: true
+          test-files-path: '' # TODO: Add the path to the directory with your test files
+          seed-data: true
+          seed-data-files-path: '' # TODO: Add the path to the directory with your seed data files
+          use-integrated-security: false
+          db-username: 'sa' # The default system administrator account that comes with SQL Server. This is the only account set up in our self hosted Action Runners' SQL Server instances.
+          db-password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }} # This is an org level secret. It is the password for the sa account.
+
 
       #########################################################################################################################
       # The previous three steps are all that most builds will need. They will build your database on the Action Runner and run any tests you have.
