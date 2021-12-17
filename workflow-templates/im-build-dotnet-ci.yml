@@ -44,7 +44,7 @@ jobs:
           echo "PRERELEASE=false" >> $GITHUB_ENV
 
   dotnet-build-and-test:
-    runs-on: [self-hosted, ubuntu-20.04] # TODO: Switch this to [self-hosted, windows-2019] if building a db
+    runs-on: [self-hosted, ubuntu-20.04]
 
     needs: [examine-triggers]
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
@@ -87,13 +87,24 @@ jobs:
       #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
 
       - name: Build Database
-        uses: im-open/build-database-ci-action@v1.0.5
+        uses: im-open/build-database-ci-action@v3.0.0
         with:
-          db-server-name: localhost
+          # TODO: These parameters are the most commonly used. They tell the action to create the repo's database on the Action Runner,
+          #       validate and run the repo's migration scripts, run tests, and seed data into the database for future needs (like integration tests).
+          #       There is more configuration for the action that can happen though, and more it can do.
+          #       See https://github.com/im-open/build-database-ci-action for detailed documentation and examples.
+          db-server-name: ${{ env.DB_SERVER_NAME }}
           db-name: ${{ env.DB_NAME }}
-          drop-db-after-build: ${{ env.DROP_DB_AFTER_STEP }}
-          install-mock-db-objects: ${{ env.INSTALL_MOCK_DB_OBJ }} # TODO: Delete if not using
-          mock-db-object-nuget-feed-url: ${{ env.MOCK_DB_OBJ_URL }} # TODO: Delete if not using
+          create-database-file: '' # TODO: Add the path to the create database file (often called Initialization.sql)
+          migration-files-path: '' # TODO: Add the path to the directory with your migration files
+          should-validate-migrations: true # This will make flyway validate the migration scripts before running them
+          run-tests: true
+          test-files-path: '' # TODO: Add the path to the directory with your test files
+          seed-data: true
+          seed-data-files-path: '' # TODO: Add the path to the directory with your seed data files
+          use-integrated-security: false
+          db-username: 'sa' # The default system administrator account that comes with SQL Server. This is the only account set up in our self hosted Action Runners' SQL Server instances.
+          db-password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }} # This is an org level secret. It is the password for the sa account.
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1

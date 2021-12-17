@@ -134,20 +134,25 @@ jobs:
           version: 7.2.0 # This version works with the current version of build-database-ci-action. Newer versions might, but they should be tested.
 
       - name: Build Database
-        uses: im-open/build-database-ci-action@v2.0.1
+        uses: im-open/build-database-ci-action@v3.0.0
         with:
+          # TODO: These parameters are the most commonly used. They tell the action to create the repo's database on the Action Runner,
+          #       validate and run the repo's migration scripts, run tests, and seed data into the database for future needs (like integration tests).
+          #       There is more configuration for the action that can happen though, and more it can do.
+          #       See https://github.com/im-open/build-database-ci-action for detailed documentation and examples.
           db-server-name: ${{ env.DB_SERVER_NAME }}
-          db-server-port: ${{ env.DB_SERVER_PORT }}
           db-name: ${{ env.DB_NAME }}
-          install-mock-db-objects: true # TODO: Remove this if you don't have any dependencies on objects in other repositories (the default value is false)
-          mock-db-object-nuget-feed-url: ${{ env.ARTIFACTORY_RETRIEVAL_URL }} # TODO: If install-mock-db-objects is set to false, this can be removed
-          drop-db-after-build: false
-          run-tests: true # TODO: Remove this if your database doesn't have tests.
-          nuget-username: ${{ secrets.ARTIFACTORY_USERNAME }} # TODO: If install-mock-db-objects is set to false, this can be removed
-          nuget-password: ${{ secrets.ARTIFACTORY_API_KEY }} # TODO: If install-mock-db-objects is set to false, this can be removed
-          # If you need to run this job on Windows runners, then remove db-username and db-password so integrated security will be utilized
-          db-username: sa
-          db-password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }}
+          create-database-file: '' # TODO: Add the path to the create database file (often called Initialization.sql)
+          migration-files-path: '' # TODO: Add the path to the directory with your migration files
+          should-validate-migrations: true # This will make flyway validate the migration scripts before running them
+          run-tests: true
+          test-files-path: '' # TODO: Add the path to the directory with your test files
+          seed-data: true
+          seed-data-files-path: '' # TODO: Add the path to the directory with your seed data files
+          use-integrated-security: false
+          db-username: 'sa' # The default system administrator account that comes with SQL Server. This is the only account set up in our self hosted Action Runners' SQL Server instances.
+          db-password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }} # This is an org level secret. It is the password for the sa account.
+
 
       #########################################################################################################################
       # The previous three steps are all that most builds will need. They will build your database on the Action Runner and run any tests you have.
