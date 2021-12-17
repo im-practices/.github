@@ -87,13 +87,29 @@ jobs:
       #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
 
       - name: Build Database
-        uses: im-open/build-database-ci-action@v1.0.5
+        uses: im-open/build-database-ci-action@v3.0.0
         with:
-          db-server-name: localhost
+          db-server-name: ${{ env.DB_SERVER_NAME }}
           db-name: ${{ env.DB_NAME }}
-          drop-db-after-build: ${{ env.DROP_DB_AFTER_STEP }}
-          install-mock-db-objects: ${{ env.INSTALL_MOCK_DB_OBJ }} # TODO: Delete if not using
-          mock-db-object-nuget-feed-url: ${{ env.MOCK_DB_OBJ_URL }} # TODO: Delete if not using
+          migration-files-path: '' # TODO: Add the path to the directory with your migration files
+          # TODO: The parameters above are the bare minimum needed to use the action. Below are listed the optional parameters you may need to use.
+          #       Uncomment the ones you need and fill out the additional TODO's.
+          # db-server-port: 1433 # TODO: This is the default value in the action. Delete this if you don't need to change it.
+          # use-integrated-security: false # TODO: This is the default value in the action. Delete this if you don't need to change it.
+          # db-username: 'sa' # The default system administrator account that comes with SQL Server. This is the only account set up in our self hosted Action Runners' SQL Server instances.
+          # db-password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }} # This is an org level secret. It is the password for the sa account.
+          # install-mock-db-objects: true
+          # mock-db-object-dependency-list: '' # TODO: Add a json list of objects specifying your dependencies. The format is [{"version":"1.0.0","packageName":"dbo.Something","nugetUrl":"https://nuget.pkg.github.com/my-org/my-repo/dbo.Something.nupkg"}]
+          # incremental: false # TODO: This is the default value in the action. Delete this if you don't need to change it.
+          # create-database-file: '' # TODO: Add the path to the create database file (often called Initialization.sql)
+          # run-tests: true
+          # test-files-path: '' # TODO: Add the path to the directory with your test files
+          # test-timeout: '' # TODO: Add the time, in seconds, to wait for all the tests to run before timing out. The default is 300. Delete if 300 is fine or if you aren't running tests.
+          # drop-db-after-build: false # TODO: This is the default value in the action. Delete this if you don't need to change it.
+          # should-validate-migrations: false  # TODO: This is the default value in the action. Delete this if you don't need to change it.
+          # seed-data: true
+          # seed-data-files-path: '' # TODO: Add the path to the directory with your seed data files
+          # managed-schemas: dbo  # TODO: This is the default value in the action. If you need to change it add commas between the schemas (i.e. dbo,OtherSchema), otherwise delete this line.
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
