@@ -9,6 +9,7 @@ The templates defined in this repository have been customized for our build proc
 The templates defined in this repository are also the source of truth for the `im-` templates in each of the Enterprise Org `.github` repos.  When a merge to main happens, the template files in this repo will be copied to the other `.github` repositories in the Enterprise.  If changes have been made to any of the `im-` template files in those organizations' `.github` repos they will be overwritten by these changes.
 
 ## Adding new Templates
+
 If there are new templates that can be used across many organizations, please make a PR to this repository so they can be shared with each organization in the Enterprise.  
 
 Templates that are specific to an organization should be added directly to that organization's `.github` repository.  Those template files should contain the `org-` prefix instead of the `im-` prefix.  Using the correct prefix will keep them from being overridden when this repository is synced with the others.
@@ -36,7 +37,6 @@ The templates in this repository fall into one of the following categories:
     - im_run
     - im_test
     - im_tf
-    
 - For new `.yml` files ensure:
   - [ ] The file contains the appropriate `im-<build|deploy|test|run>-` prefix
   - [ ] Clearly mark what needs to be customized or populated by the user
@@ -50,6 +50,8 @@ The templates in this repository fall into one of the following categories:
     - The `set-vars` job cleans the environment variable input and sets an output
     - All other jobs that need to use environment should add a `needs: [set-vars]` and use the `ENVIRONMENT` output from the job.
     - Other variables that vary between environments and make use of the `im-open/set-variable-based-on-environment` action should also be done in the `set-vars` job.  
+  - Add an entry to [start-project-template-inventory.json] if the new file is for app services, terraform or azure databases
+    - The `canHaveMultiples` flag indicates whether it should be a single workflow in the repo or if the workflow can duplicated and customized in the repo.
   - For consistency, 
     - [ ] Ensure there are spaces between the brackets and the expression when using expression syntax
       - Expected: ${{ secrets.thing }}
@@ -60,8 +62,19 @@ The templates in this repository fall into one of the following categories:
     - [ ] Outside of script blocks, use single `'` instead of double `"`
     - [ ] For any secrets, document whether it is an org, repo or environment level secret
       
+## start-project Integration
+This repository contains two files that enable integration with `start-project`:
+- [package.json]
+  - This allows the repository to be restored via npm
+- [start-project-template-inventory.json]
+  - This file tells `start-project` which workflow templates should be added to different project types
+
+When `start-project` runs, it restores this repository and examines the inventory file to determine which Workflows should be included.  The generator should include the latest version of the Workflow.
+
 
 [add a workflow]: https://docs.github.com/en/actions/guides/setting-up-continuous-integration-using-workflow-templates
 [Sharing workflows with your organization]: https://docs.github.com/en/actions/learn-github-actions/sharing-workflows-with-your-organization
 [Random Username Generator]: https://jimpix.co.uk/words/random-username-generator.asp#results
 [im-deploy-tf-manual-apply.yml]: ./workflow-templates/im-deploy-tf-manual-apply.yml
+[start-project-template-inventory.json]: ./start-project-template-inventory.json
+[package.json]: ./package.json
