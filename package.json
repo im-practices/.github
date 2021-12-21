@@ -1,0 +1,16 @@
+{
+  "name": "im-practices-github",
+  "version": "1.0.0",
+  "description": "Customized Workflow Templates for WTW-IM",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/im-practices/.github.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/im-practices/.github/issues"
+  },
+  "homepage": "https://github.com/im-practices/.github#readme"
+}
