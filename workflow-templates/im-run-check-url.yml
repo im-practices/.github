@@ -1,0 +1,19 @@
+# Workflow Code: distressedstoat_v1    DO NOT REMOVE
+
+name: Runbook - Check Url
+
+on:
+  workflow_dispatch:
+    inputs:
+      url-to-check:
+        description: The url to get the status of.
+        required: true
+
+jobs:
+  check-status-of-url:
+    steps:
+      - name: Check the status code returned by the url
+        uses: im-open/url-status-check@v1.0.0
+        with:
+          url: ${{ inputs.url-to-check }}
+          fail-on-bad-status: true # TODO: Update this if you don't want the action to fail for 400+ response codes. Otherwise you can remove this line since the action's default is true.
