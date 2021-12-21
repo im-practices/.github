@@ -1,0 +1,5 @@
+{
+    "name": "Run - Check Url",
+    "description": "Template that can be used to ping a url and get the status",
+    "iconName": "im_run"
+}
