@@ -13,6 +13,7 @@ name: Run Cypress Tests
 #    "precy:ci": "rm -rf mochawesome-report/",
 # 4. Add the following script that merges all test json files and generates an html report.  Your name may vary based on your project conventions.  If the output file or results dir are changed, update the env values in the workflow.
 #    "cy:report": "mochawesome-merge mochawesome-report/*.json > merged-results.json && marge --reportDir cypress-results merged-results.json",
+#                                                                                        ^^ marge is not a typo, it's a command for the "mochawesome report generator"
 
 # TODO: Verify Triggers
 on:
