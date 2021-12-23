@@ -38,20 +38,22 @@ The templates in this repository fall into one of the following categories:
     - im_test
     - im_tf
 - For new `.yml` files ensure:
+  - Add an entry to [start-project-template-inventory.json] if the new file is for app services, terraform or azure databases
+    - The `canHaveMultiples` flag indicates whether it should be a single workflow in the repo or if the workflow can duplicated and customized in the repo.
+  - If applicable, add a new entry to `git-er-done`'s [recommended templates] page if the template should be used with any of the project types listed.
   - [ ] The file contains the appropriate `im-<build|deploy|test|run>-` prefix
+  - [ ] Add a workflow code as the first line in the workflow: `# Workflow Code: UpsetBass_v1    DO NOT REMOVE`
+    - When changes are made to the workflow the version should be incremented
+    - Replace `UpsetBass` in the example above with your own code.  The [Random Username Generator] site can help.  The current workflows were generated using the emotions/creatures options.
+  - [ ] Add the Purpose, Frequency, Projects to use the template with and Prerequisites comment at the top of the workflow file.
   - [ ] Clearly mark what needs to be customized or populated by the user
   - [ ] Avoid using default values that may be overlooked
   - [ ] Clearly state the format if something specific is required
   - [ ] If you want to use the github hosted runners use the `runs-on: ubuntu-latest` tag
-  - [ ] Add a workflow code as the first line in the workflow: `# Workflow Code: UpsetBass_v1    DO NOT REMOVE`
-    - When changes are made to the workflow the version should be incremented
-    - Replace `UpsetBass` in the example above with your own code.  The [Random Username Generator] site can help.  The current workflows were generated using the emotions/creatures options.
   - [ ] If the workflow takes in the environment as a parameter, use the `set-vars` job pattern that is implemented in other workflows like [im-deploy-tf-manual-apply.yml]
     - The `set-vars` job cleans the environment variable input and sets an output
     - All other jobs that need to use environment should add a `needs: [set-vars]` and use the `ENVIRONMENT` output from the job.
     - Other variables that vary between environments and make use of the `im-open/set-variable-based-on-environment` action should also be done in the `set-vars` job.  
-  - Add an entry to [start-project-template-inventory.json] if the new file is for app services, terraform or azure databases
-    - The `canHaveMultiples` flag indicates whether it should be a single workflow in the repo or if the workflow can duplicated and customized in the repo.
   - For consistency, 
     - [ ] Ensure there are spaces between the brackets and the expression when using expression syntax
       - Expected: ${{ secrets.thing }}
@@ -78,3 +80,4 @@ When `start-project` runs, it restores this repository and examines the inventor
 [im-deploy-tf-manual-apply.yml]: ./workflow-templates/im-deploy-tf-manual-apply.yml
 [start-project-template-inventory.json]: ./start-project-template-inventory.json
 [package.json]: ./package.json
+[recommended templates]: https://github.com/im-practices/git-er-done/blob/main/actions/recommended-templates.md

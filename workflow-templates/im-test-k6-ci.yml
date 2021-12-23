@@ -1,4 +1,16 @@
 # Workflow Code: TroubledJaguar_v1    DO NOT REMOVE
+# Purpose: 
+#    Uses a container to run K6 with the file specified in 
+#    the workflow when commits are pushed to the main branch.
+#    
+# Frequency:
+#    - This workflow is intended to be reusable, and used once per repository.
+#      If the workflow is updated to hardcode the testFile argument instead of
+#      taking it in as an arg, then it could be duplicated, once per k6 project.
+#    
+# Projects to use this Template with:
+#    - App Service or Function (Optional Template)
+#    - On-Prem Service         (Optional Template)
 
 name: K6 Automated Load Tester
 

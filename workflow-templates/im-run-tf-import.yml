@@ -1,7 +1,18 @@
 # Workflow Code: DrearyBuck_v5    DO NOT REMOVE
 
-# TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# Purpose: 
+#    Imports a specified resource into the terraform state when someone kicks it off manually.
+#    
+# Frequency:
+#    - This workflow should only be used once per repository
+#    
+# Projects to use this Template with:
+#    -  Terraform (Optional Template)
+#
+# TODO Prerequisites:
+#    - If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+
 
 name: Import Terraform State
 on:

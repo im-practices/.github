@@ -1,4 +1,16 @@
 # Workflow Code: PanickyGnat_v2    DO NOT REMOVE
+# Purpose: 
+#    Cleans up GH Releases that are created for a branch. The same functionality 
+#    is included in the .NET CI Build workflow when a PR is merged but is also 
+#    included in this separate workflow in case in needs to be run manually.
+#
+# Frequency: 
+#    - This workflow should only be used once per repository
+#
+# Projects to use this Template with:
+#    - Azure App Service or Function (Optional Template)
+#    - On-Prem Service               (Optional Template)
+#    - On-Prem Site                  (Optional Template)
 
 name: Cleanup Releases for Branches
 on:

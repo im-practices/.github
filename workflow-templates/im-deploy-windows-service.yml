@@ -1,19 +1,26 @@
 # Workflow Code: MaterialVolcano_v13    DO NOT REMOVE
-
-# Note: Each deployable on-prem service in the repository should have their own copy of this workflow rather than trying to deploy several
-#       on-prem service with the same workflow.  If the service is deployed as part of a group, the service still needs its own copy of this
-#       workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
-
-# Prerequisites
-# 1 - Make sure the Service account secrets have been added to the environment
-# 2 - Make sure the host windows server has been prepped to accept incoming WinRM Requests
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-# TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+# Purpose: 
+#    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the 
+#    specified tags, makes changes to any configuration files for the specified environments, stops 
+#    the service, deploys the pre-built artifacts to an on-prem machine then starts the service. Each 
+#    deployable project in a solution should have their own deployment workflow.
+#    
+# Frequency:
+#    Each deployable on-prem service in the repository should have their own copy of this workflow rather than trying to deploy several
+#    on-prem service with the same workflow.  If the service is deployed as part of a group, the service still needs its own copy of this
+#    workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
+#    
+# Projects to use this Template with:
+#    - On-Prem Service (Core Template)
+#
+# TODO: Prerequisites:
+#     - Make sure the Service account secrets have been added to the environment
+#     - Make sure the host windows server has been prepped to accept incoming WinRM Requests
+#     - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+#     - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 #       Generally one board should be set up per windows service in the repository.
 
-# TODO: If there are multiple on prem services in the repo, append the service name to this workflow's file name and update the workflow name below
-name: Deploy On Prem Windows Service
+name: Deploy On Prem Windows Service # TODO: If there are multiple on prem services in the repo, append the service name to this workflow's file name and update this name
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger

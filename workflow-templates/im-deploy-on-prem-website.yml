@@ -1,20 +1,27 @@
 # Workflow Code: FuzzyDragon_v19    DO NOT REMOVE
+# Purpose: 
+#    Gathers various stakeholder and attestor approvals, downloads artifacts from a release 
+#    with the specified tags, makes changes to any configuration files for the specified environments, 
+#    stops the app pool, deploys the pre-built artifacts to an on-prem machine then starts the app pool. 
+#    Each deployable project in a solution should have their own deployment workflow.
+#    
+# Frequency:
+#    Each deployable on-prem site in the repository should have their own copy of this workflow rather than trying to deploy several
+#    on-prem websites with the same workflow.  If the site is deployed as part of a group, the site still needs its own copy of this
+#    workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
+#    
+# Projects to use this Template with:
+#    - On-Prem Site (Core Template)
+#
+# TODO: Prerequisites:
+#    - Make sure the Service account secrets have been added to the environment
+#    - Make sure the host IIS server has been prepped to accept incoming WinRM Requests
+#      See the IIS App Pool action README for more details: https://github.com/im-open/iis-service-action/#readme
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#      Generally one board should be set up per on-prem site in the repository.
 
-# Note: Each deployable on-prem site in the repository should have their own copy of this workflow rather than trying to deploy several
-#       on-prem websites with the same workflow.  If the site is deployed as part of a group, the site still needs its own copy of this
-#       workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
-
-# Prerequisites
-# 1 - Make sure the Service account secrets have been added to the environment
-# 2 - Make sure the host IIS server has been prepped to accept incoming WinRM Requests
-#     See the IIS App Pool action README for more details: https://github.com/im-open/iis-service-action/#readme
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-# TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
-#       Generally one board should be set up per on-prem site in the repository.
-
-# TODO: If there are multiple on prem sites in the repo, append the site name to this workflow's file name and update the workflow name below
-name: Deploy On Prem Website
+name: Deploy On Prem Website # TODO: If there are multiple on prem sites in the repo, append the site name to this workflow's file name and update this name
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger

@@ -1,19 +1,31 @@
 # Workflow Code: SurprisedHedgehog_v8    DO NOT REMOVE
+# Purpose: 
+#    Runs the Cypress script specified in the workflow when commits 
+#    are pushed to the PR or when someone kicks it off manually.
+#    
+# Frequency:
+#    - This workflow can be duplicated once per cypress project that you wish to run independently.
+#    
+# Projects to use this Template with:
+#    - Azure App Service or Function (Optional Template)
+#    - On-Prem Site                  (Optional Template)
+#
+# TODO Prerequisites:
+#    - If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+#    - In order to use this workflow a few changes need to be made to the cypress test configuration:
+#      1. Make the following npm package changes in your cypress test directory
+#         npm uninstall mocha-teamcity-reporter
+#         npm install --save-dev mochawesome mochawesome-merge mochawesome-report-generator
+#      2. Modify the cypress run section of the ci script by replacing the '--reporter ./mocha-teamcity-reporter' with '--reporter mochawesome --reporter-options overwrite=false,html=false,json=true'. For instance:
+#         old: "cy:ci" : "....&& cypress run --project ./ --reporter ./mocha-teamcity-reporter \"",
+#         new: "cy:ci" : "....&& cypress run --project ./ --reporter mochawesome --reporter-options overwrite=false,html=false,json=true \"",
+#      3. Add the following pre-ci script.  Your name will vary based on your cypress ci script name.  This removes results between test runs.
+#         "precy:ci": "rm -rf mochawesome-report/",
+#      4. Add the following script that merges all test json files and generates an html report.  Your name may vary based on your project conventions.  If the output file or results dir are changed, update the env values in the workflow.
+#         "cy:report": "mochawesome-merge mochawesome-report/*.json > merged-results.json && marge --reportDir cypress-results merged-results.json",
+#                                                                                             ^^ marge is not a typo, it's a command for the "mochawesome report generator"
 
 name: Run Cypress Tests
-
-# TODO: In order to use this workflow a few changes need to be made to the cypress test configuration:
-# 1. Make the following npm package changes in your cypress test directory
-#    npm uninstall mocha-teamcity-reporter
-#    npm install --save-dev mochawesome mochawesome-merge mochawesome-report-generator
-# 2. Modify the cypress run section of the ci script by replacing the '--reporter ./mocha-teamcity-reporter' with '--reporter mochawesome --reporter-options overwrite=false,html=false,json=true'. For instance:
-#    old: "cy:ci" : "....&& cypress run --project ./ --reporter ./mocha-teamcity-reporter \"",
-#    new: "cy:ci" : "....&& cypress run --project ./ --reporter mochawesome --reporter-options overwrite=false,html=false,json=true \"",
-# 3. Add the following pre-ci script.  Your name will vary based on your cypress ci script name.  This removes results between test runs.
-#    "precy:ci": "rm -rf mochawesome-report/",
-# 4. Add the following script that merges all test json files and generates an html report.  Your name may vary based on your project conventions.  If the output file or results dir are changed, update the env values in the workflow.
-#    "cy:report": "mochawesome-merge mochawesome-report/*.json > merged-results.json && marge --reportDir cypress-results merged-results.json",
-#                                                                                        ^^ marge is not a typo, it's a command for the "mochawesome report generator"
 
 # TODO: Verify Triggers
 on:
@@ -23,6 +35,7 @@ on:
   # workflow it shows on may change each time a commit is pushed.  To stop this from happening this workflow could be
   # kicked off with a 'repository_dispatch' trigger from the CI build, or the 'pull_request trigger' could be removed
   # and this workflow could be run manually with 'workflow_dispatch' or a new 'schedule' trigger could be added.
+  # Another option is using this as a reusable workflow: https://docs.github.com/en/actions/learn-github-actions/reusing-workflows
   pull_request: 
   workflow_dispatch:
 
@@ -47,8 +60,8 @@ jobs:
 
     # environment: '' # TODO:  If you have additional steps that use environment-level secrets fill this in, otherwise delete it
 
-    # TODO:  If your cypress tests are for an app that needs access to azure this syntax ensures your app can connect
-    #        to azure resources without clashing with the runner machine's azure identity.
+    # TODO:  If your cypress tests are for an app that needs access to azure this syntax with the environment variables
+    #        ensures your app can connect to azure resources without clashing with the runner machine's azure identity.
     #        If your tests do not need to connect to Azure, these environment variables can be removed.
     # env:  
     #   AZURE_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
@@ -57,8 +70,6 @@ jobs:
       
     steps:
       - uses: actions/checkout@v2
-
-      # TODO: If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
 
       # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # - name: Authenticate with GitHub Packages

@@ -1,6 +1,16 @@
 # Workflow Code: NeedyPig_v7    DO NOT REMOVE
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# Purpose: 
+#    Performs a start, stop or restart on an app service in the 
+#    specified environment when someone kicks it off manually.
+#    
+# Frequency:
+#    - This workflow should be duplicated once per app service/function in the repo.
+#    
+# Projects to use this Template with:
+#    - Azure App Service or Function (Optional Template)
+#
+# TODO: Prerequisites:
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Runbook - Start, stop or restart azure app
 #TODO:  You may wish to add the name of the app service/function to the name above and the file name if there are multiple app services or functions within the repository

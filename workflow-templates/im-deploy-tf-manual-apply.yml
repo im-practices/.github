@@ -1,8 +1,18 @@
 # Workflow Code: InsaneHamster_v20    DO NOT REMOVE
-
-# TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-# TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+# Purpose: 
+#    Deploys the terraform at a specified tag to a specified 
+#    environment when someone kicks off the build manually.
+#    
+# Frequency:
+#    - This workflow should only be used once per repository
+#    
+# Projects to use this Template with:
+#    - Terraform (Core Template)
+#
+# TODO: Prerequisites:
+#    - If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
 name: Apply Terraform
 on:

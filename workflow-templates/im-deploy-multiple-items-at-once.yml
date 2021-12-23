@@ -1,10 +1,25 @@
 # Workflow Code: MercifulLlama_v3    DO NOT REMOVE
-
-# Note: This workflow is intended to be used with repos that have multiple deployable artifacts which are deployed together.  It is not
-#       intended for repos that have a single deployable or repos with multiple deployable artifacts that are deployed independently.
-#       This workflow initiates multiple deployments but each deployable item should have their own streamlined deployment workflow set up.
-#       The streamlined deployment uses the normal workflow (app service/function, database, windows service, iis site, etc) but has
-#       instructions above the repository_dispatch trigger around the changes that need to be made.
+# Purpose: 
+#    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.) 
+#    but they need each item to be deployed together. 
+#    
+#    This workflow coordinates setting up environment variables, getting various stakeholder 
+#    and attestor approvals, ensuring the tag is valid for prod deployments and then initiates
+#    individual deployments via repository_dispatch events.
+#    
+# Note: 
+#    This workflow is intended to be used with repos that have multiple deployable artifacts which are deployed together.  It is not
+#    intended for repos that have a single deployable or repos with multiple deployable artifacts that are deployed independently.
+#    This workflow initiates multiple deployments but each deployable item should have their own streamlined deployment workflow set up.
+#    The streamlined deployment uses the normal workflow (app service/function, database, windows service, iis site, etc) but has
+#    instructions above the repository_dispatch trigger around the changes that need to be made.
+#    
+# Frequency:
+#    - This workflow can be duplicated.  A new workflow should be setup 
+#      for each distinct group of items that needs to be deployed together.
+#
+# Projects to use this Template with:
+#    -  Any project that needs to be deployed at the same time as others
 
 name: Deploy Multiple Items
 on:
@@ -126,8 +141,7 @@ jobs:
       # request has been received.  If your use case is to have one streamlined deployment completely finish before starting the next one, the
       # 'start deployment' block below should be copied to the bottom of the workflow that acts as a gate to the next deployment workflow.
 
-      # TODO: Add a 'start deployment' block for each item that needs to be deployed
-
+      # TODO: Add a 'start deployment' block for each item that needs to be deployed.  This is a 'fire and forget' method
       - name: Start Deployment for <deployable-name> # TODO: Add the name of the deployable
         uses: actions/github-script@v4
         with:
@@ -142,3 +156,7 @@ jobs:
                 tag: "${{ env.RELEASE_TAG }}"
               }
             });
+      
+      # TODO:  If you need one deployment to wait for one to finish before it begins, consider
+      #        using reusable workflows rather than the repository_dispatch event above
+      #        https://docs.github.com/en/actions/learn-github-actions/reusing-workflows

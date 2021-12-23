@@ -1,6 +1,17 @@
 # Workflow Code: SpiritedGnat_v6    DO NOT REMOVE
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# Purpose: 
+#    Runs a flyway repair command against an Azure SQL or 
+#    On-Prem Database when someone kicks it off manually.
+#
+# Frequency:
+#    - This workflow can be duplicated once per database in the repository.
+#    
+# Projects to use this Template with:
+#    - Azure Sql Database (Optional Template)
+#    - On-Prem Database   (Optional Template)
+#
+# TODO: Prerequisites:
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Runbook - Flyway Repair
 

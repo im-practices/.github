@@ -1,8 +1,21 @@
 # Workflow Code: LoathsomeSnipe_v23    DO NOT REMOVE
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-
-# TODO: If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+# Purpose: 
+#    Automatically checks out the code, builds, run tests and creates artifacts 
+#    which are uploaded to a GH release when commits are pushed to a PR. In the 
+#    deployment workflows, the release artifacts uploaded in this workflow are 
+#    downloaded, configured for the environment and deployed.
+#
+# Frequency: 
+#    - This workflow should only be used once per repository
+#
+# Projects to use this Template with:
+#    - Azure App Service or Function (Core Template)
+#    - On-Prem Service               (Core Template)
+#    - On-Prem Site                  (Core Template)
+#
+# TODO: Prerequisites:
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+#    - If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.    
 
 name: .Net Core CI
 

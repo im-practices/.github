@@ -1,21 +1,28 @@
 # Workflow Code: GiddyBuzzard_v6    DO NOT REMOVE
-
-# Note: The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
-#       In addition to that, however, there are three other things this workflow template is set up to do.
-#         1. Create snapshots. Snapshots are create sql object (table, view, sproc, etc.) scripts that show the shape of an object and can be
-#            useful for keeping a historical record in GitHub of the changes to them.
-#         2. Create a backup of the database and store it for later consumption. The backup can then be used in a workflow to circumvent the need
-#            to spin up the database from scratch. Very helpful for decreasing build times. Please note however that this is only a backup of a local database.
-#            It does not take the place of backups that should be happening of Production databases.
-#         3. Create mock sql objects that can be consumed by other database repos' CI processes. A flag on the build database step in this workflow can be set
-#            so that your database's dependencies are downloaded and installed.
+# Purpose: 
+#    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
+#    In addition to that, however, there are three other things this workflow template is set up to do.
+#      1. Create snapshots. Snapshots are create sql object (table, view, sproc, etc.) scripts that show the shape of an object and can be
+#         useful for keeping a historical record in GitHub of the changes to them.
+#      2. Create a backup of the database and store it for later consumption. The backup can then be used in a workflow to circumvent the need
+#         to spin up the database from scratch. Very helpful for decreasing build times. Please note however that this is only a backup of a local database.
+#         It does not take the place of backups that should be happening of Production databases.
+#      3. Create mock sql objects that can be consumed by other database repos' CI processes. A flag on the build database step in this workflow can be set
+#         so that your database's dependencies are downloaded and installed.
+#                 
+#    The need for creating snapshots and backups in this workflow is not a very common need. They are here in case you need them, but likely you won't.
+#    There are TODO's throughout this template that let you know when something isn't necessary if you don't want snapshots and/or backups created.
+#             
+#    Creating mock sql objects is a bit less rare of a need, but only if your database is a sectioned off part of the legacy ExtendHealth monolith. Again,
+#    there will be TODO's showing you where some items can be removed if you don't have any dependencies and/or don't need to create mock objects to be
+#    consumed by others.
 #
-#       The need for creating snapshots and backups in this workflow is not a very common need. They are here in case you need them, but likely you won't.
-#       There are TODO's throughout this template that let you know when something isn't necessary if you don't want snapshots and/or backups created.
+# Frequency: 
+#    - This workflow should only be used once per repository
 #
-#       Creating mock sql objects is a bit less rare of a need, but only if your database is a sectioned off part of the legacy ExtendHealth monolith. Again,
-#       there will be TODO's showing you where some items can be removed if you don't have any dependencies and/or don't need to create mock objects to be
-#       consumed by others.
+# Projects to use this Template with:
+#    - Azure SQL Database (Core Template)
+#    - On-Prem Database   (Core Template)
 
 name: Build Database CI
 # TODO: Select the appropriate trigger, if push and pull are both included, two builds will be kicked off when a PR exists and a new commit is pushed to the corresponding branch.

@@ -1,7 +1,18 @@
 # Workflow Code: BubblyGreyhound_v11    DO NOT REMOVE
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-# TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+# Purpose: 
+#    Checks out the repository and deploys a directory to the 
+#    specified storage account when someone kicks it off manually.
+#    
+# Frequency:
+#    - This workflow can be duplicated for as many storage
+#      account deployments that the repository contains
+#    
+# Projects to use this Template with:
+#    - Storage Account Deployment (Core Template)
+#
+# TODO: Prerequisites:
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
 name: Deploy Files to Azure Storage
 

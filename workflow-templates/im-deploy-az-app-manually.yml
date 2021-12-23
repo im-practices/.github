@@ -1,19 +1,28 @@
 # Workflow Code: AmbitiousLizard_v22    DO NOT REMOVE
+# Purpose: 
+#    Gathers various stakeholder and attestor approvals, downloads artifacts from a release 
+#    with the specified tags, makes changes to any configuration files for the specified 
+#    environments and deploys the pre-built artifacts to the Azure App Service or Function. 
+#    Each deployable project in a solution should have their own deployment workflow.
+#    
+# Frequency:
+#    - Each deployable app service/function in the repository should have their own copy of  
+#      this workflow rather than trying to deploy several app services or functions with the 
+#      same workflow.  If the app is deployed as part of a group, the app still needs its own
+#      copy of this workflow but it will be streamlined (instructions below) since the Deploy 
+#      Multiple Items workflow handles many of these checks.
+#    
+# Projects to use this Template with:
+#    - Azure App Service or Function (Core Template)
+#
+# TODO Prerequisites:
+#    - Make sure the az secrets have been added to the environment in GitHub
+#    - Make sure the scm restrictions (terraform) include the prod github runners (previously it had just octopus)
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#      Generally one board should be set up per app service/function in the repository.
 
-# Note: Each deployable app service/function in the repository should have their own copy of this workflow rather than trying to deploy several
-#       app services or functions with the same workflow.  If the app is deployed as part of a group, the app still needs its own copy of
-#       this workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
-
-# Prerequisites
-# 1 - Make sure the az secrets have been added to the environment
-# 2 - Make sure the scm restrictions include the prod github runners (previously it had just octopus)
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-# TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
-#       Generally one board should be set up per app service/function in the repository.
-
-# TODO: If there are multiple app service/functions in the repo, append the project name to this workflow's file name and update the workflow name below
-name: Manually deploy AZ App
+name: Manually deploy AZ App # TODO: If there are multiple app service/functions in the repo, append the project name (svc/bff/mfe/etc) to this and the actual file name
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger

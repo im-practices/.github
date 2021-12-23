@@ -1,7 +1,16 @@
 # Workflow Code: HostileMacaw_v2    DO NOT REMOVE
-
-# TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# Purpose: 
+#    Destroys all the remote objects for a terraform configuration when someone kicks it off manually.
+#    
+# Frequency:
+#    - This workflow should only be used once per repository
+#    
+# Projects to use this Template with:
+#    -  Terraform (Optional Template)
+#
+# TODO Prequisites
+#    - If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Terraform Destroy
 on:
