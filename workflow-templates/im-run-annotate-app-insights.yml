@@ -1,6 +1,19 @@
 # Workflow Code: EmpatheticDolphin_v8    DO NOT REMOVE
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# Purpose: 
+#    Creates an ad hoc app insights annotation for a specified 
+#    environment when someone kicks it off manually.
+#    
+# Frequency:
+#    - This workflow should only be used once per repository assuming
+#      there is only one app insights instance set up per env
+#    
+# Projects to use this Template with:
+#    - Azure App Service or Function (Optional Template)
+#    - Azure SQL Database            (Optional Template) 
+#    - Terraform                     (Optional Template)
+#
+# TODO: Prerequisites:
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Runbook - Annotate App Insights
 

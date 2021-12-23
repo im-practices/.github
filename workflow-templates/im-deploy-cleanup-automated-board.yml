@@ -1,4 +1,22 @@
 # Workflow Code: PitifulPelican_v7    DO NOT REMOVE
+# Purpose: 
+#    Automatically cleans up inactive cards on a project's deployment board 
+#    when it runs at its scheduled time or when someone kicks it off manually.
+#    
+#  Frequency: 
+#    - This workflow should only be used once per repository.  This workflow
+#      uses a matrix strategy so if the repo reports statuses to mulitple boards
+#      they can be added to the matrix below.
+#   
+# Projects to use this Template with:
+#    - Azure App Service or Function  (Core Template)
+#    - Azure SQL Database             (Core Template)
+#    - Storage Account Deployments    (Core Template)
+#    - On-Prem Service                (Core Template)
+#    - On-Prem Site                   (Core Template)
+#    - On-Prem Database               (Core Template)
+#    - Terraform                      (Core Template)
+
 
 name: Cleanup Automated Deployment Board
 

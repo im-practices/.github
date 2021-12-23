@@ -1,4 +1,17 @@
 # Workflow Code: ZestyFlamingo_v7    DO NOT REMOVE
+# Purpose: 
+#    Uses a container to run a K6 stress test against the environment and 
+#    with the test file the user specifies when they kick it off manually.
+#
+# Frequency:
+#    - This workflow is intended to be reusable, and used once per repository.
+#      If the workflow is updated to hardcode some arguments like test-file 
+#      and test-root-folder instead of taking them in as args, then it could 
+#      be duplicated, once per k6 project in the repo.
+#    
+# Projects to use this Template with:
+#    - App Service or Function (Optional Template)
+#    - On-Prem Service         (Optional Template)
 
 name: Manual trigger K6 test
 

@@ -1,4 +1,15 @@
 # Workflow Code: distressedstoat_v1    DO NOT REMOVE
+# Purpose: 
+#    Pings a url and fails by default if the status code is 400+
+#    
+# Frequency:
+#    - This workflow is intended to be used once per repository as is
+#      but could be duplicated so the url-to-check can be hardcoded.
+#    
+# Projects to use this Template with:
+#    -  On-Prem Service               (Optional Template)
+#    -  Azure App Service or Function (Optional Template)
+
 
 name: Runbook - Check Url
 

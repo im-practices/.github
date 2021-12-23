@@ -1,4 +1,23 @@
 # Workflow Code: PetrifiedMole_v3    DO NOT REMOVE
+# Purpose: 
+#    Compiles sass for projects that need it, compiles the solution, sets up ChromeDiver for 
+#    projects that need it then runs the specified StoryTeller tests when code is pushed to a 
+#    PR, someone manually kicks it off or when another workflow triggers it.
+#    
+# NOTE:
+#    Storyteller should not be introduced for new projects.
+#
+# Frequency:
+#    - This workflow can be duplicated as many times as needed for each Storyteller Project in the solution
+#      or modified to run tests from multiple storyteller projects.
+#    
+# Projects to use this Template with:
+#    -  On Prem Site    (Optional Template)
+#    -  On Prem Service (Optional Template)
+#
+# TODO Prerequisites:
+#    - If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+
 
 name: Run StoryTeller
 
@@ -22,8 +41,6 @@ jobs:
     runs-on: [self-hosted, windows-2019]
     steps:
       - uses: actions/checkout@v2
-
-      # TODO: If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
 
       # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # - name: Authenticate with GitHub Packages

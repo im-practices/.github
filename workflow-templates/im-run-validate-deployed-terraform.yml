@@ -1,11 +1,21 @@
 # Workflow Code: ShinySQUIRREL_v10    DO NOT REMOVE
-
-# Pre-requisites
-# This workflow relies on a Deployment Board being set up to determine what should be currently deployed to the environment
-# https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
-
-# TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# Purpose: 
+#    Validates that the deployed terraform matches what is supposed to be deployed
+#    when it runs at a scheduled time or when someone kicks it off manually.
+#
+# Frequency:
+#    - This workflow should only be used once per repository.  It contains a matrix
+#      strategy that can be updated for the environments and additional matrix args
+#      could be added for different projects if there are more than one in a repo.
+#
+# Projects to use this Template with:
+#    - Terraform (Core Template)
+#
+# TODO Prerequisites:
+#    - This workflow relies on a Deployment Board being set up to determine what should be currently deployed to the environment
+#      https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#    - If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Validate Deployed Terraform
 on:

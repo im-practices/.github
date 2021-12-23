@@ -1,19 +1,25 @@
 # Workflow Code: BetrayedCod_v10    DO NOT REMOVE
+# Purpose: 
+#    Gathers the required approvals from stakeholders and attestors, ensures 
+#    tags are valid for production deployments and runs the migrations against 
+#    an Azure SQL database when someone kicks it off manually.
+#    
+# Frequency:
+#     Each deployable az db in the repository should have their own copy of this workflow rather than trying to deploy several
+#     az databases with the same workflow.  If the db is deployed as part of a group, the db still needs its own copy of this
+#     workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
+#    
+# Projects to use this Template with:
+#    - Azure SQL Database           (Core Template)
+# 
+# TODO Prerequisites:
+#    - Make sure the az secrets have been added to the environment
+#    - Make sure the prod runners have access to the database with a 'azurerm_sql_virtual_network_rule'
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#      Generally one board should be set up per database in the repository.
 
-# Note: Each deployable az db in the repository should have their own copy of this workflow rather than trying to deploy several
-#       az databases with the same workflow.  If the db is deployed as part of a group, the db still needs its own copy of this
-#       workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
-
-# Prerequisites
-# 1 - Make sure the az secrets have been added to the environment
-# 2 - Make sure the prod runners have access to the database with a 'azurerm_sql_virtual_network_rule'
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-# TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
-#       Generally one board should be set up per database in the repository.
-
-# TODO: If there are multiple az databases in the repo, append the db name to this workflow's file name and update the workflow name below
-name: Deploy Database to Azure
+name: Deploy Database to Azure # TODO: If there are multiple az databases in the repo, append the db name to this workflow's file name and update the workflow name below
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger

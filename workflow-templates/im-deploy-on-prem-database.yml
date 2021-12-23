@@ -1,19 +1,25 @@
 # Workflow Code: AmazedPiglet_v10    DO NOT REMOVE
+# Purpose: 
+#    Gathers the required approvals from stakeholders and attestors, ensures tags
+#    are valid for production deployments and runs the migrations against an on-prem
+#    database using a username and password when someone kicks it off manually.
+#    
+# Frequency:
+#   - Each deployable on-prem db in the repository should have their own copy of this workflow rather than trying to deploy several
+#     on-prem databases with the same workflow.  If the db is deployed as part of a group, the db still needs its own copy of this
+#     workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
+#    
+# Projects to use this Template with:
+#    - On-Prem Database (Core Template)
+#
+# TODO: Prerequisites:
+#    - Work with Data Practices to get an account with the same permissions as were used in the service account you used to deploy with previously
+#    - Make sure the database login secrets have been added to the environment
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#      Generally one board should be set up per database in the repository.
 
-# Note: Each deployable on-prem db in the repository should have their own copy of this workflow rather than trying to deploy several
-#       on-prem databases with the same workflow.  If the db is deployed as part of a group, the db still needs its own copy of this
-#       workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
-
-# Prerequisites
-# 1 - Work with Data Practices to get an account with the same permissions as were used in the service account you used to deploy with previously
-# 2 - Make sure the database login secrets have been added to the environment
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-# TODO: Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
-#       Generally one board should be set up per database in the repository.
-
-# TODO: If there are multiple on prem databases in the repo, append the db name to this workflow's file name and update the workflow name below
-name: Deploy Database to On-Prem Server
+name: Deploy Database to On-Prem Server # TODO: If there are multiple on prem databases in the repo, append the db name to this workflow's file name and update this name
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger

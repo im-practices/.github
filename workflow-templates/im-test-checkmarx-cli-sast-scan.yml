@@ -1,4 +1,19 @@
 # Workflow Code: EnthralledOyster_v4    DO NOT REMOVE
+# Purpose: 
+#    Checks out the repository and initiates a checkmarx scan on a schedule, 
+#    when someone kicks it off manually or when it is triggered by another 
+#    workflow, like the dotnet CI workflow.
+#
+# Frequency:
+#    - This workflow should only be used once per repository
+#    
+# Projects to use this Template with:
+#    -  Azure App Service or Function (Core Template)
+#    -  npm Package                   (Core Template)
+#    -  Nuget Package                 (Core Template)
+#    -  On-Prem Service               (Core Template)
+#    -  On-Prem Site                  (Core Template)
+
 
 name: Checkmarx CLI SAST Scan
 

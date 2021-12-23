@@ -1,6 +1,17 @@
 # Workflow Code: ScornfulFlamingo_v1   DO NOT REMOVE
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# Purpose: 
+#    Deletes a blob from a specified Azure Storage Account when someone kicks it off manually.
+#    
+# Frequency:
+#    - This workflow should only be used once per repository
+#    
+# Projects to use this Template with:
+#    - Storage Account Deployments (Core Template)
+#
+# TODO: Prerequisites:
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+#    - The SP used in this workflow needs an additional permission (StorageBlob Data Contributor) so it can delete blobs
+#      https://docs.microsoft.com/en-us/azure/storage/blobs/assign-azure-role-data-access?tabs=portal
 
 name: Delete Azure Blob
 

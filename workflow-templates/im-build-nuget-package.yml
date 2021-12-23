@@ -1,16 +1,21 @@
 # Workflow Code: TrustingCockroach_v17    DO NOT REMOVE
-# This workflow will build a project and publish the nuget package to github packages registry.
-
-# TODO: If there are more than one nuget package projects in the repo, duplicate this workflow for each package
-
-# TODO: If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
-
-# TODO: Make sure the .csproj file has been updated with the appropriate values required for GH Packages
-#        (PackageId, Version, RepositoryUrl)
-#        https://github.com/im-practices/git-er-done/blob/main/packages/publish-nuget.md
-
-# TODO: This workflow uses the elevated GH_PACKAGES_TOKEN secret to read/write/delete packages.  It is at the organization level but only
-#        available to select repos.  To use this let a member of the SWAT team or Infra-Purple know and it can be enabled for your repository.
+# Purpose: 
+#    Automatically builds the project and runs tests with code coverage. If 
+#    everything is green, a new semantic version is calculated and a new package 
+#    version and tag are pushed to the repository. When the PR is merged, the 
+#    package versions created for each branch commit in the PR are removed.
+#    
+# Frequency: This workflow should be duplicated once per nuget package in the repository
+#    
+# Projects to use this Template with:
+#    - Nuget Package (Core Template)
+#
+# TODO Prerequisites:
+#    - If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+#    - Make sure the .csproj file has been updated with the appropriate values required for GH Packages (PackageId, Version, RepositoryUrl)
+#      https://github.com/im-practices/git-er-done/blob/main/packages/publish-nuget.md
+#    - This workflow uses the elevated GH_PACKAGES_TOKEN secret to read/write/delete packages.  It is at the organization level but only
+#      available to select repos.  To use this let a member of the SWAT team or Infra-Purple know and it can be enabled for your repository.
 
 name: 'Build and Publish Nuget package'
 

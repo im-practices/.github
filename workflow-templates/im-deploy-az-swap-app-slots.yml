@@ -1,6 +1,16 @@
 # Workflow Code: IrritatedHyena_v7    DO NOT REMOVE
-
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# Purpose: 
+#    Swaps deployment slots in a specified environment for an Azure App Service
+#    or Function outside of a deployment when someone kicks it off manually.
+#    
+# Frequency:
+#    - This workflow can be duplicated once per app service or function
+#    
+# Projects to use this Template with:
+#    - Azure App Service or Function (Optional Template)
+#
+# TODO: Prerequisites:
+#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Swap Azure App Slots
 

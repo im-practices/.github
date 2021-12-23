@@ -1,10 +1,24 @@
 # Workflow Code: AngryGoose_v6    DO NOT REMOVE
-
-# Note: This workflow should not be used to tag repos that have CI workflows that create their own releases, like
-#       the dotnet ci build because this workflow would conflict with that. This workflow is recommended for
-#       things like infrastructure repositories or database projects that do not have a CI build which increments
-#       their versions.  If a repo has multiple projects that need this workflow, multiple tags can be generated
-#       with this workflow by duplicating the increment version step and including different 'tag-prefix' args.
+# Purpose: 
+#   Automatically calculates the next semantic version and creates a tag on the repository
+#   when a PR is merged. The tag is used in later workflows to deploy the tf or db.     
+#        
+# Note: 
+#    This workflow should not be used to tag repos that have CI workflows that create their own releases, like
+#    the dotnet ci build because this workflow would conflict with that. This workflow is recommended for
+#    things like infrastructure repositories or database projects that do not have a CI build which increments
+#    their versions.
+#
+# Frequency: 
+#    This workflow should only be used once per repository
+#    If the repo has multiple projects that need this workflow (like db and tf), multiple tags can be generated with
+#    with this workflow by duplicating the increment version step and including different 'tag-prefix' args.
+#
+# Projects to use this Template with:
+#    - Azure SQL Database           (Core Template)
+#    - On-Prem Database             (Core Template)
+#    - Storage Account Deployments  (Core Template)
+#    - Terraform                    (Core Template)
 
 name: Increment Version on Merge
 on:

@@ -1,14 +1,26 @@
 # Workflow Code: GuiltyBison_v6    DO NOT REMOVE
+# Purpose: 
+#    Runs the Postman script specified in the workflow when someone 
+#    manually kicks it off or when another workflow triggers it.   
+#    
+# Frequency:
+#    - This workflow can be duplicated for each Postman project in the repository
+#      or it can be modified to run multiple projects.
+#    
+# Projects to use this Template with:
+#    -  App Service or Function (Optional Template)
+#    -  On Prem Site            (Optional Template)
+#    -  On Prem Service         (Optional Template)
+#
+# TODO: Prerequisites:
+#    - If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+#    - Make the following npm package changes: 
+#      npm uninstall newman-reporter-teamcity
+#    - Update the reporters an options in your package.json script.  For instance:
+#      old script: "newman run tests/postman-tests/ParticipantGuidance.postman_collection.json -e tests/postman-tests/participant-guidance-prod.postman_environment.json -r cli,teamcity",
+#      new script: "newman run tests/postman-tests/ParticipantGuidance.postman_collection.json -e tests/postman-tests/participant-guidance-prod.postman_environment.json -r cli,json --reporter-json-export postman-results.json",
 
 name: Run Postman Tests
-
-# TODO: In order to use this workflow a few changes need to be made to the postman test configuration:
-# 1. Make the following npm package changes
-#    npm uninstall newman-reporter-teamcity
-
-# 2. The reporters and options need to be updated. For instance:
-#    old: "newman run tests/postman-tests/ParticipantGuidance.postman_collection.json -e tests/postman-tests/participant-guidance-prod.postman_environment.json -r cli,teamcity",
-#    new: "newman run tests/postman-tests/ParticipantGuidance.postman_collection.json -e tests/postman-tests/participant-guidance-prod.postman_environment.json -r cli,json --reporter-json-export postman-results.json",
 
 # TODO: Verify Triggers
 on:
@@ -36,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # TODO: If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+      
 
       # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # - name: Authenticate with GitHub Packages

@@ -1,7 +1,17 @@
 # Workflow Code: DeterminedPorcupine_v8    DO NOT REMOVE
-
-# TODO: If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
-# TODO: Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+# Purpose: 
+#    Automatically runs a terraform plan against the specified environments and 
+#    comments on the PR with the expected changes when commits are pushed to a PR.
+#
+# Frequency: 
+#    - This workflow should only be used once per repository
+#   
+# Projects to use this Template with:
+#    - Terraform (Core Template)
+#
+# TODO Prerequisites:
+#     - If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+#     - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Automatically run tf plan and comment on PR
 on:
