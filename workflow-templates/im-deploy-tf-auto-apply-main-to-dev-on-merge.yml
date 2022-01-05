@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v15    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v16    DO NOT REMOVE
 # Purpose: 
 #    Automatically runs a terraform apply -auto-approve with the changes 
 #    in the PR against the dev environment when a PR is merged to main. 
@@ -108,7 +108,7 @@ jobs:
       # TODO: Remove this step if you do not want a teams notification
       - name: Send Status to Teams
         if: always()
-        uses: im-open/post-status-to-teams-action@v1.0.3
+        uses: im-open/post-status-to-teams-action@v1.1.0
         with:
           title: Auto-Deploying <project-name> Terraform to Dev # TODO: Replace <project-name> with your project
           workflow-status: ${{ job.status }}
