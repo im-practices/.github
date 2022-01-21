@@ -1,21 +1,21 @@
 # Workflow Code: MercifulLlama_v3    DO NOT REMOVE
-# Purpose: 
-#    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.) 
-#    but they need each item to be deployed together. 
-#    
-#    This workflow coordinates setting up environment variables, getting various stakeholder 
+# Purpose:
+#    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.)
+#    but they need each item to be deployed together.
+#
+#    This workflow coordinates setting up environment variables, getting various stakeholder
 #    and attestor approvals, ensuring the tag is valid for prod deployments and then initiates
 #    individual deployments via repository_dispatch events.
-#    
-# Note: 
+#
+# Note:
 #    This workflow is intended to be used with repos that have multiple deployable artifacts which are deployed together.  It is not
 #    intended for repos that have a single deployable or repos with multiple deployable artifacts that are deployed independently.
 #    This workflow initiates multiple deployments but each deployable item should have their own streamlined deployment workflow set up.
 #    The streamlined deployment uses the normal workflow (app service/function, database, windows service, iis site, etc) but has
 #    instructions above the repository_dispatch trigger around the changes that need to be made.
-#    
+#
 # Frequency:
-#    - This workflow can be duplicated.  A new workflow should be setup 
+#    - This workflow can be duplicated.  A new workflow should be setup
 #      for each distinct group of items that needs to be deployed together.
 #
 # Projects to use this Template with:
@@ -96,7 +96,7 @@ jobs:
           echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
-  # This job needs to run for all environments because tf-plan relies
+  # This job needs to run for all environments because initiate-deployments relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
     needs: [set-vars, stakeholder-approval, attestor-approval]
@@ -124,6 +124,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-tag: ${{ env.RELEASE_TAG }}
           fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
+
+  # If you want to verify that the Jira ticket(s) being deployed have the proper attestations, there is an action for that.
+  # https://github.com/im-open/verify-fields-on-jira-task
+  # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
+  # Details on how to use the action can be found in the action's README.
 
   initiate-deployments:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
@@ -156,7 +161,7 @@ jobs:
                 tag: "${{ env.RELEASE_TAG }}"
               }
             });
-      
+
       # TODO:  If you need one deployment to wait for one to finish before it begins, consider
       #        using reusable workflows rather than the repository_dispatch event above
       #        https://docs.github.com/en/actions/learn-github-actions/reusing-workflows

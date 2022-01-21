@@ -1,11 +1,11 @@
 # Workflow Code: InsaneHamster_v21    DO NOT REMOVE
-# Purpose: 
-#    Deploys the terraform at a specified tag to a specified 
+# Purpose:
+#    Deploys the terraform at a specified tag to a specified
 #    environment when someone kicks off the build manually.
-#    
+#
 # Frequency:
 #    - This workflow should only be used once per repository
-#    
+#
 # Projects to use this Template with:
 #    - Terraform (Core Template)
 #
@@ -146,6 +146,11 @@ jobs:
         if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
         with:
           tag: ${{ env.GITHUB_REF }}
+
+  # If you want to verify that the Jira ticket being deployed has the proper attestations, there is an action for that.
+  # https://github.com/im-open/verify-fields-on-jira-task
+  # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
+  # Details on how to use the action can be found in the action's README.
 
   tf-plan:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
@@ -334,6 +339,10 @@ jobs:
     if: always()
     steps:
       - run: echo "The current environment is ${{  needs.set-vars.outputs.ENVIRONMENT  }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
+
+      # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
+      # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
+      # Details on how to set up that action can be found in the action's README.
 
       - uses: im-open/workflow-conclusion@v2.0.0
         id: conclusion

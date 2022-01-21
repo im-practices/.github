@@ -1,15 +1,15 @@
 # Workflow Code: FuzzyDragon_v20    DO NOT REMOVE
-# Purpose: 
-#    Gathers various stakeholder and attestor approvals, downloads artifacts from a release 
-#    with the specified tags, makes changes to any configuration files for the specified environments, 
-#    stops the app pool, deploys the pre-built artifacts to an on-prem machine then starts the app pool. 
+# Purpose:
+#    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
+#    with the specified tags, makes changes to any configuration files for the specified environments,
+#    stops the app pool, deploys the pre-built artifacts to an on-prem machine then starts the app pool.
 #    Each deployable project in a solution should have their own deployment workflow.
-#    
+#
 # Frequency:
 #    Each deployable on-prem site in the repository should have their own copy of this workflow rather than trying to deploy several
 #    on-prem websites with the same workflow.  If the site is deployed as part of a group, the site still needs its own copy of this
 #    workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
-#    
+#
 # Projects to use this Template with:
 #    - On-Prem Site (Core Template)
 #
@@ -250,6 +250,11 @@ jobs:
           release-tag: ${{ env.RELEASE_TAG }}
           fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
 
+  # If you want to verify that the Jira ticket being deployed has the proper attestations, there is an action for that.
+  # https://github.com/im-open/verify-fields-on-jira-task
+  # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
+  # Details on how to use the action can be found in the action's README.
+
   deploy-site:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, windows-2019]
@@ -399,6 +404,10 @@ jobs:
     if: always()
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+
+      # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
+      # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
+      # Details on how to set up that action can be found in the action's README.
 
       - uses: im-open/workflow-conclusion@v2.0.0
         id: conclusion

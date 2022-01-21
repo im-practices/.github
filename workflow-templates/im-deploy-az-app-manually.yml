@@ -1,17 +1,17 @@
 # Workflow Code: AmbitiousLizard_v23    DO NOT REMOVE
-# Purpose: 
-#    Gathers various stakeholder and attestor approvals, downloads artifacts from a release 
-#    with the specified tags, makes changes to any configuration files for the specified 
-#    environments and deploys the pre-built artifacts to the Azure App Service or Function. 
+# Purpose:
+#    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
+#    with the specified tags, makes changes to any configuration files for the specified
+#    environments and deploys the pre-built artifacts to the Azure App Service or Function.
 #    Each deployable project in a solution should have their own deployment workflow.
-#    
+#
 # Frequency:
-#    - Each deployable app service/function in the repository should have their own copy of  
-#      this workflow rather than trying to deploy several app services or functions with the 
+#    - Each deployable app service/function in the repository should have their own copy of
+#      this workflow rather than trying to deploy several app services or functions with the
 #      same workflow.  If the app is deployed as part of a group, the app still needs its own
-#      copy of this workflow but it will be streamlined (instructions below) since the Deploy 
+#      copy of this workflow but it will be streamlined (instructions below) since the Deploy
 #      Multiple Items workflow handles many of these checks.
-#    
+#
 # Projects to use this Template with:
 #    - Azure App Service or Function (Core Template)
 #
@@ -155,7 +155,7 @@ jobs:
           echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
-  # This job needs to run for all environments because tf-plan relies
+  # This job needs to run for all environments because deploy-code relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
     needs: [set-vars, stakeholder-approval, attestor-approval]
@@ -183,6 +183,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-tag: ${{ env.RELEASE_TAG }}
           fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
+
+  # If you want to verify that the Jira ticket being deployed has the proper attestations, there is an action for that.
+  # https://github.com/im-open/verify-fields-on-jira-task
+  # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
+  # Details on how to use the action can be found in the action's README.
 
   deploy-code:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
@@ -373,6 +378,10 @@ jobs:
     if: always()
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+
+      # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
+      # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
+      # Details on how to set up that action can be found in the action's README.
 
       - uses: im-open/workflow-conclusion@v2.0.0
         id: conclusion

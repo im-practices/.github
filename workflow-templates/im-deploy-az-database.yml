@@ -1,17 +1,17 @@
 # Workflow Code: BetrayedCod_v11    DO NOT REMOVE
-# Purpose: 
-#    Gathers the required approvals from stakeholders and attestors, ensures 
-#    tags are valid for production deployments and runs the migrations against 
+# Purpose:
+#    Gathers the required approvals from stakeholders and attestors, ensures
+#    tags are valid for production deployments and runs the migrations against
 #    an Azure SQL database when someone kicks it off manually.
-#    
+#
 # Frequency:
 #     Each deployable az db in the repository should have their own copy of this workflow rather than trying to deploy several
 #     az databases with the same workflow.  If the db is deployed as part of a group, the db still needs its own copy of this
 #     workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
-#    
+#
 # Projects to use this Template with:
 #    - Azure SQL Database           (Core Template)
-# 
+#
 # TODO Prerequisites:
 #    - Make sure the az secrets have been added to the environment
 #    - Make sure the prod runners have access to the database with a 'azurerm_sql_virtual_network_rule'
@@ -137,6 +137,11 @@ jobs:
         with:
           tag: ${{ env.RELEASE_TAG }}
 
+  # If you want to verify that the Jira ticket being deployed has the proper attestations, there is an action for that.
+  # https://github.com/im-open/verify-fields-on-jira-task
+  # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
+  # Details on how to use the action can be found in the action's README.
+
   deploy-az-db:
     needs: [set-vars, validate-tag-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
@@ -223,6 +228,10 @@ jobs:
     if: always()
     steps:
       - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+
+      # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
+      # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
+      # Details on how to set up that action can be found in the action's README.
 
       - uses: im-open/workflow-conclusion@v2.0.0
         id: conclusion
