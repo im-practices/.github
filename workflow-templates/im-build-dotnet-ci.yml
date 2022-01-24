@@ -1,11 +1,11 @@
 # Workflow Code: LoathsomeSnipe_v24    DO NOT REMOVE
-# Purpose: 
-#    Automatically checks out the code, builds, run tests and creates artifacts 
-#    which are uploaded to a GH release when commits are pushed to a PR. In the 
-#    deployment workflows, the release artifacts uploaded in this workflow are 
+# Purpose:
+#    Automatically checks out the code, builds, run tests and creates artifacts
+#    which are uploaded to a GH release when commits are pushed to a PR. In the
+#    deployment workflows, the release artifacts uploaded in this workflow are
 #    downloaded, configured for the environment and deployed.
 #
-# Frequency: 
+# Frequency:
 #    - This workflow should only be used once per repository
 #
 # Projects to use this Template with:
@@ -15,7 +15,7 @@
 #
 # TODO: Prerequisites:
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.    
+#    - If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
 
 name: .Net Core CI
 
@@ -507,20 +507,20 @@ jobs:
         run: |
           echo "There were errors in the workflow.  Check the workflow-conclusion step above for more details on what failed."
           exit 1
-      # NOTE:  Currently this is not working and WTW needs needs to whitelist our actions runners in order to initiate a scan
-      # TODO: Delete if you have other triggers for checkmarx scans
-      # TODO: Uncomment once this workflow has been merged to master at least once.  The repository_dispatch event won't work until the checkmarx workflow is in main.
-      # - name: Kick off Checkmarx if workflow succeeded
-      #   if: steps.conclusion.outputs.workflow_conclusion == 'success'
-      #   uses: actions/github-script@v5
-      #   with:
-      #     github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org-level secret
-      #     script: |
-      #       github.rest.repos.createDispatchEvent({
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         event_type: 'run_checkmarx',
-      #         client_payload: {
-      #           ref: "${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}"
-      #         }
-      #       });
+
+      # TODO: Delete if you have other triggers for checkmarx scans and don't want it kicked off from the CI build
+      #       The repository_dispatch event won't work until the checkmarx workflow has been merged to main for the first time.
+      - name: Kick off Checkmarx if workflow succeeded
+        if: steps.conclusion.outputs.workflow_conclusion == 'success'
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org-level secret
+          script: |
+            github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'run_checkmarx',
+              client_payload: {
+                ref: "${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}"
+              }
+            });

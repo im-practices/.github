@@ -1,19 +1,18 @@
 # Workflow Code: EnthralledOyster_v5    DO NOT REMOVE
-# Purpose: 
-#    Checks out the repository and initiates a checkmarx scan on a schedule, 
-#    when someone kicks it off manually or when it is triggered by another 
+# Purpose:
+#    Checks out the repository and initiates a checkmarx scan on a schedule,
+#    when someone kicks it off manually or when it is triggered by another
 #    workflow, like the dotnet CI workflow.
 #
 # Frequency:
 #    - This workflow should only be used once per repository
-#    
+#
 # Projects to use this Template with:
 #    -  Azure App Service or Function (Core Template)
 #    -  npm Package                   (Core Template)
 #    -  Nuget Package                 (Core Template)
 #    -  On-Prem Service               (Core Template)
 #    -  On-Prem Site                  (Core Template)
-
 
 name: Checkmarx CLI SAST Scan
 
@@ -38,22 +37,25 @@ jobs:
   scan-the-code:
     runs-on: [self-hosted, ubuntu-20.04]
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout main for Schedule Trigger
+        uses: actions/checkout@v2
         if: github.event_name == 'schedule'
 
-      - uses: actions/checkout@v2
+      - name: Checkout Provided Ref for Repository Dispatch Trigger
+        uses: actions/checkout@v2
         if: github.event_name == 'repository_dispatch'
         with:
           ref: ${{ github.event.client_payload.ref }}
 
-      - uses: actions/checkout@v2
+      - name: Checkout provided branch/tag/sha for Workflow Dispatch Trigger
+        uses: actions/checkout@v2
         if: github.event_name == 'workflow_dispatch'
         with:
           ref: ${{ github.event.inputs.branch-tag-sha }}
 
       - name: Run the Scan
         id: scan
-        uses: im-open/checkmarx-cli-sast-scan@v2.0.0
+        uses: im-open/checkmarx-cli-sast-scan@v2.0.1
         with:
           checkmarx-server-url: ${{ secrets.CHECKMARX_URL }} # This is an org-level secret
           checkmarx-username: ${{ secrets.CHECKMARX_USERNAME }} # This is an org-level secret
