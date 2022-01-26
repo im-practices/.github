@@ -1,5 +1,5 @@
-# Workflow Code: ShinySQUIRREL_v10    DO NOT REMOVE
-# Purpose: 
+# Workflow Code: ShinySQUIRREL_v11    DO NOT REMOVE
+# Purpose:
 #    Validates that the deployed terraform matches what is supposed to be deployed
 #    when it runs at a scheduled time or when someone kicks it off manually.
 #
@@ -50,12 +50,10 @@ jobs:
       TF_WORKING_DIR: './${{ matrix.environment }}' # TODO: Verify this directory structure would be correct for your repository
       REPO_URL: https://github.com/${{ github.repository }}
       # The following SSH_* secrets are org-level secrets
-      SSH_KEY_CENTRAL_LOGGING: ${{ secrets.SSH_CENTRAL_LOGGING }}
       SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
       SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
       SSH_DEPLOY_KEY_INFO: |
         [
-          { "orgAndRepo": "im-platform/central-logging", "envName" : "SSH_KEY_CENTRAL_LOGGING" },
           { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
           { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
         ]
