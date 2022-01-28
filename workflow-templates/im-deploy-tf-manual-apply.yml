@@ -341,6 +341,7 @@ jobs:
       # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
       # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
       # Details on how to set up that action can be found in the action's README.
+      # There are secrets for the username and password already set up as org level secrets called JIRA_USERNAME and JIRA_PASSWORD.
 
       - uses: im-open/workflow-conclusion@v2.0.0
         id: conclusion
