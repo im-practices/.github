@@ -5,7 +5,7 @@
 #    
 #  Frequency: 
 #    - This workflow should only be used once per repository.  This workflow
-#      uses a matrix strategy so if the repo reports statuses to mulitple boards
+#      uses a matrix strategy so if the repo reports statuses to multiple boards
 #      they can be added to the matrix below.
 #   
 # Projects to use this Template with:
