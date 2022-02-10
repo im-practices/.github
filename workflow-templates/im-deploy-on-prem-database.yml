@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v11    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v12    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures tags
 #    are valid for production deployments and runs the migrations against an on-prem
@@ -14,7 +14,8 @@
 #
 # TODO: Prerequisites:
 #    - Work with Data Practices to get an account with the same permissions as were used in the service account you used to deploy with previously
-#    - Make sure the database login secrets have been added to the environment
+#    - Make sure the database login secrets have been added to Vault and are accessible from our self-hosted runners.
+#      See https://github.com/im-practices/git-er-done/blob/main/actions/hashicorp-vault-integration.md for information on how to do that.
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 #      Generally one board should be set up per database in the repository.
@@ -160,8 +161,8 @@ jobs:
           version: 7.9.2
 
       # TODO: Use this for any variables that change per environment
-      - name: Set Database Vars
-        id: db-vars
+      - name: Set Environment Specific Vars
+        id: environment-specific-vars
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
           scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
@@ -170,19 +171,51 @@ jobs:
         env:
           DB_NAME@dev: ''
           DB_NAME@qa: ''
-          DB_NAME@stage demo: ''
+          DB_NAME@stage demo uat: ''
           DB_NAME@prod: ''
           DB_SERVER_NAME@dev: ''
           DB_SERVER_NAME@qa: ''
-          DB_SERVER_NAME@stage demo: ''
+          DB_SERVER_NAME@stage demo uat: ''
           DB_SERVER_NAME@prod: ''
+          VAULT_URL@dev qa: 'https://vault.dev.mktp.io:8200' # TODO: Update the environments that have secrets stored in the dev Vault
+          VAULT_URL@stage demo uat prod: 'https://vault.mktp.io:8200/' # TODO: Update the environments that have secrets in the prod Vault
+
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          # TODO: The Service Principal these credentials are for needs to be given access to login to Vault. See this git-er-done article for more information:
+          # https://github.com/im-practices/git-er-done/blob/main/actions/hashicorp-vault-integration.md#setup
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get Vault Token
+        id: vault_token
+        uses: im-open/get-vault-token-for-azure-user@v1.0.0
+        with:
+          # TODO: Add the Azure Auth Method Role that was setup in Vault and has access to your secrets.
+          # See this git-er-done article for more information:
+          # https://github.com/im-practices/git-er-done/blob/main/actions/hashicorp-vault-integration.md#setup
+          vault-role: ''
+          vault-url: '${{ env.VAULT_URL }}'
+
+      - name: Import Secrets
+        id: vault-secrets
+        uses: hashicorp/vault-action@v2.3.1
+        with:
+          url: '${{ needs.set-vars.outputs.VAULT_URL }}'
+          token: '${{ steps.vault_token.outputs.client_token }}'
+          # Warning! The formatting on the secrets parameter is intentional. The spaces, pipe, and semi-colon. Every secret, except the last one, needs a semi-colon at the end of the line.
+          # See the action's documentation for more information: https://github.com/hashicorp/vault-action
+          # TODO: Update <role-name> (including the brackets) with your database Vault role name (see https://github.com/im-practices/git-er-done/blob/main/actions/hashicorp-vault-integration.md#setup).
+          secrets: |
+            database/static-creds/<role-name> username | SQL_AUTH_USERNAME ;
+            database/static-creds/<role-name> password | SQL_AUTH_PASSWORD
 
       - name: Deploy migrations
         uses: im-open/run-flyway-command@v1.2.1
         with:
-          db-server-name: '${{ steps.db-vars.outputs.DB_SERVER_NAME }}'
+          db-server-name: '${{ steps.environment-specific-vars.outputs.DB_SERVER_NAME }}'
           db-server-port: '${{ env.DB_SERVER_PORT }}'
-          db-name: '${{ steps.db-vars.outputs.DB_NAME }}'
+          db-name: '${{ steps.environment-specific-vars.outputs.DB_NAME }}'
           migration-files-path: '${{ env.MIGRATIONS_FOLDER }}'
           flyway-command: 'migrate'
           migration-history-table: '${{ env.MIGRATIONS_HISTORY_TABLE }}'
@@ -190,8 +223,8 @@ jobs:
           managed-schemas: 'dbo' # TODO: Update this csv with the schemas that flyway manages (e.g. 'dbo,CustomSchema,OtherSchema')
           enable-out-of-order: 'false'
           use-integrated-security: 'false'
-          username: '' # TODO: Add a secret and reference it here
-          password: '' # TODO: Add a secret and reference it here
+          username: '${{ steps.vault-secrets.outputs.SQL_AUTH_USERNAME }}'
+          password: '${{ steps.vault-secrets.outputs.SQL_AUTH_PASSWORD }}'
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
