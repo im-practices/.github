@@ -177,8 +177,8 @@ jobs:
           DB_SERVER_NAME@qa: ''
           DB_SERVER_NAME@stage demo uat: ''
           DB_SERVER_NAME@prod: ''
-          VAULT_URL@dev qa: 'https://vault.dev.mktp.io:8200'
-          VAULT_URL@stage demo uat prod: 'https://vault.mktp.io:8200/'
+          VAULT_URL@dev qa: 'https://vault.dev.mktp.io:8200' # TODO: Update the environments that have secrets stored in the dev Vault
+          VAULT_URL@stage demo uat prod: 'https://vault.mktp.io:8200/' # TODO: Update the environments that have secrets in the prod Vault
 
       - name: AZ Login
         uses: azure/login@v1
