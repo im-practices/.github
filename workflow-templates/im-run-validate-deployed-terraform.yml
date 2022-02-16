@@ -14,7 +14,6 @@
 # TODO Prerequisites:
 #    - This workflow relies on a Deployment Board being set up to determine what should be currently deployed to the environment
 #      https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
-#    - If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Validate Deployed Terraform
