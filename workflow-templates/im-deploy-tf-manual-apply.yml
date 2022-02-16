@@ -10,7 +10,6 @@
 #    - Terraform (Core Template)
 #
 # TODO: Prerequisites:
-#    - If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 

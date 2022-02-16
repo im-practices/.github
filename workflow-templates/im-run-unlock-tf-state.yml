@@ -8,8 +8,7 @@
 # Projects to use this Template with:
 #    - Terraform (Core Template)
 #
-# TODO Prequisites
-#    - If the terraform is still using on-prem-egress-ips, it needs to be switched to network-information.
+# TODO Prerequisites
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Unlock Terraform State
