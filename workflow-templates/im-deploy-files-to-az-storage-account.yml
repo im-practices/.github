@@ -44,6 +44,7 @@ env:
   DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
 
 jobs:
+  
   deploy-to-azure:
     runs-on: [self-hosted, ubuntu-20.04]
 
@@ -56,6 +57,12 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ env.GITHUB_REF }}
+          fetch-depth: 0
+      
+      - name: Verify Tag Exists
+        uses: im-open/verify-git-ref@v1.0.1
+        with:
+          branch-tag-sha: ${{ env.GITHUB_REF }}
 
       - name: AZ Login
         id: login

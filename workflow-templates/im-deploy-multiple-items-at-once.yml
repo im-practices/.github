@@ -45,9 +45,24 @@ env:
   RELEASE_TAG: ${{ github.event.inputs.tag }} # This is the tag that we'll be deploying
 
 jobs:
+  verify-tag-exists:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Verify Tag Exists
+        uses: im-open/verify-git-ref@v1.0.1
+        with:
+          branch-tag-sha: ${{ env.RELEASE_TAG }}
+
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
+    needs: [verify-tag-exists]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ env.ENVIRONMENT }} Stakeholder Approval'
     steps:
@@ -58,6 +73,7 @@ jobs:
   # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   attestor-approval:
+    needs: [verify-tag-exists]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ env.ENVIRONMENT }} Attestor Approval'
     steps:
