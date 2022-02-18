@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v6    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v7    DO NOT REMOVE
 # Purpose: 
 #    Runs a flyway repair command against an Azure SQL or 
 #    On-Prem Database when someone kicks it off manually.
@@ -19,56 +19,34 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment the database is in - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
+        description: The environment the database is in
         required: true
         default: dev
+        type: choice
+        options: # TODO: Update for the environments that are available
+          - dev
+          - qa
+          - stage
+          - demo
+          - uat
+          - prod
       branch-tag-sha:
         description: The branch, tag or sha of the flyway scripts that should be repaired.
         required: true
 
 env:
+  ENVIRONMENT: ${{ github.event.inputs.environment }}
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha }}
   DB_SERVER_PORT: '1433' # TODO: Verify that this is correct
   MIGRATIONS_HISTORY_TABLE: 'MigrationHistory' # TODO: Verify this table name
   PATH_TO_MIGRATION_FILES: '' # TODO: Add the path to the migrations folder
 
 jobs:
-  set-vars:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-    outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
-
-    steps:
-      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      - name: Set ENVIRONMENT
-        id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.environment }}
-          create-output-variables: true
-          error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
-        env:
-          # TODO: Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
-          ENVIRONMENT@dev d development: 'dev'
-          ENVIRONMENT@qa q: 'qa'
-          ENVIRONMENT@stg s stage: 'stage'
-          ENVIRONMENT@o demo: 'demo'
-          ENVIRONMENT@u uat: 'uat'
-          ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}."
-
   repair-database-migrations:
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-    needs: [set-vars]
+    environment: ${{ env.ENVIRONMENT }}
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}."
 
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -87,7 +65,7 @@ jobs:
         id: db-vars
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
-          scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
           input-file: '' # TODO: if you have an input file with your variable substitutions, add them here
         env:

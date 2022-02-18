@@ -50,10 +50,7 @@ The templates in this repository fall into one of the following categories:
   - [ ] Avoid using default values that may be overlooked
   - [ ] Clearly state the format if something specific is required
   - [ ] If you want to use the github hosted runners use the `runs-on: ubuntu-latest` tag
-  - [ ] If the workflow takes in the environment as a parameter, use the `set-vars` job pattern that is implemented in other workflows like [im-deploy-tf-manual-apply.yml]
-    - The `set-vars` job cleans the environment variable input and sets an output
-    - All other jobs that need to use environment should add a `needs: [set-vars]` and use the `ENVIRONMENT` output from the job.
-    - Other variables that vary between environments and make use of the `im-open/set-variable-based-on-environment` action should also be done in the `set-vars` job.  
+  - [ ] If the workflow takes in the environment as a parameter, use the `type: choice` pattern that is implemented in other workflows like [im-deploy-tf-manual-apply.yml]
   - For consistency, 
     - [ ] Ensure there are spaces between the brackets and the expression when using expression syntax
       - Expected: ${{ secrets.thing }}

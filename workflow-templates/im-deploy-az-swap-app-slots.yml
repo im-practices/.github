@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v7    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v8    DO NOT REMOVE
 # Purpose: 
 #    Swaps deployment slots in a specified environment for an Azure App Service
 #    or Function outside of a deployment when someone kicks it off manually.
@@ -23,69 +23,57 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment where slots are being swapped - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
+        description: The environment where slots are being swapped
         required: true
+        type: choice
+        options: # TODO: Update for the environments that are available
+          - dev
+          - qa
+          - stage
+          - demo
+          - uat
+          - prod
       open-pagerduty-window:
-        description: Flag indicating whether a pagerduty maintenance window should be opened
+        description: Open a pagerduty maintenance window
         required: true
         default: 'false'
+        type: boolean
   # When using repository dispatch, the payload must have the following properties:
   # { environment: 'dev|qa|stage|demo|uat|prod', 'open-pagerduty-window': 'true|false'}
   repository_dispatch:
     types: [swap_slots]
 
-jobs:
-  set-vars:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
-    # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-    outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
-      RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }}
-      AZ_APP_NAME: ${{ steps.set-variables.outputs.AZ_APP_NAME }}
-      OPEN_WINDOW: ${{ steps.get-inputs-from-trigger.OPEN_WINDOW }}
+jobs:
+  swap-slots:
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ env.ENVIRONMENT }}
+    env:
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ env.ENVIRONMENT }} from GitHub Actions' # TODO: Verify this PD Maintenance Window Description
+      TARGET_SLOT: 'Production' # TODO: Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main site, update it here
+      SOURCE_SLOT: '' # TODO: Add the name of the source slot
+      AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function, change this value to functionapp
 
     steps:
-      - id: get-inputs-from-trigger
-        run: |
+      - run: |
           eventName=${{ github.event_name }}
           if [ "$eventName" == "workflow_dispatch" ]; then
-            echo "ENV_INPUT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+            echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
             echo "OPEN_WINDOW=${{ github.event.inputs.open-pagerduty-window }}" >> $GITHUB_ENV
           elif [ "$eventName" == "repository_dispatch" ]; then
-            echo "ENV_INPUT=${{ github.event.client_payload.environment }}" >> $GITHUB_ENV
+            echo "ENVIRONMENT=${{ github.event.client_payload.environment }}" >> $GITHUB_ENV
             echo "OPEN_WINDOW=${{ github.event.client_payload.open-pagerduty-window }}" >> $GITHUB_ENV
           fi
 
-      - name: Set ENVIRONMENT
-        id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.environment }}
-          create-output-variables: true
-          error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
-        env:
-          # TODO: Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
-          ENVIRONMENT@dev d development: 'dev'
-          ENVIRONMENT@qa q: 'qa'
-          ENVIRONMENT@stg s stage: 'stage'
-          ENVIRONMENT@o demo: 'demo'
-          ENVIRONMENT@u uat: 'uat'
-          ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
-        id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
-          scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
-          create-output-variables: true
+          scope: ${{ env.ENVIRONMENT }}
         env:
           # TODO: For the following inputs, fill in the value if you have the environment and delete the environment if it does not exist
           # This variable is used to swap and delete slots
@@ -103,23 +91,6 @@ jobs:
           AZ_APP_NAME@uat: ''
           AZ_APP_NAME@prod: ''
 
-  swap-slots:
-    runs-on: [self-hosted, ubuntu-20.04]
-    needs: [set-vars]
-    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-    env:
-      ENVIRONMENT: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      RESOURCE_GROUP: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-      AZ_APP_NAME: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
-      OPEN_WINDOW: ${{ needs.set-vars.outputs.OPEN_WINDOW }}
-      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
-      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions' # TODO: Verify this PD Maintenance Window Description
-      TARGET_SLOT: 'Production' # TODO: Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main site, update it here
-      SOURCE_SLOT: '' # TODO: Add the name of the source slot
-      AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function, change this value to functionapp
-
-    steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
 
       - name: Open a PagerDuty Maintenance Window
         if: env.OPEN_WINDOW == 'true'

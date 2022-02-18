@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v7    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v8    DO NOT REMOVE
 # Purpose: 
 #    Uses a container to run a K6 stress test against the environment and 
 #    with the test file the user specifies when they kick it off manually.
@@ -19,9 +19,14 @@ on:
   workflow_dispatch:
     inputs:
       env-to-test:
-        description: 'Environment to run test against - dev|qa|stage'
+        description: 'Environment to run test against'
         required: true
         default: 'dev'
+        type: choice
+        options: # TODO:  Update for the environments your k6 test can be run against
+          - dev
+          - qa
+          - stage
       test-folder-root:
         description: 'Root directory of k6 test files including configs, etc. IE: tests/k6'
         required: true
@@ -39,46 +44,16 @@ on:
         required: true
         default: '' # TODO: Set default version of k6. IE. 0.33.0
       run-stress-step:
-        description: 'Run k6 stress test optimized step. [true, false].  The optimized step allows more connections and transactions.'
+        description: 'Run k6 stress test optimized step. The optimized step allows more connections and transactions.'
         required: false
         default: 'false'
+        type: boolean
 
 jobs:
-  set-vars:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    outputs:
-      # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value in another job: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-
-    steps:
-      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      - name: Set ENVIRONMENT
-        id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.env-to-test }}
-          create-output-variables: true
-          error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
-        env:
-          # TODO: Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
-          ENVIRONMENT@dev d development: 'dev'
-          ENVIRONMENT@qa q: 'qa'
-          ENVIRONMENT@stg s stage: 'stage'
-          ENVIRONMENT@o demo: 'demo'
-          ENVIRONMENT@u uat: 'uat'
-          ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}"
-
   k6_test:
     runs-on: [self-hosted, ubuntu-20.04]
-    needs: [set-vars]
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ github.event.inputs.env-to-test }}"
 
       - name: Checkout
         uses: actions/checkout@v1
@@ -105,7 +80,7 @@ jobs:
         if: ${{ github.event.inputs.run-stress-step != 'true' }}
         working-directory: ${{ github.event.inputs.test-folder-root }}
         run: |
-          k6 run ${{ github.event.inputs.test-file }} ${{ github.event.inputs.k6-extra-params }} -e RUN_ENV=${{ needs.set-vars.outputs.ENVIRONMENT }}
+          k6 run ${{ github.event.inputs.test-file }} ${{ github.event.inputs.k6-extra-params }} -e RUN_ENV=${{ github.event.inputs.env-to-test }}
 
       - name: Run local k6 as a stress test
         if: ${{ github.event.inputs.run-stress-step == 'true' }}
@@ -117,4 +92,4 @@ jobs:
           echo "Open Files, Reuse TCP ports, and Port Range below:"
           ulimit -Sa | grep 'open files'
           sudo sysctl -a | grep -E 'net.ipv4.ip_local_port_range|net.ipv4.tcp_tw_reuse|fs.file-max'
-          k6 run ${{ github.event.inputs.test-file }} ${{ github.event.inputs.k6-extra-params }} -e RUN_ENV=${{ needs.set-vars.outputs.ENVIRONMENT }}
+          k6 run ${{ github.event.inputs.test-file }} ${{ github.event.inputs.k6-extra-params }} -e RUN_ENV=${{ github.event.inputs.env-to-test }}
