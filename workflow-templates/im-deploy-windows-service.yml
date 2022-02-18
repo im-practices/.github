@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v15    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v16    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -75,7 +75,6 @@ jobs:
       SERVICE_PATH: ${{ steps.windows-server.outputs.SERVICE_PATH }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_PATH }}
       WINDOWS_SERVER_SERVICE_USER: ${{ steps.windows-server.outputs.WINDOWS_SERVER_SERVICE_USER }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
       WINDOWS_SERVER_SERVICE_PASSWORD: ${{ steps.windows-server.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
-      WINDOWS_SERVER_CERT_PATH: ${{ steps.windows-server.outputs.WINDOWS_SERVER_CERT_PATH }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
 
     steps:
       - name: Checkout Repository
@@ -137,13 +136,6 @@ jobs:
           WINDOWS_SERVER_SERVICE_PASSWORD@demo: ''
           WINDOWS_SERVER_SERVICE_PASSWORD@uat: ''
           WINDOWS_SERVER_SERVICE_PASSWORD@prod: ''
-          # TODO: Fill in the windows-server-cert-path for WinRm access to the Windows machine and remove the environments that are not used.
-          WINDOWS_SERVER_CERT_PATH@dev: ''
-          WINDOWS_SERVER_CERT_PATH@qa: ''
-          WINDOWS_SERVER_CERT_PATH@stage: ''
-          WINDOWS_SERVER_CERT_PATH@demo: ''
-          WINDOWS_SERVER_CERT_PATH@uat: ''
-          WINDOWS_SERVER_CERT_PATH@prod: ''
           # TODO: Fill in the service-user-name for that the windows service uses remove if using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
           SERVICE_USER_NAME@dev: ''
           SERVICE_USER_NAME@qa: ''
@@ -296,20 +288,19 @@ jobs:
       - name: Stop Service
         id: stop-service
         if: always()
-        uses: im-open/windows-service-action@v1.0.1
+        uses: im-open/windows-service-action@v2.0.0
         with:
           action: 'stop'
           service-name: ${{ needs.set-vars.outputs.SERVICE_NAME }}
           server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
           service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
           service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
-          server-public-key: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
         continue-on-error: true
 
       - name: Deploy Deployment Package
         id: deploy
         if: steps.app-pool-stop.outcome == 'success'
-        uses: 'im-open/deploy-windows-files@v1.0.3'
+        uses: im-open/deploy-windows-files@v2.0.0
         with:
           server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
           service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
@@ -317,12 +308,11 @@ jobs:
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
           deployment-folder-path: ${{ needs.set-vars.outputs.SERVICE_PATH }}
           clean-deployment-folder: 'true'
-          server-public-key: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
 
       - name: Register Service
         id: register
         if: steps.deploy.outcome == 'success'
-        uses: im-open/register-windows-service@v1.0.1
+        uses: im-open/register-windows-service@v2.0.0
         with:
           service-name: '${{ needs.set-vars.outputs.SERVICE_NAME }}'
           deployment-path: '${{ needs.set-vars.outputs.SERVICE_PATH }}\\win-service.exe'
@@ -331,18 +321,16 @@ jobs:
           service-credential-password: ${{ needs.set-vars.outputs.SERVICE_USER_SECRET }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
           service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
           service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
-          server-public-key: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
 
       - name: Start Service
         if: steps.register.outcome == 'success'
-        uses: im-open/windows-service-action@v1.0.1
+        uses: im-open/windows-service-action@v2.0.0
         with:
           action: 'start'
           service-name: ${{ needs.set-vars.outputs.SERVICE_NAME }}
           server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
           service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
           service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
-          server-public-key: ${{ needs.set-vars.outputs.WINDOWS_SERVER_CERT_PATH }}
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'

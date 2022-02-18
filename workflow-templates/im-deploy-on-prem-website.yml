@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v21    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v22    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -79,7 +79,6 @@ jobs:
       WEBSITE_CERT_PASSWORD: ${{ steps.set-variables.outputs.WEBSITE_CERT_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_PASSWORD }}
       IIS_SERVER_SERVICE_USER: ${{ steps.set-variables.outputs.IIS_SERVER_SERVICE_USER }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
       IIS_SERVER_SERVICE_PASSWORD: ${{ steps.set-variables.outputs.IIS_SERVER_SERVICE_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
-      IIS_SERVER_CERT_PATH: ${{ steps.set-variables.outputs.IIS_SERVER_CERT_PATH }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
 
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -176,13 +175,6 @@ jobs:
           IIS_SERVER_SERVICE_PASSWORD@demo: ''
           IIS_SERVER_SERVICE_PASSWORD@uat: ''
           IIS_SERVER_SERVICE_PASSWORD@prod: ''
-          # TODO: Fill in the iis-server-cert-path for WinRm access to the IIS Server and remove the environments that are not used.
-          IIS_SERVER_CERT_PATH@dev: ''
-          IIS_SERVER_CERT_PATH@qa: ''
-          IIS_SERVER_CERT_PATH@stage: ''
-          IIS_SERVER_CERT_PATH@demo: ''
-          IIS_SERVER_CERT_PATH@uat: ''
-          IIS_SERVER_CERT_PATH@prod: ''
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
@@ -321,7 +313,7 @@ jobs:
       # Uncomment this if the site hasn't been created before
       # This action does work better if the website cert is already installed
       # - name: Create Web Site
-      #   uses: im-open/iis-site-create@v1.0.0
+      #   uses: im-open/iis-site-create@v2.0.0
       #   with:
       #     server: '${{ needs.set-vars.outputs.IIS_SERVER }}'
       #     website-name: '${{ needs.set-vars.outputs.WEBSITE_NAME }}'
@@ -333,23 +325,21 @@ jobs:
       #     website-cert-password: '${{ needs.set-vars.outputs.WEBSITE_CERT_PASSWORD }}'
       #     service-account-id: '${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}'
       #     service-account-password: '${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}'
-      #     server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
 
       - name: Stop App Pool
         id: app-pool-stop
         if: always()
-        uses: im-open/app-pool-action@v1.0.0
+        uses: im-open/app-pool-action@v2.0.0
         with:
           action: 'stop'
           server: ${{ needs.set-vars.outputs.IIS_SERVER }}
           app-pool-name: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
           service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
           service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
-          server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
 
       - name: Deploy deployment package
         if: steps.app-pool-stop.outcome == 'success'
-        uses: 'im-open/deploy-windows-files@v1.0.3'
+        uses: 'im-open/deploy-windows-files@v2.0.0'
         with:
           server: ${{ needs.set-vars.outputs.IIS_SERVER }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
@@ -357,17 +347,15 @@ jobs:
           clean-deployment-folder: 'true'
           service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
           service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
-          server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
 
       - name: Start App Pool
-        uses: im-open/app-pool-action@v1.0.0
+        uses: im-open/app-pool-action@v2.0.0
         with:
           action: 'start'
           server: ${{ needs.set-vars.outputs.IIS_SERVER }}
           app-pool-name: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
           service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
           service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
-          server-public-key: ${{ needs.set-vars.outputs.IIS_SERVER_CERT_PATH }}
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'
