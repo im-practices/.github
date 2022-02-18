@@ -1,4 +1,4 @@
-# Workflow Code: MercifulLlama_v3    DO NOT REMOVE
+# Workflow Code: MercifulLlama_v4    DO NOT REMOVE
 # Purpose:
 #    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.)
 #    but they need each item to be deployed together.
@@ -29,18 +29,24 @@ on:
         description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO: update for the environments you use
+        description: The environment to deploy to
         required: true
+        type: choice
+        options: # TODO: Update for the environments that are available
+          - dev
+          - qa
+          - stage
+          - demo
+          - uat
+          - prod
 
 env:
+  ENVIRONMENT: ${{ github.event.inputs.environment }}
   RELEASE_TAG: ${{ github.event.inputs.tag }} # This is the tag that we'll be deploying
 
 jobs:
-  set-vars:
+  verify-tag-exists:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     steps:
       - name: Checkout Repository
@@ -53,73 +59,52 @@ jobs:
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
 
-      - name: Set ENVIRONMENT
-        id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.environment }}
-          create-output-variables: true
-          error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
-        env:
-          # TODO: Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
-          ENVIRONMENT@dev d development: 'dev'
-          ENVIRONMENT@qa q: 'qa'
-          ENVIRONMENT@stg s stage: 'stage'
-          ENVIRONMENT@o demo: 'demo'
-          ENVIRONMENT@u uat: 'uat'
-          ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
-    needs: [set-vars]
+    needs: [verify-tag-exists]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
+    environment: '${{ env.ENVIRONMENT }} Stakeholder Approval'
     steps:
       - run: |
-          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Stakeholder approval was received or no required reviewers were set for this environment."
 
   # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   attestor-approval:
-    needs: [set-vars]
+    needs: [verify-tag-exists]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Attestor Approval'
+    environment: '${{ env.ENVIRONMENT }} Attestor Approval'
     steps:
       - run: |
-          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
   # This job needs to run for all environments because initiate-deployments relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
-    needs: [set-vars, stakeholder-approval, attestor-approval]
+    needs: [stakeholder-approval, attestor-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
-        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        if: env.ENVIRONMENT == 'prod'
         uses: actions/checkout@v2
         with:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.1
-        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        if: env.ENVIRONMENT == 'prod'
         with:
           tag: ${{ env.RELEASE_TAG }}
 
       - uses: im-open/is-release-production-ready@v1.0.1
-        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        if: env.ENVIRONMENT == 'prod'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-tag: ${{ env.RELEASE_TAG }}
@@ -131,11 +116,11 @@ jobs:
   # Details on how to use the action can be found in the action's README.
 
   initiate-deployments:
-    needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
+    needs: [validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
 
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       # The 'start deployment' blocks below will initiate the deployment of a single item by creating a repository dispatch event that tells GitHub to
       # kick off a particular workflow.  Each deployable item that will be started this way should have a streamlined copy of the appropriate workflow
@@ -157,7 +142,7 @@ jobs:
               repo: context.repo.repo,
               event_type: "", // TODO:  Get the type from the streamlined workflow that will be kicked off.  This is listed in the types:[] under the repository_dispatch trigger.
               client_payload: {
-                environment: "${{ needs.set-vars.outputs.ENVIRONMENT }}",
+                environment: "${{ env.ENVIRONMENT }}",
                 tag: "${{ env.RELEASE_TAG }}"
               }
             });

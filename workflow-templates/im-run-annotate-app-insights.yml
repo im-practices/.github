@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v8    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v9    DO NOT REMOVE
 # Purpose: 
 #    Creates an ad hoc app insights annotation for a specified 
 #    environment when someone kicks it off manually.
@@ -21,9 +21,17 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment the service is in - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
+        description: The environment the service is in 
         required: true
         default: prod
+        type: choice
+        options: # TODO: Update for the environments that are available
+          - dev
+          - qa
+          - stage
+          - demo
+          - uat
+          - prod
       category:
         description: The category of the annotation
         required: false
@@ -36,38 +44,15 @@ on:
         required: false
         default: ''
 
+env:
+  ENVIRONMENT: ${{ github.event.inputs.environment }}
+
 jobs:
-  set-vars:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-    outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
-      RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }}
-      APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }}
-
+  create-annotatation:
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ env.ENVIRONMENT }}
     steps:
-      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      - name: Set ENVIRONMENT
-        id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.environment }}
-          create-output-variables: true
-          error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
-        env:
-          # TODO: Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
-          ENVIRONMENT@dev d development: 'dev'
-          ENVIRONMENT@qa q: 'qa'
-          ENVIRONMENT@stg s stage: 'stage'
-          ENVIRONMENT@o demo: 'demo'
-          ENVIRONMENT@u uat: 'uat'
-          ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The event is ${{ github.event.inputs.eventName }}"
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The event is ${{ github.event.inputs.eventName }}"
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
@@ -75,8 +60,7 @@ jobs:
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
-          scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
-          create-output-variables: true
+          scope: ${{ env.ENVIRONMENT }}
         env:
           # This variable is used to upload and download blobs from blob storage
           RESOURCE_GROUP@dev: ''
@@ -93,13 +77,6 @@ jobs:
           APP_INSIGHTS_NAME@uat: ''
           APP_INSIGHTS_NAME@prod: ''
 
-  create-annotatation:
-    runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-    needs: [set-vars]
-    steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The event is ${{ github.event.inputs.eventName }}"
-
       - name: AZ Login
         id: login
         uses: azure/login@v1
@@ -110,8 +87,8 @@ jobs:
         uses: im-open/create-app-insights-annotation@v1.0.1
         with:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
-          resourceGroupName: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-          appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
           releaseName: ${{ github.event.inputs.eventName }}
           category: ${{ github.event.inputs.category }}
           customMetadata: ${{ github.event.inputs.customMetadata }}

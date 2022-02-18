@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v12    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v13    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures tags
 #    are valid for production deployments and runs the migrations against an on-prem
@@ -31,24 +31,33 @@ on:
         description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO: update for the environments you use
+        description: The environment to deploy to
         required: true
+        type: choice
+        options: # TODO: Update for the environments that are available
+          - dev
+          - qa
+          - stage
+          - demo
+          - uat
+          - prod
 
   # TODO: If a repository has multiple deployable artifacts that are deployed together through the 'Deploy Multiple Items' workflow:
   #       1. Uncomment the repository_dispatch trigger
   #       2. Delete the workflow_dispatch trigger
-  #       3. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
-  #       4. Delete the 'set-vars' job
-  #       4. Delete the 'stakeholder-approval' job
-  #       5. Delete the 'attestor-approval' job
-  #       6. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
-  #       7. Replace all instances of "${{ needs.set-vars.outputs.ENVIRONMENT }}" with "${{ github.event.client_payload.environment }}"
-  #       8. Under the 'deploy-on-prem-db' job, delete the needs property
-  #       9. Under the 'update-deployment-board-and-send-teams-notification' job, update the needs property to be: "needs: [deploy-on-prem-db]"
+  #       3. Change the env.ENVIRONMENT value from "${{ github.event.inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
+  #       4. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
+  #       5. Delete the 'stakeholder-approval' job
+  #       6. Delete the 'attestor-approval' job
+  #       7. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
+  #       8. Replace all instances of "${{ env.ENVIRONMENT }}" with "${{ github.event.client_payload.environment }}"
+  #       9. Under the 'deploy-on-prem-db' job, delete the needs property
+  #       10. Under the 'update-deployment-board-and-send-teams-notification' job, update the needs property to be: "needs: [deploy-on-prem-db]"
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
 env:
+  ENVIRONMENT: ${{ github.event.inputs.environment }}
   RELEASE_TAG: ${{ github.event.inputs.tag  }} # This is the tag that we'll be deploying
   DB_SERVER_PORT: '1433' # TODO: Verify that this is the correct port
   MIGRATIONS_FOLDER: '' # TODO: Add the path to the migrations folder
@@ -56,11 +65,8 @@ env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
 
 jobs:
-  set-vars:
+  verify-tag-exists:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
 
     steps:
       - name: Checkout Repository
@@ -73,68 +79,47 @@ jobs:
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
 
-      - name: Set ENVIRONMENT
-        id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.environment }}
-          create-output-variables: true
-          error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
-        env:
-          # TODO: Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
-          ENVIRONMENT@dev d development: 'dev'
-          ENVIRONMENT@qa q: 'qa'
-          ENVIRONMENT@stg s stage: 'stage'
-          ENVIRONMENT@o demo: 'demo'
-          ENVIRONMENT@u uat: 'uat'
-          ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
-    needs: [set-vars]
+    needs: [verify-tag-exists]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
+    environment: '${{ env.ENVIRONMENT }} Stakeholder Approval'
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
       - name: Approval Received
         run: echo "Stakeholder approval was received"
 
   # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   attestor-approval:
-    needs: [set-vars]
+    needs: [verify-tag-exists]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Attestor Approval'
+    environment: '${{ env.ENVIRONMENT }} Attestor Approval'
     steps:
       - run: |
-          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
   # This job needs to run for all environments because deploy-on-prem-db relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-for-prod-deploys:
-    needs: [set-vars, stakeholder-approval, attestor-approval]
+    needs: [stakeholder-approval, attestor-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
-        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        if: env.ENVIRONMENT == 'prod'
         uses: actions/checkout@v2
         with:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.1
-        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        if: env.ENVIRONMENT == 'prod'
         with:
           tag: ${{ env.RELEASE_TAG }}
 
@@ -144,11 +129,11 @@ jobs:
   # Details on how to use the action can be found in the action's README.
 
   deploy-on-prem-db:
-    needs: [set-vars, validate-tag-for-prod-deploys]
+    needs: [validate-tag-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    environment: ${{ env.ENVIRONMENT }}
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -165,7 +150,7 @@ jobs:
         id: environment-specific-vars
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
-          scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
           input-file: '' # TODO: if you have an input file with your variable substitutions, add them here
         env:
@@ -201,7 +186,7 @@ jobs:
         id: vault-secrets
         uses: hashicorp/vault-action@v2.3.1
         with:
-          url: '${{ needs.set-vars.outputs.VAULT_URL }}'
+          url: '${{ env.VAULT_URL }}'
           token: '${{ steps.vault_token.outputs.client_token }}'
           # Warning! The formatting on the secrets parameter is intentional. The spaces, pipe, and semi-colon. Every secret, except the last one, needs a semi-colon at the end of the line.
           # See the action's documentation for more information: https://github.com/hashicorp/vault-action
@@ -228,10 +213,10 @@ jobs:
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: [set-vars, deploy-on-prem-db]
+    needs: [deploy-on-prem-db]
     if: always()
     steps:
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
       # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
@@ -249,7 +234,7 @@ jobs:
         uses: im-open/update-deployment-board@v1.3.4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          environment: ${{ env.ENVIRONMENT }}
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.RELEASE_TAG}}
           ref-type: 'tag'
@@ -274,7 +259,7 @@ jobs:
             ]
 
       - name: Send Status to Deployment Notifications Channel for Prod Deploys
-        if: always() && needs.set-vars.outputs.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
+        if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.0
         with:
           title: ${{ env.DB_NAME }} Deployment to On-Prem Server # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel

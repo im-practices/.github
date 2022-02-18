@@ -1,4 +1,4 @@
-# Workflow Code: NeedyPig_v7    DO NOT REMOVE
+# Workflow Code: NeedyPig_v8    DO NOT REMOVE
 # Purpose: 
 #    Performs a start, stop or restart on an app service in the 
 #    specified environment when someone kicks it off manually.
@@ -19,46 +19,40 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: The action that should be taken - start|stop|restart.
+        description: The action that should be taken.
         required: true
         default: restart
+        type: choice
+        options:
+          - start
+          - stop
+          - restart
       environment:
-        description: The environment the app is in - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
+        description: The environment the app is in
         required: true
         default: prod
+        type: choice
+        options: # TODO: Update for the environments that are available
+          - dev
+          - qa
+          - stage
+          - demo
+          - uat
+          - prod
+env:
+  ENVIRONMENT: ${{ github.event.inputs.environment }}
+  ACTION: ${{ github.event.inputs.action }}
 
 jobs:
-  set-vars:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+  start-stop-restart:
+    runs-on: [self-hosted, ubuntu-20.04]
+    environment: ${{ env.ENVIRONMENT }}
 
-    # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.ENV_NAME }}
-    outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
-      RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }}
-      APP_NAME: ${{ steps.set-variables.outputs.APP_NAME }}
-      SLOT_NAME: ${{ steps.set-variables.outputs.SLOT_NAME }}
-
+    env:
+      AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function change the value to 'functionapp'
+      
     steps:
-      - name: Set ENVIRONMENT
-        id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.environment }}
-          create-output-variables: true
-          error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
-        env:
-          # TODO: Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
-          ENVIRONMENT@dev d development: 'dev'
-          ENVIRONMENT@qa q: 'qa'
-          ENVIRONMENT@stg s stage: 'stage'
-          ENVIRONMENT@o demo: 'demo'
-          ENVIRONMENT@u uat: 'uat'
-          ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
@@ -66,8 +60,7 @@ jobs:
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
-          scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
-          create-output-variables: true
+          scope: ${{ env.ENVIRONMENT }}
         env:
           # TODO: For the following inputs, fill in the value if you have the environment or delete the environment if it does not exist
           RESOURCE_GROUP@dev: ''
@@ -91,35 +84,7 @@ jobs:
           # SLOT_NAME@uat: ''
           # SLOT_NAME@prod: ''
 
-  start-stop-restart:
-    needs: [set-vars]
-    runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-
-    env:
-      ENVIRONMENT: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      APP_NAME: ${{ needs.set-vars.outputs.APP_NAME }}
-      RESOURCE_GROUP: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
-      AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function change the value to 'functionapp'
-      # SLOT_NAME: ${{ needs.set-vars.outputs.SLOT_NAME }} # TODO: Uncomment if restarting slots, delete if not
-
-    steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
-
-      - name: Clean action input
-        id: clean-action
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.action }}
-          error-on-no-match: true
-          custom-error-message: 'The action must be start, stop or restart'
-          create-output-variables: true
-        env:
-          ACTION@start t: 'start'
-          ACTION@stop p: 'stop'
-          ACTION@restart r: 'restart'
-
-      - run: echo "'${{ steps.clean-action.outputs.ACTION }}' will be peformed on ${{ env.ENVIRONMENT }} ${{ env.APP_NAME }}"
+      - run: echo "'${{ env.ACTION }}' will be peformed on ${{ env.ENVIRONMENT }} ${{ env.APP_NAME }}"
 
       - name: AZ Login
         id: login
@@ -130,17 +95,17 @@ jobs:
       # TODO: if you wish to perform any of the following actions on a slot, append the following to each of the commands: --slot ${{ env.SLOT_NAME }}
 
       - name: start
-        if: steps.clean-action.outputs.ACTION == 'start'
+        if: env.ACTION == 'start'
         # ARM_SUBSCRIPTION_ID is an env-level secret
         run: az ${{ env.AZ_APP_TYPE }} start --name ${{ env.APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
       - name: stop
-        if: steps.clean-action.outputs.ACTION == 'stop'
+        if: env.ACTION == 'stop'
         # ARM_SUBSCRIPTION_ID is an env-level secret
         run: az ${{ env.AZ_APP_TYPE }} stop --name ${{ env.APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
       - name: restart
-        if: steps.clean-action.outputs.ACTION == 'restart'
+        if: env == 'restart'
         # ARM_SUBSCRIPTION_ID is an env-level secret
         run: az ${{ env.AZ_APP_TYPE }} restart --name ${{ env.APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }}
 

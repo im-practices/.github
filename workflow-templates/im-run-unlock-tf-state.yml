@@ -1,4 +1,4 @@
-# Workflow Code: FrazzledFerret_v9    DO NOT REMOVE
+# Workflow Code: FrazzledFerret_v10    DO NOT REMOVE
 # Purpose:
 #    Removes a lock from the terraform state when someone kicks it off manually.
 #
@@ -19,13 +19,22 @@ on:
         description: The lock ID that needs to be removed.  Terraform provides this value (lock info.ID) in the message indicating there was an error acquiring the state lock.
         required: true
       environment:
-        description: The environment the lock should be removed in - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
+        description: The environment the lock should be removed in
         required: true
+        type: choice
+        options: # TODO: Update for the environments that are available
+          - dev
+          - qa
+          - stage
+          - demo
+          - uat
+          - prod
       branch-tag-sha:
         description: The branch, tag or sha of the terraform that is currently in the environment where the lock is.  This is needed to do a terraform init with the appropriate code.
         required: true
 
 env:
+  ENVIRONMENT: ${{ github.event.inputs.environment }}
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }}
   # The following ARM_* secrets are org-level secrets
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
@@ -45,44 +54,14 @@ env:
     ]
 
 jobs:
-  set-vars:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }} # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-
-    steps:
-      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      - name: Set ENVIRONMENT
-        id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.environment }}
-          create-output-variables: true
-          error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
-        env:
-          # TODO: Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
-          ENVIRONMENT@dev d development: 'dev'
-          ENVIRONMENT@qa q: 'qa'
-          ENVIRONMENT@stg s stage: 'stage'
-          ENVIRONMENT@o demo: 'demo'
-          ENVIRONMENT@u uat: 'uat'
-          ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.   The branch/tag/sha is ${{ env.GITHUB_REF }}."
-
   tf-unlock-state:
-    needs: [set-vars]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    environment: ${{ env.ENVIRONMENT }}
 
     defaults:
       run:
         shell: bash
-        working-directory: './${{ needs.set-vars.outputs.ENVIRONMENT }}' # TODO: Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
+        working-directory: './${{ env.ENVIRONMENT }}' # TODO: Verify this directory (./dev, ./qa, ./stage, ./prod, ./demo, ./uat) will be correct for your project
 
     steps:
       - name: Checkout Repository
@@ -90,7 +69,7 @@ jobs:
         with:
           ref: ${{ env.GITHUB_REF }}
 
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.   The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts

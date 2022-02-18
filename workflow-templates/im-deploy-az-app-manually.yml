@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v23    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v24    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -33,28 +33,34 @@ on:
         description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment:
-        description: The environment to deploy to - dev|qa|stage|prod|demo|uat # TODO: update for the environments you use
+        description: The environment to deploy to
         required: true
+        type: choice
+        options: # TODO: Update for the environments that are available
+          - dev
+          - qa
+          - stage
+          - demo
+          - uat
+          - prod
 
   # TODO: If a repository has multiple deployable artifacts that are deployed together through the 'Deploy Multiple Items' workflow:
   #       1. Uncomment the repository_dispatch trigger
   #       2. Delete the workflow_dispatch trigger
-  #       3. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
-  #       4. Under the 'set-vars' job:
-  #          a. Change the outputs.ENVIRONMENT value from "${{ steps.clean-env.outputs.ENVIRONMENT }}" to "${{ github.event.client_payload.environment }}"
-  #          b. Delete the 'Checkout Repository' step
-  #          c. Delete the 'Verify Tag Exists' step
-  #          d. Delete the 'Set ENVIRONMENT' step
-  #          e. Change the echo statement to use "${{ github.event.client_payload.environment }}" when printing the environment
-  #          f. Change the set-variables step's scope from "${{ steps.clean-env.outputs.ENVIRONMENT }}" to "${{ github.event.client_payload.environment }}"
-  #       4. Delete the 'stakeholder-approval' job
-  #       5. Delete the 'attestor-approval' job
-  #       6. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
-  #       7. Under the 'deploy-code' job, update the needs property to be: "needs: [set-vars]"
+  #       3. Change the env.ENVIRONMENT value from "${{ github.event.inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
+  #       4. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
+  #       5. Under the 'set-vars' job:
+  #          a. Delete the 'Checkout Repository' step
+  #          b. Delete the 'Verify Tag Exists' step
+  #       6. Delete the 'stakeholder-approval' job
+  #       7. Delete the 'attestor-approval' job
+  #       8. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
+  #       9. Under the 'deploy-code' job, update the needs property to be: "needs: [set-vars]"
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
 env:
+  ENVIRONMENT: ${{ github.event.inputs.environment }}
   RELEASE_TAG: ${{ github.event.inputs.tag }} # This is the tag that we'll be deploying
   TIMEZONE: 'america/denver' # TODO: Verify timezone
 
@@ -64,12 +70,13 @@ jobs:
 
     outputs:
       # To use these values: ${{ needs.set-vars.outputs.<OUTPUT_NAME> }}
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
       RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }}
       AZ_APP_NAME: ${{ steps.set-variables.outputs.AZ_APP_NAME }}
       APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }}
 
     steps:
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
@@ -80,35 +87,13 @@ jobs:
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
 
-      - name: Set ENVIRONMENT
-        id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.environment }}
-          create-output-variables: true
-          error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
-        env:
-          # TODO: Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
-          ENVIRONMENT@dev d development: 'dev'
-          ENVIRONMENT@qa q: 'qa'
-          ENVIRONMENT@stg s stage: 'stage'
-          ENVIRONMENT@o demo: 'demo'
-          ENVIRONMENT@u uat: 'uat'
-          ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
-      # This step is separate from the one above because it uses clean-env's normalized ENVIRONMENT output as the scope for each variable below.
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
-          scope: ${{ steps.clean-env.outputs.ENVIRONMENT }}
+          scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
           # This variable is used to swap slots and annotate app insights
@@ -138,10 +123,10 @@ jobs:
   stakeholder-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Stakeholder Approval'
+    environment: '${{ env.ENVIRONMENT }} Stakeholder Approval'
     steps:
       - run: |
-          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Stakeholder approval was received or no required reviewers were set for this environment."
 
   # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
@@ -149,10 +134,10 @@ jobs:
   attestor-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ needs.set-vars.outputs.ENVIRONMENT }} Attestor Approval'
+    environment: '${{ env.ENVIRONMENT }} Attestor Approval'
     steps:
       - run: |
-          echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
   # This job needs to run for all environments because deploy-code relies
@@ -161,24 +146,24 @@ jobs:
     needs: [set-vars, stakeholder-approval, attestor-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
-        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        if: env.ENVIRONMENT == 'prod'
         uses: actions/checkout@v2
         with:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.1
-        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        if: env.ENVIRONMENT == 'prod'
         with:
           tag: ${{ env.RELEASE_TAG }}
 
       - uses: im-open/is-release-production-ready@v1.0.1
-        if: needs.set-vars.outputs.ENVIRONMENT == 'prod'
+        if: env.ENVIRONMENT == 'prod'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-tag: ${{ env.RELEASE_TAG }}
@@ -192,11 +177,11 @@ jobs:
   deploy-code:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+    environment: ${{ env.ENVIRONMENT }}
 
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30
-      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ needs.set-vars.outputs.ENVIRONMENT }} from GitHub Actions'
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ env.ENVIRONMENT }} from GitHub Actions'
       TARGET_SLOT: 'Production'
       AZ_SLOT_NAME: '' # TODO: If using slots, set this to the name of the azure deployment slot.  If this differs per environment, add a new section in the set-vars job above where the value can be set per environment
       ASSET_ZIP: 'published_app.zip' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
@@ -205,7 +190,7 @@ jobs:
       AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function, change this value to functionapp
 
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - name: Download artifacts from release
         uses: im-open/download-release-asset@v1.0.2
@@ -224,13 +209,13 @@ jobs:
       - name: Set Variables for use with Configuration and Substitution Values
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
-          scope: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
           input-file: '' # TODO: if you have an input file with your variable substitutions, add them here
         env:
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
-          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of set-vars.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
+          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of env.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
           # Auth0_Domain@dev: 'wtw-im-dev.auth0.com'
           # Auth0_Domain@qa: 'wtw-im-qa.auth0.com'
@@ -368,7 +353,7 @@ jobs:
       #         repo: context.repo.repo,
       #         event_type: "swap_slots", # TODO: verify the other workflow has a repository_dispatch event that accepts the swap_slots type.
       #         client_payload: {
-      #           environment: "${{ needs.set-vars.outputs.ENVIRONMENT }}"
+      #           environment: "${{ env.ENVIRONMENT }}"
       #         }
       #       });
 
@@ -377,7 +362,7 @@ jobs:
     needs: [set-vars, deploy-code]
     if: always()
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
       # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
@@ -395,7 +380,7 @@ jobs:
         uses: im-open/update-deployment-board@v1.3.4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          environment: ${{ needs.set-vars.outputs.ENVIRONMENT }}
+          environment: ${{ env.ENVIRONMENT }}
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.RELEASE_TAG }}
           ref-type: 'tag'
@@ -420,7 +405,7 @@ jobs:
             ]
 
       - name: Send Status to Deployment Notifications Channel for Prod Deploys
-        if: always() && needs.set-vars.outputs.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
+        if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.0
         with:
           title: ${{ needs.set-vars.outputs.AZ_APP_NAME }} Deployment to Azure # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel

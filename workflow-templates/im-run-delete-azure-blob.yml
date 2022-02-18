@@ -1,4 +1,4 @@
-# Workflow Code: ScornfulFlamingo_v1   DO NOT REMOVE
+# Workflow Code: ScornfulFlamingo_v2   DO NOT REMOVE
 # Purpose: 
 #    Deletes a blob from a specified Azure Storage Account when someone kicks it off manually.
 #    
@@ -29,47 +29,28 @@ on:
         description: The name of the blob to delete
         required: true
       environment:
-        description: The environment to delete the blob from - dev|qa|stage|prod|demo|uat # TODO: Update for the environments that are available
+        description: The environment to delete the blob from
         required: true
+        type: choice
+        options: # TODO: Update for the environments that are available
+          - dev
+          - qa
+          - stage
+          - demo
+          - uat
+          - prod
+
+env:
+  ENVIRONMENT: ${{ github.event.inputs.ENVIRONMENT }}
 
 jobs:
-  set-vars:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    # To use any of these outputs in another job use the following syntax: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-    outputs:
-      ENVIRONMENT: ${{ steps.clean-env.outputs.ENVIRONMENT }}
-
-    steps:
-      # To use this value: ${{ needs.set-vars.outputs.ENVIRONMENT }}
-      - name: Set ENVIRONMENT
-        id: clean-env
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ github.event.inputs.environment }}
-          create-output-variables: true
-          error-on-no-match: true
-          custom-error-message: 'The environment must be Dev, QA, Stage Demo, UAT or Prod' # TODO: Update for the environments that are available
-        env:
-          # TODO: Update for the environments your project contains
-          # The value array contains the environments it will match and the corresponding key is
-          # the environment it will output if one of the values was found.  It is case insensitive.
-          ENVIRONMENT@dev d development: 'dev'
-          ENVIRONMENT@qa q: 'qa'
-          ENVIRONMENT@stg s stage: 'stage'
-          ENVIRONMENT@o demo: 'demo'
-          ENVIRONMENT@u uat: 'uat'
-          ENVIRONMENT@prod p production: 'prod'
-
-      - run: echo "The current environment is ${{ steps.clean-env.outputs.ENVIRONMENT }}."
-
   delete-blob:
     runs-on: [self-hosted, ubuntu-20.04]
 
-    environment: ${{ needs.set-vars.outputs.ENVIRONMENT }} # TODO: Verify the environment
+    environment: ${{ env.ENVIRONMENT }}
 
     steps:
-      - run: echo "The current environment is ${{ needs.set-vars.outputs.ENVIRONMENT }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}."
 
       - name: AZ Login
         id: login
