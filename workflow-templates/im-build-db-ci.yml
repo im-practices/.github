@@ -1,5 +1,5 @@
-# Workflow Code: GiddyBuzzard_v6    DO NOT REMOVE
-# Purpose: 
+# Workflow Code: GiddyBuzzard_v7    DO NOT REMOVE
+# Purpose:
 #    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #    In addition to that, however, there are three other things this workflow template is set up to do.
 #      1. Create snapshots. Snapshots are create sql object (table, view, sproc, etc.) scripts that show the shape of an object and can be
@@ -9,15 +9,15 @@
 #         It does not take the place of backups that should be happening of Production databases.
 #      3. Create mock sql objects that can be consumed by other database repos' CI processes. A flag on the build database step in this workflow can be set
 #         so that your database's dependencies are downloaded and installed.
-#                 
+#
 #    The need for creating snapshots and backups in this workflow is not a very common need. They are here in case you need them, but likely you won't.
 #    There are TODO's throughout this template that let you know when something isn't necessary if you don't want snapshots and/or backups created.
-#             
+#
 #    Creating mock sql objects is a bit less rare of a need, but only if your database is a sectioned off part of the legacy ExtendHealth monolith. Again,
 #    there will be TODO's showing you where some items can be removed if you don't have any dependencies and/or don't need to create mock objects to be
 #    consumed by others.
 #
-# Frequency: 
+# Frequency:
 #    - This workflow should only be used once per repository
 #
 # Projects to use this Template with:
@@ -121,7 +121,7 @@ jobs:
         shell: pwsh
         run: echo "::set-output name=folder::$($(Get-Date).Year).$($(Get-Date).Month.ToString("00"))"
       - name: SQL Lint
-        uses: im-open/tsql-lint-action@v1.0.3
+        uses: im-open/tsql-lint-action@v1.0.4
         with:
           tsqllint-version: 1.11.0
           path-to-sql-files: 'Database/src/SqlDatabase/Migrations/${{ steps.migration-folder.outputs.folder }}' # TODO: Update this path to wherever the files to lint live

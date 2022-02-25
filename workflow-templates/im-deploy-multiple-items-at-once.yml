@@ -1,4 +1,4 @@
-# Workflow Code: MercifulLlama_v4    DO NOT REMOVE
+# Workflow Code: MercifulLlama_v5    DO NOT REMOVE
 # Purpose:
 #    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.)
 #    but they need each item to be deployed together.
@@ -55,7 +55,7 @@ jobs:
           fetch-depth: 0
 
       - name: Verify Tag Exists
-        uses: im-open/verify-git-ref@v1.0.1
+        uses: im-open/verify-git-ref@v1.1.0
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
 
