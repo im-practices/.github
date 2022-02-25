@@ -48,7 +48,7 @@ env:
   ENVIRONMENT: ${{ github.event.inputs.environment }}
 
 jobs:
-  create-annotatation:
+  create-annotation:
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ env.ENVIRONMENT }}
     steps:
