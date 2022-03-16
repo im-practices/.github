@@ -1,4 +1,4 @@
-# Workflow Code: GratefulTermite_v4    DO NOT REMOVE
+# Workflow Code: GratefulTermite_v5    DO NOT REMOVE
 # Purpose:
 #    Taints a specified terraform resource when someone kicks it off manually.
 #
@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment the taint should be done in. 
+        description: The environment the taint should be done in.
         required: true
         type: choice
         options: # TODO: Update for the environments that are available
@@ -56,7 +56,7 @@ env:
 jobs:
   tf-taint-resource:
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ env.ENVIRONMENT }}
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     defaults:
       run:

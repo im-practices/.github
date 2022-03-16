@@ -1,4 +1,4 @@
-# Workflow Code: MercifulLlama_v5    DO NOT REMOVE
+# Workflow Code: MercifulLlama_v6    DO NOT REMOVE
 # Purpose:
 #    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.)
 #    but they need each item to be deployed together.
@@ -64,7 +64,7 @@ jobs:
   stakeholder-approval:
     needs: [verify-tag-exists]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ env.ENVIRONMENT }} Stakeholder Approval'
+    environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: |
           echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -75,7 +75,7 @@ jobs:
   attestor-approval:
     needs: [verify-tag-exists]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ env.ENVIRONMENT }} Attestor Approval'
+    environment: '${{ github.event.inputs.environment }} Attestor Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: |
           echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."

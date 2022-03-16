@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v9    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v10    DO NOT REMOVE
 # Purpose:
 #    Swaps deployment slots in a specified environment for an Azure App Service
 #    or Function outside of a deployment when someone kicks it off manually.
@@ -46,25 +46,17 @@ on:
 jobs:
   swap-slots:
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ env.ENVIRONMENT }}
+    environment: ${{ github.event.inputs.environment || github.event.client_payload.environment }}
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ env.ENVIRONMENT }} from GitHub Actions' # TODO: Verify this PD Maintenance Window Description
       TARGET_SLOT: 'Production' # TODO: Verify that this is correct.  This is the name azure uses by default.  If you are using a different slot for your main site, update it here
       SOURCE_SLOT: '' # TODO: Add the name of the source slot
       AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function, change this value to functionapp
+      ENVIRONMENT: ${{ github.event.inputs.environment || github.event.client_payload.environment }}
+      OPEN_WINDOW: ${{ github.event.inputs.open-pagerduty-window || github.event.client_payload.open-pagerduty-window }}
 
     steps:
-      - run: |
-          eventName=${{ github.event_name }}
-          if [ "$eventName" == "workflow_dispatch" ]; then
-            echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
-            echo "OPEN_WINDOW=${{ github.event.inputs.open-pagerduty-window }}" >> $GITHUB_ENV
-          elif [ "$eventName" == "repository_dispatch" ]; then
-            echo "ENVIRONMENT=${{ github.event.client_payload.environment }}" >> $GITHUB_ENV
-            echo "OPEN_WINDOW=${{ github.event.client_payload.open-pagerduty-window }}" >> $GITHUB_ENV
-          fi
-
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
 
       # For more information and best practices on the usage and options available

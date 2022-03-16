@@ -1,11 +1,11 @@
-# Workflow Code: NeedyPig_v8    DO NOT REMOVE
-# Purpose: 
-#    Performs a start, stop or restart on an app service in the 
+# Workflow Code: NeedyPig_v9    DO NOT REMOVE
+# Purpose:
+#    Performs a start, stop or restart on an app service in the
 #    specified environment when someone kicks it off manually.
-#    
+#
 # Frequency:
 #    - This workflow should be duplicated once per app service/function in the repo.
-#    
+#
 # Projects to use this Template with:
 #    - Azure App Service or Function (Optional Template)
 #
@@ -46,11 +46,11 @@ env:
 jobs:
   start-stop-restart:
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ env.ENVIRONMENT }}
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     env:
       AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function change the value to 'functionapp'
-      
+
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
 
