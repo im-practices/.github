@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v24    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v25    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform at a specified tag to a specified
 #    environment when someone kicks off the build manually.
@@ -104,7 +104,7 @@ jobs:
   stakeholder-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ env.ENVIRONMENT }} Stakeholder Approval'
+    environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
       - name: Approval Received
@@ -140,7 +140,7 @@ jobs:
   tf-plan:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ env.ENVIRONMENT }}
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
     env:
       PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ env.ENVIRONMENT }} environment from GitHub Actions' # TODO: Verify this description
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
@@ -247,7 +247,7 @@ jobs:
   tf-apply:
     needs: [set-vars, tf-plan, tf-plan-manual-approval]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ env.ENVIRONMENT }}
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     defaults:
       run:

@@ -1,11 +1,11 @@
-# Workflow Code: SpiritedGnat_v7    DO NOT REMOVE
-# Purpose: 
-#    Runs a flyway repair command against an Azure SQL or 
+# Workflow Code: SpiritedGnat_v8    DO NOT REMOVE
+# Purpose:
+#    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
 #
 # Frequency:
 #    - This workflow can be duplicated once per database in the repository.
-#    
+#
 # Projects to use this Template with:
 #    - Azure Sql Database (Optional Template)
 #    - On-Prem Database   (Optional Template)
@@ -44,7 +44,7 @@ env:
 jobs:
   repair-database-migrations:
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ env.ENVIRONMENT }}
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}."
 

@@ -1,15 +1,15 @@
-# Workflow Code: EmpatheticDolphin_v9    DO NOT REMOVE
-# Purpose: 
-#    Creates an ad hoc app insights annotation for a specified 
+# Workflow Code: EmpatheticDolphin_v10    DO NOT REMOVE
+# Purpose:
+#    Creates an ad hoc app insights annotation for a specified
 #    environment when someone kicks it off manually.
-#    
+#
 # Frequency:
 #    - This workflow should only be used once per repository assuming
 #      there is only one app insights instance set up per env
-#    
+#
 # Projects to use this Template with:
 #    - Azure App Service or Function (Optional Template)
-#    - Azure SQL Database            (Optional Template) 
+#    - Azure SQL Database            (Optional Template)
 #    - Terraform                     (Optional Template)
 #
 # TODO: Prerequisites:
@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment the service is in 
+        description: The environment the service is in
         required: true
         default: prod
         type: choice
@@ -50,9 +50,9 @@ env:
 jobs:
   create-annotation:
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ env.ENVIRONMENT }}
+    environment: ${{ github.event.inputs.environment }}
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The event is ${{ github.event.inputs.eventName }}"
+      - run: echo "The current environment is ${{ github.event.inputs.environment }}.  The event is ${{ github.event.inputs.eventName }}"
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
@@ -60,7 +60,7 @@ jobs:
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
-          scope: ${{ env.ENVIRONMENT }}
+          scope: ${{ github.event.inputs.environment }}
         env:
           # This variable is used to upload and download blobs from blob storage
           RESOURCE_GROUP@dev: ''

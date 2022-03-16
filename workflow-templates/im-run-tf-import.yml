@@ -1,4 +1,4 @@
-# Workflow Code: DrearyBuck_v7    DO NOT REMOVE
+# Workflow Code: DrearyBuck_v8    DO NOT REMOVE
 
 # Purpose:
 #    Imports a specified resource into the terraform state when someone kicks it off manually.
@@ -17,10 +17,10 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The environment the import should be done in. 
+        description: The environment the import should be done in.
         required: true
         type: choice
-        options:  # TODO: Update for the environments that are available
+        options: # TODO: Update for the environments that are available
           - dev
           - qa
           - stage
@@ -60,7 +60,7 @@ env:
 jobs:
   tf-import-state:
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ env.ENVIRONMENT }}
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     defaults:
       run:

@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v25    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v26    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -123,7 +123,7 @@ jobs:
   stakeholder-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ env.ENVIRONMENT }} Stakeholder Approval'
+    environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: |
           echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -134,7 +134,7 @@ jobs:
   attestor-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ env.ENVIRONMENT }} Attestor Approval'
+    environment: '${{ github.event.inputs.environment }} Attestor Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: |
           echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -177,7 +177,7 @@ jobs:
   deploy-code:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ env.ENVIRONMENT }}
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30

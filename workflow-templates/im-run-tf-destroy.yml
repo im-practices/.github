@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v4    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v5    DO NOT REMOVE
 # Purpose:
 #    Destroys all the remote objects for a terraform configuration when someone kicks it off manually.
 #
@@ -54,7 +54,7 @@ env:
 jobs:
   tf-destroy:
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ env.ENVIRONMENT }}
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     defaults:
       run:
