@@ -100,7 +100,7 @@ jobs:
       #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
 
       - name: Build Database
-        uses: im-open/build-database-ci-action@v3.0.0
+        uses: im-open/build-database-ci-action@v3.0.3
         with:
           # TODO: These parameters are the most commonly used. They tell the action to create the repo's database on the Action Runner,
           #       validate and run the repo's migration scripts, run tests, and seed data into the database for future needs (like integration tests).
