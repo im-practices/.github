@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v24    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v25    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -290,7 +290,7 @@ jobs:
       # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
       # https://github.com/im-open/octostache-action
-      - uses: im-open/octostache-action@v2.1.1
+      - uses: im-open/octostache-action@v3.0.0
         with:
           variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
           files-with-substitutions: '' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
