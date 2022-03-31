@@ -71,8 +71,9 @@ jobs:
           # TODO: Replace with any files or folders that need to be excluded from the scan.
           # Default list and format at https://github.com/im-open/checkmarx-cli-sast-scan/tree/main#excluding-files-and-folders
           # If you have an existing scan, view the checkmarx build step in TeamCity to see if there were additional exclusions added.
-          exclude-paths: ''
+          # exclude-paths: ''
 
+          # The following are default values for each available input.
           # report-name: 'CheckmarxSASTResults.pdf'
           # sast-high: 0    # This cannot exceed 0 according to our standards
           # sast-medium: 4  # This cannot exceed 4 according to our standards
