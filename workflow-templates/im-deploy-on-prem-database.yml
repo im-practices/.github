@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v15    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v16    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures tags
 #    are valid for production deployments and runs the migrations against an on-prem
@@ -63,6 +63,7 @@ env:
   MIGRATIONS_FOLDER: '' # TODO: Add the path to the migrations folder
   MIGRATIONS_HISTORY_TABLE: 'MigrationHistory' # TODO: Verify this table name
   TIMEZONE: 'america/denver' # TODO: Verify timezone
+  VAULT_URL: 'https://vault.mktp.io:8200/'
 
 jobs:
   verify-tag-exists:
@@ -162,8 +163,6 @@ jobs:
           DB_SERVER_NAME@qa: ''
           DB_SERVER_NAME@stage demo uat: ''
           DB_SERVER_NAME@prod: ''
-          VAULT_URL@dev qa: 'https://vault.dev.mktp.io:8200' # TODO: Update the environments that have secrets stored in the dev Vault
-          VAULT_URL@stage demo uat prod: 'https://vault.mktp.io:8200/' # TODO: Update the environments that have secrets in the prod Vault
 
       - name: AZ Login
         uses: azure/login@v1
@@ -210,6 +209,13 @@ jobs:
           use-integrated-security: 'false'
           username: '${{ steps.vault-secrets.outputs.SQL_AUTH_USERNAME }}'
           password: '${{ steps.vault-secrets.outputs.SQL_AUTH_PASSWORD }}'
+
+      - name: Azure logout
+        if: always() && steps.login.outcome == 'success'
+        run: |
+          az logout
+          az cache purge
+          az account clear
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
