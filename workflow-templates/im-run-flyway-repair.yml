@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v8    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v9    DO NOT REMOVE
 # Purpose:
 #    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
@@ -40,6 +40,7 @@ env:
   DB_SERVER_PORT: '1433' # TODO: Verify that this is correct
   MIGRATIONS_HISTORY_TABLE: 'MigrationHistory' # TODO: Verify this table name
   PATH_TO_MIGRATION_FILES: '' # TODO: Add the path to the migrations folder
+  VAULT_URL: 'https://vault.mktp.io:8200/' # TODO: Remove this if this workflow is run against an azure database
 
 jobs:
   repair-database-migrations:
@@ -53,11 +54,18 @@ jobs:
         with:
           ref: ${{ env.GITHUB_REF }}
 
-      # TODO: If not acting on an azure database, remove this
+      - name: Install Flyway
+        uses: im-open/setup-flyway@v1.0.2
+        with:
+          version: 7.9.2
+
       - name: AZ Login
         id: login
         uses: azure/login@v1
         with:
+          # TODO: If repairing an on prem database's migration history, the Service Principal these credentials are for needs to be given access to login to Vault.
+          #       See this git-er-done article for more information:
+          #       https://github.com/im-practices/git-er-done/blob/main/actions/hashicorp-vault-integration.md#setup
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
       # TODO: Use this for any variables that change per environment
@@ -77,11 +85,13 @@ jobs:
           DB_SERVER_NAME@qa: ''
           DB_SERVER_NAME@stage demo: ''
           DB_SERVER_NAME@prod: ''
+          # TODO: Remove this if this workflow is run against an on-prem database
           AZURE_KEY_VAULT@dev: ''
           AZURE_KEY_VAULT@qa: ''
           AZURE_KEY_VAULT@stage demo: ''
           AZURE_KEY_VAULT@prod: ''
 
+      # TODO: Remove this step if this workflow is run against an on-prem database
       # Get the Azure SQL Creds from Key Vault
       - name: Get Azure SQL Credentials
         run: |
@@ -94,10 +104,30 @@ jobs:
           echo "SQL_USER=$sqlUser" >> $GITHUB_ENV
           echo "SQL_PASSWORD=$sqlPassword" >> $GITHUB_ENV
 
-      - name: Install Flyway
-        uses: im-open/setup-flyway@v1.0.2
-        with:
-          version: 7.9.2
+      # TODO: Uncomment this step if this workflow is run against an on-prem database
+      # - name: Get Vault Token
+      #   id: vault_token
+      #   uses: im-open/get-vault-token-for-azure-user@v1.0.0
+      #   with:
+      #     # TODO: Add the Azure Auth Method Role that was setup in Vault and has access to your secrets.
+      #     # See this git-er-done article for more information:
+      #     # https://github.com/im-practices/git-er-done/blob/main/actions/hashicorp-vault-integration.md#setup
+      #     vault-role: ''
+      #     vault-url: '${{ env.VAULT_URL }}'
+
+      # TODO: Uncomment this step if this workflow is run against an on-prem database
+      # - name: Import Secrets
+      #   id: vault-secrets
+      #   uses: hashicorp/vault-action@v2.3.1
+      #   with:
+      #     url: '${{ env.VAULT_URL }}'
+      #     token: '${{ steps.vault_token.outputs.client_token }}'
+      #     # Warning! The formatting on the secrets parameter is intentional. The spaces, pipe, and semi-colon. Every secret, except the last one, needs a semi-colon at the end of the line.
+      #     # See the action's documentation for more information: https://github.com/hashicorp/vault-action
+      #     # TODO: Update <role-name> (including the brackets) with your database Vault role name (see https://github.com/im-practices/git-er-done/blob/main/actions/hashicorp-vault-integration.md#setup).
+      #     secrets: |
+      #       database/static-creds/<role-name> username | SQL_USERNAME ;
+      #       database/static-creds/<role-name> password | SQL_PASSWORD
 
       - name: Flyway repair
         uses: im-open/run-flyway-command@v1.2.1
@@ -109,10 +139,10 @@ jobs:
           migration-history-table: ${{ env.MIGRATIONS_HISTORY_TABLE }}
           migration-files-path: ${{ env.PATH_TO_MIGRATION_FILES }}
           use-integrated-security: false
+          # These will be set by the step above this one, either by querying Azure Key Vault for Azure db's or Hashicorp Vault for on-prem db's
           username: '${{ env.SQL_USER }}'
           password: '${{ env.SQL_PASSWORD }}'
 
-      # TODO: If not acting on an azure database, remove this
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'
         run: |
