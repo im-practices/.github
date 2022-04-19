@@ -1,0 +1,5 @@
+{
+  "name": "Test and Import SAM YAML",
+  "description": "Workflow template for SAM YAML and Stewarship Mapping",
+  "iconName": "im_test"
+}
