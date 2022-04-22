@@ -21,20 +21,24 @@ on:
   pull_request:
     types: [closed]
     paths:
-      - './sam.yaml' # TODO - Verify sam.yaml file name
+      - 'sam.yaml' # TODO - Verify sam.yaml file name and path. This path is for the a sam.yaml file located at the root of the proejct
 
 jobs:
   sam-yaml:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO: verify default branch name
+    name: Test and Import SAM YAML
+    if: github.event.pull_request.merged == true && github.base_ref == 'main'
+
+    runs-on: [ubuntu-latest]
+
     steps:
       - name: Checkout Repository
-        uses: actions/checkokut@v2
+        uses: actions/checkout@v2
 
       - name: Validate SAM.yaml file
         id: parse-yaml
         uses: 'im-open/yaml-file-validation@v1.1.0'
         with:
-          yaml-file-path: './sam.yaml' # TODO: Verify name, case and extension of your sam.yml file
+          yaml-file-path: './sam.yaml' #TOOD - verify sam.yaml file name and path, it's different than the trigger filter path
           schema-file-path: 'SAM'
           output-json: true
           # TODO: The information return level can be set to information, warn, or failure
