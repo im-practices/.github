@@ -12,7 +12,8 @@
             { "name": "im-build-cleanup-releases-for-branches.yml", "canHaveMultiples": false},
             { "name": "im-deploy-az-swap-app-slots.yml", "canHaveMultiples": true},
             { "name": "im-run-start-stop-restart-azure-app.yml", "canHaveMultiples": true},
-            { "name": "im-run-add-or-update-az-keyvault-secret.yml", "canHaveMultiples": false}
+            { "name": "im-run-add-or-update-az-keyvault-secret.yml", "canHaveMultiples": false},
+            { "name": "im-test-sam-yaml.yml", "canHaveMultiples": false }
         ]
     },
     "bc-api": {
@@ -28,7 +29,8 @@
             { "name": "im-build-cleanup-releases-for-branches.yml", "canHaveMultiples": false},
             { "name": "im-deploy-az-swap-app-slots.yml", "canHaveMultiples": true},
             { "name": "im-run-start-stop-restart-azure-app.yml", "canHaveMultiples": true},
-            { "name": "im-run-add-or-update-az-keyvault-secret.yml", "canHaveMultiples": false}
+            { "name": "im-run-add-or-update-az-keyvault-secret.yml", "canHaveMultiples": false},
+            { "name": "im-test-sam-yaml.yml", "canHaveMultiples": false }
         ]
     },
     "sql-database": {
@@ -40,7 +42,8 @@
         ],
         "optionalTemplates": [
             { "name": "im-run-flyway-repair.yml", "canHaveMultiples": true},
-            { "name": "im-run-annotate-app-insights.yml", "canHaveMultiples": false}
+            { "name": "im-run-annotate-app-insights.yml", "canHaveMultiples": false},
+            { "name": "im-test-sam-yaml.yml", "canHaveMultiples": false }
         ]
     },
     "azure-infrastructure": {
@@ -58,7 +61,8 @@
             { "name": "im-run-tf-import.yml", "canHaveMultiples": false},
             { "name": "im-run-tf-taint.yml", "canHaveMultiples": false},
             { "name": "im-run-add-or-update-az-keyvault-secret.yml", "canHaveMultiples": false},
-            { "name": "im-run-tf-destroy.yml", "canHaveMultiples": false}
+            { "name": "im-run-tf-destroy.yml", "canHaveMultiples": false},
+            { "name": "im-test-sam-yaml.yml", "canHaveMultiples": false }
         ]
     }
 }
