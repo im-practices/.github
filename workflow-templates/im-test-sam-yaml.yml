@@ -14,7 +14,7 @@
 # TODO: Prerequisites:
 #    - Create a sam.yaml file that describes the Bounded Context projet information
 
-name: Test SAM.yaml and Import to Stewardship Mapping
+name: SAM.yaml Test and Import to Stewardship Mapping
 
 on:
   # After a PR is merged, the workflow will check for changes to the SAM YAML file in the root directory
