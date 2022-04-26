@@ -1,5 +1,5 @@
 {
-  "name": "Test and Import SAM YAML",
-  "description": "Workflow template for SAM YAML and Stewarship Mapping",
+  "name": "Test - Validate and Export SAM YAML",
+  "description": "Workflow template for validating the sam.yaml file and exporting the metadata to Stewarship Mapping.",
   "iconName": "im_test"
 }

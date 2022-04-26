@@ -1,6 +1,6 @@
 # Workflow Code: DigitalWerewolf_v1    DO NOT REMOVE
 # Purpose:
-#    Runs the SAM YAML Validation action and then imports the
+#    Runs the SAM YAML Validation action and exports the
 #    output JSON into the Stewardship Mapping document repository
 #
 # Frequency:
@@ -12,20 +12,21 @@
 #       for more information
 #
 # TODO: Prerequisites:
-#    - Create a sam.yaml file that describes the Bounded Context projet information
+#    - Create a sam.yaml file that describes the Bounded Context project information
 
-name: SAM.yaml Test and Import to Stewardship Mapping
+name: SAM.yaml Validate and Export to Stewardship Mapping
 
 on:
   # After a PR is merged, the workflow will check for changes to the SAM YAML file in the root directory
   pull_request:
     types: [closed]
     paths:
+      - '.github/workflows/im-test-sam-yaml.yml'
       - 'sam.yaml' # TODO - Verify sam.yaml file name and path. This path is for the a sam.yaml file located at the root of the proejct
 
 jobs:
   sam-yaml:
-    name: Test and Import SAM YAML
+    name: Test and Export SAM YAML
     if: github.event.pull_request.merged == true && github.base_ref == 'main'
 
     runs-on: [ubuntu-latest]
@@ -38,15 +39,14 @@ jobs:
         id: parse-yaml
         uses: 'im-open/yaml-file-validation@v1.1.0'
         with:
-          yaml-file-path: './sam.yaml' #TOOD - verify sam.yaml file name and path, it's different than the trigger filter path
+          yaml-file-path: './sam.yaml' # TODO - verify sam.yaml file name, extension and path, this might be slightly different than the trigger filter because it requires a relative path.
           schema-file-path: 'SAM'
           output-json: true
-          # TODO: The information return level can be set to information, warn, or failure
-          # log-level: failure
+          # log-level: failure # TODO: The information return level can be set to information, warn, or failure
 
       - name: Import SAM JSON into Stewardship Mapping
         id: push-sam-json
         uses: 'im-open/import-stewardship-sam-json@v1.0.0'
         with:
           sam-json: ${{ steps.parse-yaml.outputs.json-output }}
-          account-key: ${{ secrets.STEWARDSHIP_SAM_IMPORT_TOKEN }}
+          account-key: ${{ secrets.STEWARDSHIP_SAM_IMPORT_TOKEN }} # This is an org-level secret
