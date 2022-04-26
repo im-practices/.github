@@ -18,17 +18,17 @@ name: SAM.yaml Validate and Export to Stewardship Mapping
 
 on:
   # After a PR is merged, the workflow will check for changes to the SAM YAML file in the root directory
-  pull_request:
-    types: [closed]
+  push:
+    branches:
+      - 'main'
     paths:
       - '.github/workflows/im-test-sam-yaml.yml'
-      - 'sam.yaml' # TODO - Verify sam.yaml file name and path. This path is for the a sam.yaml file located at the root of the proejct
+      - 'sam.yaml' # TODO - Verify sam.yaml file name and path. This path is for a sam.yaml file located at the root of the proejct
+  workflow_dispatch:
 
 jobs:
   sam-yaml:
-    name: Test and Export SAM YAML
-    if: github.event.pull_request.merged == true && github.base_ref == 'main'
-
+    name: Validate and Export SAM YAML
     runs-on: [ubuntu-latest]
 
     steps:
@@ -44,7 +44,7 @@ jobs:
           output-json: true
           # log-level: failure # TODO: The information return level can be set to information, warn, or failure
 
-      - name: Import SAM JSON into Stewardship Mapping
+      - name: Export SAM JSON to Stewardship Mapping
         id: push-sam-json
         uses: 'im-open/import-stewardship-sam-json@v1.0.0'
         with:
