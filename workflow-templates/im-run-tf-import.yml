@@ -1,4 +1,4 @@
-# Workflow Code: DrearyBuck_v8    DO NOT REMOVE
+# Workflow Code: DrearyBuck_v9    DO NOT REMOVE
 
 # Purpose:
 #    Imports a specified resource into the terraform state when someone kicks it off manually.
@@ -77,7 +77,7 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.0.3
+        uses: im-open/setup-deploy-keys@v1.0.5
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
