@@ -23,7 +23,7 @@ on:
       - 'main'
     paths:
       - '.github/workflows/im-test-sam-yaml.yml'
-      - 'sam.yaml' # TODO - Verify sam.yaml file name and path. This path is for a sam.yaml file located at the root of the proejct
+      - 'sam.yaml' # TODO - Verify sam.yaml file name, extension and path. This path is for a sam.yaml file located at the root of the project.  Note it does not start with '/' nor './'.
   workflow_dispatch:
 
 jobs:
