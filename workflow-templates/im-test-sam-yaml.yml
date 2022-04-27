@@ -46,7 +46,7 @@ jobs:
 
       - name: Export SAM JSON to Stewardship Mapping
         id: push-sam-json
-        uses: 'im-open/import-stewardship-sam-json@v1.0.0'
+        uses: 'im-open/import-stewardship-sam-json@v1.0.1'
         with:
           sam-json: ${{ steps.parse-yaml.outputs.json-output }}
           account-key: ${{ secrets.STEWARDSHIP_SAM_IMPORT_TOKEN }} # This is an org-level secret
