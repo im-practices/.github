@@ -1,4 +1,4 @@
-# Workflow Code: GratefulTermite_v5    DO NOT REMOVE
+# Workflow Code: GratefulTermite_v6    DO NOT REMOVE
 # Purpose:
 #    Taints a specified terraform resource when someone kicks it off manually.
 #
@@ -73,7 +73,7 @@ jobs:
 
       # Allows pulling modules from the respective github repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.0.3
+        uses: im-open/setup-deploy-keys@v1.0.5
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
