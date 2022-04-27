@@ -5,8 +5,8 @@
             { "name": "im-deploy-az-app-manually.yml", "canHaveMultiples": true},
             { "name": "im-deploy-multiple-items-at-once.yml", "canHaveMultiples": false},
             { "name": "im-deploy-cleanup-automated-board.yml", "canHaveMultiples": false},
-            { "name": "im-test-checkmarx-cli-sast-scan.yml", "canHaveMultiples": false}
-
+            { "name": "im-test-checkmarx-cli-sast-scan.yml", "canHaveMultiples": false},
+            { "name": "im-test-sam-yaml.yml", "canHaveMultiples": false }
         ],
         "optionalTemplates": [
             { "name": "im-build-cleanup-releases-for-branches.yml", "canHaveMultiples": false},
@@ -21,8 +21,8 @@
             { "name": "im-deploy-az-app-manually.yml", "canHaveMultiples": true},
             { "name": "im-deploy-multiple-items-at-once.yml", "canHaveMultiples": false},
             { "name": "im-deploy-cleanup-automated-board.yml", "canHaveMultiples": false},
-            { "name": "im-test-checkmarx-cli-sast-scan.yml", "canHaveMultiples": false}
-
+            { "name": "im-test-checkmarx-cli-sast-scan.yml", "canHaveMultiples": false},
+            { "name": "im-test-sam-yaml.yml", "canHaveMultiples": false }
         ],
         "optionalTemplates": [
             { "name": "im-build-cleanup-releases-for-branches.yml", "canHaveMultiples": false},
@@ -36,7 +36,8 @@
             { "name": "im-build-db-ci.yml", "canHaveMultiples": false},
             { "name": "im-build-increment-version-on-merge.yml", "canHaveMultiples": false},
             { "name": "im-deploy-az-database.yml", "canHaveMultiples": true},
-            { "name": "im-deploy-cleanup-automated-board.yml", "canHaveMultiples": false}
+            { "name": "im-deploy-cleanup-automated-board.yml", "canHaveMultiples": false},
+            { "name": "im-test-sam-yaml.yml", "canHaveMultiples": false }
         ],
         "optionalTemplates": [
             { "name": "im-run-flyway-repair.yml", "canHaveMultiples": true},
@@ -51,7 +52,8 @@
             { "name": "im-deploy-tf-manual-apply.yml", "canHaveMultiples": false},
             { "name": "im-deploy-cleanup-automated-board.yml", "canHaveMultiples": false},
             { "name": "im-run-validate-deployed-terraform.yml", "canHaveMultiples": false},
-            { "name": "im-run-unlock-tf-state.yml", "canHaveMultiples": false}
+            { "name": "im-run-unlock-tf-state.yml", "canHaveMultiples": false},
+            { "name": "im-test-sam-yaml.yml", "canHaveMultiples": false }
         ],
         "optionalTemplates": [
             { "name": "im-run-annotate-app-insights.yml", "canHaveMultiples": false},

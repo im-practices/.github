@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v26    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v27    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -59,7 +59,7 @@ jobs:
             const prMergedToMain = prMerged && targetRef === 'main';
             const isPreRelease = !prMergedToMain
 
-            # For a detailed explanation of why we use different refs for different scenarios 
+            # For a detailed explanation of why we use different refs for different scenarios
             # see https://docs.github.com/en/rest/reference/pulls#get-a-pull-request
             const refToBuildAndTag = prMergedToMain ? mergeRef : sourceRef;
 
@@ -305,34 +305,9 @@ jobs:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}
           path: ${{ env.CODE_COVERAGE_DIR_JEST }}
 
-  validate-sam-yaml:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    needs: [examine-triggers]
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
-
-    env:
-      REF_TO_BUILD_AND_TAG: needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG
-
-    outputs:
-      validate: ${{ steps.sam-yaml.outputs.validation-outcome }}
-
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ env.REF_TO_BUILD_AND_TAG }}
-
-      - name: Validate SAM.yaml
-        continue-on-error: true
-        id: sam-yaml
-        uses: im-open/yaml-file-validation@v1.0.5
-        with:
-          yaml-file-path: ./SAM.yml # TODO: Verify name, case and extension of your sam.yml file
-          schema-file-path: 'SAM'
-
   build-deployment-artifacts:
     runs-on: ubuntu-latest
-    needs: [examine-triggers, dotnet-build-and-test, jest, validate-sam-yaml] # TODO: Update if any jobs were added/removed/renamed (usually jest has been removed)
+    needs: [examine-triggers, dotnet-build-and-test, jest] # TODO: Update if any jobs were added/removed/renamed (usually jest has been removed)
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true' && needs.examine-triggers.outputs.CREATE_RELEASE
 
     defaults:
@@ -470,12 +445,7 @@ jobs:
   finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
     needs: # TODO: Update the needs [] list if any jobs were added/removed/renamed
-      [
-        dotnet-build-and-test,
-        jest,
-        validate-sam-yaml,
-        build-deployment-artifacts,
-      ]
+      [dotnet-build-and-test, jest, build-deployment-artifacts]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - uses: im-open/workflow-conclusion@v2.0.0

@@ -1,0 +1,52 @@
+# Workflow Code: DigitalWerewolf_v1    DO NOT REMOVE
+# Purpose:
+#    Runs the SAM YAML Validation action and exports the
+#    output JSON into the Stewardship Mapping document repository
+#
+# Frequency:
+#    - This workflow should only be used once per repository
+#
+# Projects to use this Template with:
+#    -  Any project that needs to report SAM information for Stewardship Mapping
+#       See https://github.com/im-practices/master-architecture-plan/blob/main/Implementation%20Decisions/adr-015_system_architecture_metadata.md
+#       for more information
+#
+# TODO: Prerequisites:
+#    - Create a sam.yaml file that describes the Bounded Context project information
+
+name: SAM.yaml Validate and Export to Stewardship Mapping
+
+on:
+  # After a PR is merged, the workflow will check for changes to the SAM YAML file in the root directory
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '.github/workflows/im-test-sam-yaml.yml'
+      - 'sam.yaml' # TODO - Verify sam.yaml file name, extension and path. This path is for a sam.yaml file located at the root of the project.  Note it does not start with '/' nor './'.
+  workflow_dispatch:
+
+jobs:
+  sam-yaml:
+    name: Validate and Export SAM YAML
+    runs-on: [ubuntu-latest]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Validate SAM.yaml file
+        id: parse-yaml
+        uses: 'im-open/yaml-file-validation@v1.1.0'
+        with:
+          yaml-file-path: './sam.yaml' # TODO - verify sam.yaml file name, extension and path, this might be slightly different than the trigger filter because it requires a relative path.
+          schema-file-path: 'SAM'
+          output-json: true
+          # log-level: failure # TODO: The information return level can be set to information, warn, or failure
+
+      - name: Export SAM JSON to Stewardship Mapping
+        id: push-sam-json
+        uses: 'im-open/import-stewardship-sam-json@v1.0.1'
+        with:
+          sam-json: ${{ steps.parse-yaml.outputs.json-output }}
+          account-key: ${{ secrets.STEWARDSHIP_SAM_IMPORT_TOKEN }} # This is an org-level secret

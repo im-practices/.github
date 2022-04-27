@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v21    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v22    DO NOT REMOVE
 # Purpose:
 #    Automatically builds the project and runs tests with code coverage. If
 #    everything is green, a new semantic version is calculated and a new package
@@ -60,29 +60,9 @@ jobs:
           echo "IS_MERGE_TO_MAIN=true" >> $GITHUB_ENV
           echo "PRERELEASE=false" >> $GITHUB_ENV
 
-  # TODO: If this repo contains another workflow that validates sam.yaml, this job can be removed.  If removing, update any needs[] that point to this.
-  validate-sam-yaml:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    needs: [examine-triggers]
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
-
-    outputs:
-      validate: ${{ steps.sam-yaml.outputs.validation-outcome }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Validate SAM.yaml
-        id: sam-yaml
-        uses: im-open/yaml-file-validation@v1.0.5
-        with:
-          yaml-file-path: ./SAM.yml # TODO: Verify name, case and extension of your sam.yml file
-          schema-file-path: 'SAM'
-
   build-test-publish:
     runs-on: [self-hosted, ubuntu-20.04] # TODO: decide whether to run on a self-hosted runner. It's only necessary if pushing the package to Artifactory.
-    needs: [examine-triggers, validate-sam-yaml]
+    needs: [examine-triggers]
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
@@ -261,7 +241,7 @@ jobs:
 
   finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
-    needs: [examine-triggers, build-test-publish, validate-sam-yaml]
+    needs: [examine-triggers, build-test-publish]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     env:
       NEXT_VERSION: ${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}

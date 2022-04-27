@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v16    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v17    DO NOT REMOVE
 # Purpose:
 #    Automatically calculates the next semantic version, runs an npm ci, an npm run tests
 #    if there is one, an npm publish and then pushes a latest tag for main builds. When the
@@ -62,30 +62,9 @@ jobs:
           echo "PRERELEASE=false" >> $GITHUB_ENV
           echo "DIST_TAG=latest" >> $GITHUB_ENV
 
-  # TODO: If this repo contains another workflow that validates sam.yaml, this job can be removed.  If removing, update any needs[] that point to this.
-  validate-sam-yaml:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    needs: [examine-triggers]
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
-
-    outputs:
-      validate: ${{ steps.sam-yaml.outputs.validation-outcome }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Validate SAM.yaml
-        continue-on-error: true
-        id: sam-yaml
-        uses: im-open/yaml-file-validation@v1.0.5
-        with:
-          yaml-file-path: ./SAM.yml # TODO: Verify name, case and extension of your sam.yml file
-          schema-file-path: 'SAM'
-
   build-and-publish-to-gpr:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: [examine-triggers, validate-sam-yaml]
+    needs: [examine-triggers]
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
     env:
@@ -168,7 +147,7 @@ jobs:
 
   finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
-    needs: [examine-triggers, validate-sam-yaml, build-and-publish-to-gpr]
+    needs: [examine-triggers, build-and-publish-to-gpr]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     env:
       NEXT_VERSION: ${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}
