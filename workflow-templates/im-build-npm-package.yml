@@ -78,6 +78,7 @@ jobs:
     env:
       IS_PRERELEASE: ${{ needs.examine-triggers.outputs.IS_PRERELEASE }}
       DIST_TAG: ${{ needs.examine-triggers.outputs.DIST_TAG }}
+      REF_TO_BUILD_AND_TAG: ${{ needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG }}
 
     defaults:
       run:
