@@ -33,7 +33,6 @@ on:
       - ''
 
 env:
-  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret # TODO: this env can be removed if the project does not contain an .npmrc file that needs this value
   TIMEZONE: 'america/denver'
   REPO_URL: '${{ github.server_url }}/${{ github.repository }}'
 
