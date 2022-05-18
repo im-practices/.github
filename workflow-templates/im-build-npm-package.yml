@@ -170,7 +170,6 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     env:
       NEXT_VERSION: ${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}
-      CREATE_RELEASE: ${{ needs.examine-triggers.outputs.CREATE_RELEASE }}
 
     steps:
       - uses: im-open/workflow-conclusion@v2.0.2
