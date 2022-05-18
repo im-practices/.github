@@ -164,7 +164,7 @@ jobs:
 
       # TODO: copy the step above for each additional package
 
-finish-build:
+  finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
     needs: [examine-triggers, build-and-publish-to-gpr]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
