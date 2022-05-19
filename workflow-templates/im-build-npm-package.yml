@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v18    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v19    DO NOT REMOVE
 # Purpose:
 #    Automatically calculates the next semantic version, runs an npm ci, an npm run tests
 #    if there is one, an npm publish and then pushes a latest tag for main builds. When the
@@ -33,34 +33,42 @@ on:
       - ''
 
 env:
-  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret # TODO: this env can be removed if the project does not contain an .npmrc file that needs this value
   TIMEZONE: 'america/denver'
-  REPO_URL: 'https://github.com/${{ github.repository }}'
+  REPO_URL: '${{ github.server_url }}/${{ github.repository }}'
 
 jobs:
   examine-triggers:
     runs-on: ubuntu-latest
     outputs:
       CONTINUE_WORKFLOW: ${{ env.CONTINUE_WORKFLOW }}
-      IS_MERGE_TO_MAIN: ${{ env.IS_MERGE_TO_MAIN }}
-      PRERELEASE: ${{ env.PRERELEASE }}
+      REF_TO_BUILD_AND_TAG: ${{ env.REF_TO_BUILD_AND_TAG }}
+      CREATE_RELEASE: ${{ env.CREATE_RELEASE }}
+      IS_PRERELEASE: ${{ env.IS_PRERELEASE }}
       DIST_TAG: ${{ env.DIST_TAG }}
 
     steps:
-      - run: |
-          echo "CONTINUE_WORKFLOW=true" >> $GITHUB_ENV
-          echo "IS_MERGE_TO_MAIN=false" >> $GITHUB_ENV
-          echo "PRERELEASE=true" >> $GITHUB_ENV
-          echo "DIST_TAG=${{ github.head_ref }}" >> $GITHUB_ENV
-
-      - if: github.event.action == 'closed' && github.event.pull_request.merged == false
-        run: echo "CONTINUE_WORKFLOW=false" >> $GITHUB_ENV
-
-      - if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO: verify default branch name
-        run: |
-          echo "IS_MERGE_TO_MAIN=true" >> $GITHUB_ENV
-          echo "PRERELEASE=false" >> $GITHUB_ENV
-          echo "DIST_TAG=latest" >> $GITHUB_ENV
+      - name: Set default env variables
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const targetRef = '${{ github.base_ref }}';
+            const sourceRef = '${{ github.head_ref }}';
+            const mergeRef = '${{ github.ref }}';
+            const prIsDraft = '${{ github.event.pull_request.draft }}' === 'true';
+            const prClosed = '${{ github.event.action }}' === 'closed';
+            const prMerged = prClosed && '${{ github.event.pull_request.merged }}' === 'true';
+            const prMergedToMain = prMerged && targetRef === 'main';
+            const isPreRelease = !prMergedToMain;
+            // For a detailed explanation of why we use different refs for different scenarios 
+            // see https://docs.github.com/en/rest/reference/pulls#get-a-pull-request
+            const refToBuildAndTag = prMergedToMain ? mergeRef : sourceRef;
+            const continueWorkflow = prClosed && !prMerged ? false : true;
+            const doTagRelease = continueWorkflow && !prIsDraft ? true :  false;
+            core.exportVariable('IS_PRERELEASE', isPreRelease);
+            core.exportVariable('REF_TO_BUILD_AND_TAG', refToBuildAndTag);
+            core.exportVariable('CONTINUE_WORKFLOW', continueWorkflow);
+            core.exportVariable('CREATE_RELEASE', doTagRelease);
+            core.exportVariable('DIST_TAG', prMergedToMain ? 'latest' : sourceRef)
 
   build-and-publish-to-gpr:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
@@ -68,9 +76,9 @@ jobs:
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
     env:
-      IS_MERGE_TO_MAIN: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
-      PRERELEASE: ${{ needs.examine-triggers.outputs.PRERELEASE }}
+      IS_PRERELEASE: ${{ needs.examine-triggers.outputs.IS_PRERELEASE }}
       DIST_TAG: ${{ needs.examine-triggers.outputs.DIST_TAG }}
+      REF_TO_BUILD_AND_TAG: ${{ needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG }}
 
     defaults:
       run:
@@ -84,10 +92,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
+          ref: ${{ env.REF_TO_BUILD_AND_TAG }}
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 12 # TODO: verify node version
+          node-version: 16 # TODO: verify node version
           registry-url: https://npm.pkg.github.com/
 
       # TODO: If the project contains dependencies to other npm packages in GitHub's npm package registry, uncomment this step, otherwise delete
@@ -101,7 +110,7 @@ jobs:
         id: version
         uses: im-open/git-version-lite@v2.0.8
         with:
-          calculate-prerelease-version: ${{ env.PRERELEASE }}
+          calculate-prerelease-version: ${{ env.IS_PRERELEASE }}
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
           tag-prefix: 'none' # TODO: verify your prefix, the new ci workflows add v automatically but npm packages typically won't have a prefix
 
@@ -122,28 +131,38 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
 
-      - name: Create a tag for main builds
-        uses: actions/github-script@v4
-        if: ${{ env.IS_MERGE_TO_MAIN }} == 'true'
+      - name: Create GitHub Tag and Release
+        if: needs.examine-triggers.outputs.CREATE_RELEASE == 'true'
+        id: create_release
+        uses: im-open/create-release@v3.0.0
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            await github.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: `refs/tags/${{ steps.version.outputs.NEXT_VERSION }}`,
-              sha: context.sha
-            });
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          delete-existing-release: true # Handy when you hit 're-run jobs' on a workflow run
+          tag-name: ${{ steps.version.outputs.NEXT_VERSION }}
+          prerelease: ${{ env.IS_PRERELEASE }}
+          commitish: ${{ env.REF_TO_BUILD_AND_TAG }}
 
-      - name: Cleanup pre-release package versions
-        if: env.IS_MERGE_TO_MAIN == 'true'
+  cleanup-prereleases:
+    if: always() && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup the branch pre-releases for all closed PRs
+        uses: im-open/delete-prereleases-for-branch@v1.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          branch-name: ${{ github.head_ref }}
+
+      - name: Cleanup pre-release packages
+        if: always()
         uses: im-open/delete-branch-package-versions@v1.0.4
         with:
           github-token: ${{ secrets.GH_PACKAGES_TOKEN }} # This is a special org-level secret that needs to be authorized for this repo
-          organization: '' # TODO: Add the organization this repo is in
+          organization: ${{ github.repository_owner }}
           branch-name: ${{ github.head_ref }}
           package-type: 'npm'
           package-name: '' # TODO: Add the name of the package (the base name without any versions, like screen or via-scripts)
+
+      # TODO: copy the step above for each additional package
 
   finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
@@ -151,17 +170,12 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     env:
       NEXT_VERSION: ${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}
-      IS_MERGE_TO_MAIN: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
 
     steps:
       - uses: im-open/workflow-conclusion@v2.0.2
         id: conclusion
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          additional-conclusions: |
-            [
-              { "name": "sam.yaml validation", "conclusion" : "${{ needs.validate-sam-yaml.outputs.validate }}" }
-            ]
 
       - name: Send Status to Teams
         if: always()
@@ -181,20 +195,17 @@ jobs:
             ]
 
       - name: Comment on PR with version ${{ env.NEXT_VERSION }}
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
           script: |
             let nextVersion = '${{ env.NEXT_VERSION }}';
-            let isMergeToMain = '${{ env.IS_MERGE_TO_MAIN }}' == 'true';
 
             let tagText = '- Tag - N/A';
             let testPackageText = '';
             if (nextVersion && nextVersion.length > 0) {
-              tagText =  isMergeToMain ?
-                `- [Tag - ${nextVersion}](${{ env.REPO_URL }}/releases/tag/${nextVersion})` :
-                `- Next Version - ${nextVersion}`;
+              tagText =  `- [Tag - ${nextVersion}](${{ env.REPO_URL }}/releases/tag/${nextVersion})`;
               testPackageText = `- To test this version try running:
               \`\`\`bash
               npm install @<org>/<package-name>@${nextVersion} # TODO: Replace <org>/<package-name> with actual values
@@ -205,8 +216,8 @@ jobs:
             const commentBody = `
             - [Workflow Run - ${{ steps.conclusion.outputs.workflow_conclusion }}](${{ env.REPO_URL }}/actions/runs/${{ github.run_id }})
             ${tagText}
-            ${testPackageText}
-              `;
+            ${testPackageText}`;
+
             github.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
