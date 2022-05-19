@@ -152,7 +152,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           branch-name: ${{ github.head_ref }}
 
-      - name: Cleanup start-project pre-release packages
+      - name: Cleanup pre-release packages
         if: always()
         uses: im-open/delete-branch-package-versions@v1.0.4
         with:
