@@ -345,8 +345,7 @@ jobs:
               { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.test }}" },
               { "name": "dotnet coverage", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.coverage }}" },
               { "name": "jest test", "conclusion" : "${{ needs.jest.outputs.test }}" },
-              { "name": "jest coverage", "conclusion" : "${{ needs.jest.outputs.coverage }}" },
-              { "name": "sam.yaml validation", "conclusion" : "${{ needs.validate-sam-yaml.outputs.validate }}" }
+              { "name": "jest coverage", "conclusion" : "${{ needs.jest.outputs.coverage }}" }
             ]
 
       - name: Do not create a release if there have been failures
@@ -458,8 +457,7 @@ jobs:
               { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.test }}" },
               { "name": "dotnet coverage", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.coverage }}" },
               { "name": "jest test", "conclusion" : "${{ needs.jest.outputs.test }}" },
-              { "name": "jest coverage", "conclusion" : "${{ needs.jest.outputs.coverage }}" },
-              { "name": "sam.yaml validation", "conclusion" : "${{ needs.validate-sam-yaml.outputs.validate }}" }
+              { "name": "jest coverage", "conclusion" : "${{ needs.jest.outputs.coverage }}" }
             ]
 
       - name: Send Status to Teams
