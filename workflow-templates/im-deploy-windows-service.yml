@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v20    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v21    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -68,13 +68,13 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     outputs:
-      WINDOWS_SERVER: ${{ steps.windows-server.outputs.WINDOWS_SERVER }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
+      ON_PREM_WINDOWS_SERVER: ${{ steps.windows-server.outputs.ON_PREM_WINDOWS_SERVER }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
       SERVICE_NAME: ${{ steps.windows-server.outputs.SERVICE_NAME }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_NAME }}
       SERVICE_USER_NAME: ${{ steps.windows-server.outputs.SERVICE_USER_NAME }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_USER_NAME }}
       SERVICE_USER_SECRET: ${{ steps.windows-server.outputs.SERVICE_USER_SECRET }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_USER_SECRET }}
       SERVICE_PATH: ${{ steps.windows-server.outputs.SERVICE_PATH }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_PATH }}
-      WINDOWS_SERVER_SERVICE_USER: ${{ steps.windows-server.outputs.WINDOWS_SERVER_SERVICE_USER }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
-      WINDOWS_SERVER_SERVICE_PASSWORD: ${{ steps.windows-server.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
+      ON_PREM_DEPLOYMENT_SA_ID: ${{ steps.windows-server.outputs.ON_PREM_DEPLOYMENT_SA_ID }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
+      ON_PREM_DEPLOYMENT_SA_SECRET: ${{ steps.windows-server.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
     steps:
       - name: Checkout Repository
@@ -101,13 +101,15 @@ jobs:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # TODO: Fill in the windows-server and remove the environments that are not used.
-          WINDOWS_SERVER@dev: ''
-          WINDOWS_SERVER@qa: ''
-          WINDOWS_SERVER@stage: ''
-          WINDOWS_SERVER@demo: ''
-          WINDOWS_SERVER@uat: ''
-          WINDOWS_SERVER@prod: ''
+          # TODO: Fill in the iis-server and remove the environments that are not used.
+          # This should be a FQDN name (on-prem-server.extendhealth.com) for the DNS request
+          # to resolve correctly
+          ON_PREM_WINDOWS_SERVER@dev: ''
+          ON_PREM_WINDOWS_SERVER@qa: ''
+          ON_PREM_WINDOWS_SERVER@stage: ''
+          ON_PREM_WINDOWS_SERVER@demo: ''
+          ON_PREM_WINDOWS_SERVER@uat: ''
+          ON_PREM_WINDOWS_SERVER@prod: ''
           # TODO: Fill in the service-name and remove the environments that are not used.
           SERVICE_NAME@dev: ''
           SERVICE_NAME@qa: ''
@@ -122,20 +124,21 @@ jobs:
           SERVICE_PATH@demo: ''
           SERVICE_PATH@uat: ''
           SERVICE_PATH@prod: ''
-          # TODO: Fill in the windows-server-service-user for WinRm access to the Windows machine and remove the environments that are not used.
-          WINDOWS_SERVER_SERVICE_USER@dev: ''
-          WINDOWS_SERVER_SERVICE_USER@qa: ''
-          WINDOWS_SERVER_SERVICE_USER@stage: ''
-          WINDOWS_SERVER_SERVICE_USER@demo: ''
-          WINDOWS_SERVER_SERVICE_USER@uat: ''
-          WINDOWS_SERVER_SERVICE_USER@prod: ''
+          # TODO: Fill in the on-prem-deployment-sa-id for WinRm access to the IIS Server and remove the environments that are not used.
+          # This user id should be prefixed with the domain of the service account (extendhealth\svc-app-sa-env)
+          ON_PREM_DEPLOYMENT_SA_ID@dev: ''
+          ON_PREM_DEPLOYMENT_SA_ID@qa: ''
+          ON_PREM_DEPLOYMENT_SA_ID@stage: ''
+          ON_PREM_DEPLOYMENT_SA_ID@demo: ''
+          ON_PREM_DEPLOYMENT_SA_ID@uat: ''
+          ON_PREM_DEPLOYMENT_SA_ID@prod: ''
           # TODO: Fill in the windows-server-service-password for WinRm access to the Windows machine and remove the environments that are not used.
-          WINDOWS_SERVER_SERVICE_PASSWORD@dev: ''
-          WINDOWS_SERVER_SERVICE_PASSWORD@qa: ''
-          WINDOWS_SERVER_SERVICE_PASSWORD@stage: ''
-          WINDOWS_SERVER_SERVICE_PASSWORD@demo: ''
-          WINDOWS_SERVER_SERVICE_PASSWORD@uat: ''
-          WINDOWS_SERVER_SERVICE_PASSWORD@prod: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@dev: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@qa: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@stage: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@demo: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@uat: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@prod: ''
           # TODO: Fill in the service-user-name for that the windows service uses remove if using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
           SERVICE_USER_NAME@dev: ''
           SERVICE_USER_NAME@qa: ''
@@ -244,7 +247,8 @@ jobs:
           tag-name: ${{ github.event.inputs.tag}}
 
       - name: Unzip release asset
-        run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
+        shell: powershell
+        run: Expand-Archive -LiteralPath ${{ env.ASSET_ZIP }} -DestinationPath ./${{ env.UNZIPPED_ASSET }}
 
       - name: Set Service Configuration and Substitution Values
         uses: im-open/set-environment-variables-by-scope@v1.0.4
@@ -265,7 +269,7 @@ jobs:
       # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
       # https://github.com/im-open/octostache-action
-      - uses: im-open/octostache-action@v3.0.0
+      - uses: im-open/octostache-action@v4.0.0
         with:
           variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
           files-with-substitutions: '' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
@@ -293,19 +297,19 @@ jobs:
         with:
           action: 'stop'
           service-name: ${{ needs.set-vars.outputs.SERVICE_NAME }}
-          server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
-          service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
-          service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
+          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
+          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
         continue-on-error: true
 
       - name: Deploy Deployment Package
         id: deploy
         if: steps.app-pool-stop.outcome == 'success'
-        uses: im-open/deploy-windows-files@v2.0.0
+        uses: im-open/deploy-windows-files@v2.0.2
         with:
-          server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
-          service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
-          service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
+          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
+          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
           deployment-folder-path: ${{ needs.set-vars.outputs.SERVICE_PATH }}
           clean-deployment-folder: 'true'
@@ -317,11 +321,11 @@ jobs:
         with:
           service-name: '${{ needs.set-vars.outputs.SERVICE_NAME }}'
           deployment-path: '${{ needs.set-vars.outputs.SERVICE_PATH }}\\win-service.exe'
-          server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
+          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
           service-credential-user: ${{ needs.set-vars.outputs.SERVICE_USER_NAME }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
           service-credential-password: ${{ needs.set-vars.outputs.SERVICE_USER_SECRET }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
-          service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
-          service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
+          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
       - name: Start Service
         if: steps.register.outcome == 'success'
@@ -329,9 +333,9 @@ jobs:
         with:
           action: 'start'
           service-name: ${{ needs.set-vars.outputs.SERVICE_NAME }}
-          server: ${{ needs.set-vars.outputs.WINDOWS_SERVER }}
-          service-account-id: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_USER }}
-          service-account-password: ${{ needs.set-vars.outputs.WINDOWS_SERVER_SERVICE_PASSWORD }}
+          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
+          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'

@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v26    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v27    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -69,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     outputs:
-      IIS_Server: ${{ steps.set-variables.outputs.IIS_SERVER }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER }}
+      ON_PREM_WINDOWS_SERVER: ${{ steps.set-variables.outputs.ON_PREM_WINDOWS_SERVER }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
       WEBSITE_NAME: ${{ steps.set-variables.outputs.WEBSITE_NAME }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_NAME }}
       APP_POOL_NAME: ${{ steps.set-variables.outputs.APP_POOL_NAME }} # To use this value: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
       WEBSITE_HOST_HEADER: ${{ steps.set-variables.outputs.WEBSITE_HOST_HEADER }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_HOST_HEADER }}
@@ -77,8 +77,8 @@ jobs:
       WEBSITE_CERT_PATH: ${{ steps.set-variables.outputs.WEBSITE_CERT_PATH }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_PATH }}
       WEBSITE_CERT_FRIENDLY_NAME: ${{ steps.set-variables.outputs.WEBSITE_CERT_FRIENDLY_NAME }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_FRIENDLY_NAME }}
       WEBSITE_CERT_PASSWORD: ${{ steps.set-variables.outputs.WEBSITE_CERT_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_PASSWORD }}
-      IIS_SERVER_SERVICE_USER: ${{ steps.set-variables.outputs.IIS_SERVER_SERVICE_USER }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
-      IIS_SERVER_SERVICE_PASSWORD: ${{ steps.set-variables.outputs.IIS_SERVER_SERVICE_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
+      ON_PREM_DEPLOYMENT_SA_ID: ${{ steps.set-variables.outputs.ON_PREM_DEPLOYMENT_SA_ID }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
+      ON_PREM_DEPLOYMENT_SA_SECRET: ${{ steps.set-variables.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -106,12 +106,14 @@ jobs:
           create-output-variables: true
         env:
           # TODO: Fill in the iis-server and remove the environments that are not used.
-          IIS_SERVER@dev: ''
-          IIS_SERVER@qa: ''
-          IIS_SERVER@stage: ''
-          IIS_SERVER@demo: ''
-          IIS_SERVER@uat: ''
-          IIS_SERVER@prod: ''
+          # This should be a FQDN name (on-prem-server.extendhealth.com) for the DNS request
+          # to resolve correctly
+          ON_PREM_WINDOWS_SERVER@dev: ''
+          ON_PREM_WINDOWS_SERVER@qa: ''
+          ON_PREM_WINDOWS_SERVER@stage: ''
+          ON_PREM_WINDOWS_SERVER@demo: ''
+          ON_PREM_WINDOWS_SERVER@uat: ''
+          ON_PREM_WINDOWS_SERVER@prod: ''
           # TODO: Fill in the website-name and remove the environments that are not used.
           WEBSITE_NAME@dev: ''
           WEBSITE_NAME@qa: ''
@@ -161,20 +163,21 @@ jobs:
           WEBSITE_CERT_PASSWORD@demo: ''
           WEBSITE_CERT_PASSWORD@uat: ''
           WEBSITE_CERT_PASSWORD@prod: ''
-          # TODO: Fill in the iis-server-service-user for WinRm access to the IIS Server and remove the environments that are not used.
-          IIS_SERVER_SERVICE_USER@dev: ''
-          IIS_SERVER_SERVICE_USER@qa: ''
-          IIS_SERVER_SERVICE_USER@stage: ''
-          IIS_SERVER_SERVICE_USER@demo: ''
-          IIS_SERVER_SERVICE_USER@uat: ''
-          IIS_SERVER_SERVICE_USER@prod: ''
-          # TODO: Fill in the iis-server-service-password for WinRm access to the IIS Server and remove the environments that are not used.
-          IIS_SERVER_SERVICE_PASSWORD@dev: ''
-          IIS_SERVER_SERVICE_PASSWORD@qa: ''
-          IIS_SERVER_SERVICE_PASSWORD@stage: ''
-          IIS_SERVER_SERVICE_PASSWORD@demo: ''
-          IIS_SERVER_SERVICE_PASSWORD@uat: ''
-          IIS_SERVER_SERVICE_PASSWORD@prod: ''
+          # TODO: Fill in the on-prem-deployment-sa-id for WinRm access to the IIS Server and remove the environments that are not used.
+          # This user id should be prefixed with the domain of the service account (extendhealth\svc-app-sa-env)
+          ON_PREM_DEPLOYMENT_SA_ID@dev: ''
+          ON_PREM_DEPLOYMENT_SA_ID@qa: ''
+          ON_PREM_DEPLOYMENT_SA_ID@stage: ''
+          ON_PREM_DEPLOYMENT_SA_ID@demo: ''
+          ON_PREM_DEPLOYMENT_SA_ID@uat: ''
+          ON_PREM_DEPLOYMENT_SA_ID@prod: ''
+          # TODO: Fill in the on-prem-deployment-sa-secret for WinRm access to the IIS Server and remove the environments that are not used.
+          ON_PREM_DEPLOYMENT_SA_SECRET@dev: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@qa: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@stage: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@demo: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@uat: ''
+          ON_PREM_DEPLOYMENT_SA_SECRET@prod: ''
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
@@ -269,7 +272,8 @@ jobs:
           tag-name: ${{ github.event.inputs.tag}}
 
       - name: Unzip release asset
-        run: unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
+        shell: powershell
+        run: Expand-Archive -LiteralPath ${{ env.ASSET_ZIP }} -DestinationPath ./${{ env.UNZIPPED_ASSET }}
 
       - name: Set Website Configuration and Substitution Values
         uses: im-open/set-environment-variables-by-scope@v1.0.4
@@ -290,7 +294,7 @@ jobs:
       # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
       # https://github.com/im-open/octostache-action
-      - uses: im-open/octostache-action@v3.0.0
+      - uses: im-open/octostache-action@v4.0.0
         with:
           variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
           files-with-substitutions: '' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
@@ -309,14 +313,14 @@ jobs:
 
       - name: Zip the published app for faster deployment and uploads
         working-directory: ${{ env.UNZIPPED_ASSET }}
-        run: zip -r ../${{env.DEPLOY_ZIP}} .
+        run: 7z a -tzip ../${{ env.DEPLOY_ZIP }} .
 
       # Uncomment this if the site hasn't been created before
       # This action does work better if the website cert is already installed
       # - name: Create Web Site
       #   uses: im-open/iis-site-create@v2.0.0
       #   with:
-      #     server: '${{ needs.set-vars.outputs.IIS_SERVER }}'
+      #     server: '${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}'
       #     website-name: '${{ needs.set-vars.outputs.WEBSITE_NAME }}'
       #     app-pool-name: '${{ needs.set-vars.outputs.APP_POOL_NAME }}'
       #     website-host-header: '${{ needs.set-vars.outputs.WEBSITE_HOST_HEADER }}'
@@ -324,8 +328,8 @@ jobs:
       #     website-cert-path: '${{ needs.set-vars.outputs.WEBSITE_CERT_PATH }}'
       #     website-cert-friendly-name: '${{ needs.set-vars.outputs.WEBSITE_CERT_FRIENDLY_NAME }}'
       #     website-cert-password: '${{ needs.set-vars.outputs.WEBSITE_CERT_PASSWORD }}'
-      #     service-account-id: '${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}'
-      #     service-account-password: '${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}'
+      #     service-account-id: '${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}'
+      #     service-account-password: '${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}'
 
       - name: Stop App Pool
         id: app-pool-stop
@@ -333,30 +337,30 @@ jobs:
         uses: im-open/app-pool-action@v2.0.0
         with:
           action: 'stop'
-          server: ${{ needs.set-vars.outputs.IIS_SERVER }}
+          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
           app-pool-name: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
-          service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
-          service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
+          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
       - name: Deploy deployment package
         if: steps.app-pool-stop.outcome == 'success'
-        uses: 'im-open/deploy-windows-files@v2.0.0'
+        uses: im-open/deploy-windows-files@v2.0.2
         with:
-          server: ${{ needs.set-vars.outputs.IIS_SERVER }}
+          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
           deployment-folder-path: ${{ needs.set-vars.outputs.WEBSITE_PATH }}
           clean-deployment-folder: 'true'
-          service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
-          service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
+          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
       - name: Start App Pool
         uses: im-open/app-pool-action@v2.0.0
         with:
           action: 'start'
-          server: ${{ needs.set-vars.outputs.IIS_SERVER }}
+          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
           app-pool-name: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
-          service-account-id: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_USER }}
-          service-account-password: ${{ needs.set-vars.outputs.IIS_SERVER_SERVICE_PASSWORD }}
+          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'
@@ -408,7 +412,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.1.2
         with:
-          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.IIS_SERVER }}
+          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -425,7 +429,7 @@ jobs:
         if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.2
         with:
-          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.IIS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
+          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret
