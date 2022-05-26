@@ -1,0 +1,5 @@
+{
+    "name": "Test - K6 Operator Workflow",
+    "description": "Workflow template for running K6 stress tests in Azure AKS Kubernetes Performance Testing Cluster",
+    "iconName": "im_test"
+}
