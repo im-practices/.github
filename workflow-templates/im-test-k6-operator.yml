@@ -117,7 +117,7 @@ jobs:
         with:
           script: |
             var output = `
-              K6 Test Paramaters =>
+              Workflow Inputs =>
                 Environment: ${{ github.event.inputs.env }};
                 Test File: ${{ github.event.inputs.test-file }};
                 Parallelism: ${{ github.event.inputs.parallelism }};
