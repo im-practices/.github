@@ -18,7 +18,7 @@ name: Run K6 test
 on:
   workflow_dispatch:
     inputs:
-      env-to-test:
+      env:
         description: 'Environment to run test against'
         required: true
         default: 'dev'
@@ -59,7 +59,7 @@ on:
 
 env:
   NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
-  K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }},test=${{ github.event.inputs.test-file }} -e RUN_ENV=${{ github.event.inputs.env-to-test }}' # TODO: Set default k6 paramaters
+  K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }},test=${{ github.event.inputs.test-file }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
 
 jobs:
   matrix-setup:
@@ -117,7 +117,7 @@ jobs:
       matrix: ${{ fromJson(needs.matrix-setup.outputs.matrix) }}
 
     steps:
-      - run: echo "The current environment is ${{ github.event.inputs.env-to-test }}"
+      - run: echo "The current environment is ${{ github.event.inputs.env }}"
 
       - run: echo "${{ needs.matrix-setup.outputs.matrix }}"
       - name: Checkout
