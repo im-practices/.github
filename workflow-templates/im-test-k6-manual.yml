@@ -1,14 +1,14 @@
 # Workflow Code: ZestyFlamingo_v9    DO NOT REMOVE
-# Purpose: 
-#    Uses a container to run a K6 stress test against the environment and 
+# Purpose:
+#    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
 #
 # Frequency:
 #    - This workflow is intended to be reusable, and used once per repository.
-#      If the workflow is updated to hardcode some arguments like test-file 
-#      and test-root-folder instead of taking them in as args, then it could 
+#      If the workflow is updated to hardcode some arguments like test-file
+#      and test-root-folder instead of taking them in as args, then it could
 #      be duplicated, once per k6 project in the repo.
-#    
+#
 # Projects to use this Template with:
 #    - App Service or Function (Optional Template)
 #    - On-Prem Service         (Optional Template)
@@ -87,7 +87,7 @@ jobs:
             const matrixObject = { "runners": matrix };
             core.setCommandEcho("Matrix set: " + JSON.stringify(matrixObject));
             core.setOutput('matrix',JSON.stringify(matrixObject));
-      
+
       - name: Annotate Test Paramaters
         uses: actions/github-script@v6
         with:
@@ -101,6 +101,7 @@ jobs:
                 Number of Runners: ${{ github.event.inputs.number-of-runners }};
                 Run NPM Build: ${{ github.event.inputs.run-npm-build }};
                 K6 Paramaters: ${{ github.event.inputs.k6-paramaters }};
+                K6 Default Paramaters: ${{ env.K6_DEFAULT_PARAMATERS }};
             `;
             core.notice(`${output}`);
 
@@ -111,7 +112,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    
+
     strategy:
       matrix: ${{ fromJson(needs.matrix-setup.outputs.matrix) }}
 
@@ -179,7 +180,7 @@ jobs:
           fi
 
           # Removing slashes from k6_paramaters
-          k6_params=$(echo "$k6_params" | tr '/' '-')
-          
+          k6_params_cleaned=$(echo $k6_params  | sed -e 's/\//-/g')
+
           # Running the test
-          k6 run ${{ github.event.inputs.test-file }} $k6_params -e RUN_ENV=${{ github.event.inputs.env-to-test }}
+          k6 run ${{ github.event.inputs.test-file }} $k6_params_cleaned

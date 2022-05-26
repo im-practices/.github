@@ -1,11 +1,11 @@
 # Workflow Code: ZestyAligator_v1    DO NOT REMOVE
-# Purpose: 
-#    Runs K6 tests at scale in Azure Kubernetes. 
+# Purpose:
+#    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
 #
 # Frequency:
 #    - This workflow is intended to be reusable, and used once per repository.
-#    
+#
 # Projects to use this Template with:
 #    - App Service or Function (Optional Template)
 #    - On-Prem Service         (Optional Template)
@@ -82,13 +82,13 @@ jobs:
     defaults:
       run:
         shell: bash
-    
+
     env:
       TIMEZONE: 'america/denver' # TODO: Verify timezone
       GRAFANA_DASHBOARD_URI: 'https://grafana.dev.mktp.io/d/N0cdP_cnz/k6-load-testing-results?orgId=1&refresh=5s&from=now-15m&to=now' # TODO: Verify link to your dashboard
       NODE_VERSION: '16.x' # TODO: Set correct node version
       K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }},test=${{ github.event.inputs.test-file }} -e RUN_ENV=${{ github.event.inputs.env-to-test }}' # TODO: Set default k6 paramaters
-      
+
       ###### DO NOT EDIT ######
       CLUSTER_NAME: 'BDAIM-D-NA26-PERFTEST-K8-CL'
       CLUSTER_RESOURCE_GROUP: 'BDAIM-D-NA26-PerformanceTesting-RGRP'
@@ -136,8 +136,18 @@ jobs:
             node-version: ${{ env.NODE_VERSION }}
 
       # TODO: Delete if you don't build your k6 tests
-      - name: Install NPM Dependencies
+      - name: NPM Cache
+        id: npm-cache
         if: github.event.inputs.run-npm-build == 'true'
+        uses: actions/cache@v2
+        with:
+          path: '${{ github.event.inputs.working-directory }}/node_modules'
+          key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{ github.event.inputs.working-directory }}/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-modules-k6-
+
+      # TODO: Delete if you don't build your k6 tests
+      - name: Install NPM Dependencies
+        if: github.event.inputs.run-npm-build == 'true' && steps.npm-cache.outputs.cache-hit != 'true'
         run: npm install
         working-directory: ${{ github.event.inputs.working-directory }}
 
@@ -146,7 +156,7 @@ jobs:
         if: github.event.inputs.run-npm-build == 'true'
         run: npm run build
         working-directory: ${{ github.event.inputs.working-directory }}
-      
+
       - name: Setup kubectl config
         uses: im-practices/setup-kubectl-config-for-private-aks@latest
         id: kube-config
@@ -192,7 +202,8 @@ jobs:
           run-name: ${{ github.event.inputs.run-name }}
           upload-type: ${{ github.event.inputs.upload-type}}
           upload-files-folder: ${{ github.event.inputs.upload-files-folder }}
-          k6-paramaters: "${{ github.event.inputs.k6-paramaters }} -e RUN_ENV=${{ github.event.inputs.env }}"
+          k6-paramaters: "${{ github.event.inputs.k6-paramaters }}"
+          k6-default-paramaters: "${{ env.K6_DEFAULT_PARAMATERS }}"
           parallelism: ${{ github.event.inputs.parallelism }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
 
@@ -230,5 +241,3 @@ jobs:
                 "uri": "${{ env.GRAFANA_DASHBOARD_URI }}"
               }
             ]
-
-
