@@ -1,24 +1,24 @@
-# Workflow Code: ZestyFlamingo_v8    DO NOT REMOVE
-# Purpose: 
-#    Uses a container to run a K6 stress test against the environment and 
+# Workflow Code: ZestyFlamingo_v9    DO NOT REMOVE
+# Purpose:
+#    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
 #
 # Frequency:
 #    - This workflow is intended to be reusable, and used once per repository.
-#      If the workflow is updated to hardcode some arguments like test-file 
-#      and test-root-folder instead of taking them in as args, then it could 
+#      If the workflow is updated to hardcode some arguments like test-file
+#      and test-root-folder instead of taking them in as args, then it could
 #      be duplicated, once per k6 project in the repo.
-#    
+#
 # Projects to use this Template with:
 #    - App Service or Function (Optional Template)
 #    - On-Prem Service         (Optional Template)
 
-name: Manual trigger K6 test
+name: Run K6 test
 
 on:
   workflow_dispatch:
     inputs:
-      env-to-test:
+      env:
         description: 'Environment to run test against'
         required: true
         default: 'dev'
@@ -27,7 +27,8 @@ on:
           - dev
           - qa
           - stage
-      test-folder-root:
+          - load
+      working-directory:
         description: 'Root directory of k6 test files including configs, etc. IE: tests/k6'
         required: true
         default: '' # TODO: Add the location of your tests.  IE: tests/k6
@@ -35,30 +36,123 @@ on:
         description: 'K6 test file to run'
         required: true
         default: '' # TODO: Add default test file  IE: check-health-simple.js
-      k6-extra-params:
-        description: 'K6 command extra paramaters'
+      run-name: # Run name is used to separate load test runs from each other.
+        description: "Run Name: Name of k6 test run in logs and kubernetes."
+        required: true
+        default: "Test-Check-Health" # TODO: Update Default k6 run name.  
+      k6-paramaters:
+        description: 'K6 extra paramaters. IE: -tag product=TEST,family=TEST'
         required: false
-        default: '' # TODO: Set default paramaters to run on every K6 test. IE. --vus 1 -i 1 --insecure-skip-tls-verify -out JSON="./k6-output.json" --out influxdb="http://influxdb:8086/k6" --config "/scripts/config/dev-config.json"
       k6-version:
         description: 'K6 version.  Versions lower than 0.32.0 will not work with this action.  Do not include the "v" prefix.'
         required: true
-        default: '' # TODO: Set default version of k6. IE. 0.33.0
-      run-stress-step:
-        description: 'Run k6 stress test optimized step. The optimized step allows more connections and transactions.'
+        default: '0.38.3' # TODO: Set default version of k6. IE. 0.33.0
+      number-of-runners:
+        description: 'Number of Runners: specify number of github self hosted runners.  Max: 10 or maxiumum self hosted linux runners.'
+        required: true
+        default: '1'
+      run-npm-build: # TODO: Delete input if you don't build your k6 tests with npm
+        description: "Run NPM Build: Run npm build to create packages k6 tests"
         required: false
-        default: 'false'
         type: boolean
+        default: false # TODO: Set true if you require npm build to run for your k6 bundle to be created
+
+env:
+  NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
+  K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }},test=${{ github.event.inputs.test-file }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
 
 jobs:
+  matrix-setup:
+    runs-on: ubuntu-20.04
+
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+    steps:
+      - name: Set Runner Matrix
+        id: set-matrix
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let matrix = [];
+            if(${{ github.event.inputs.number-of-runners }} > 10){
+              matrix = ["runner-1"];
+              core.setCommandEcho("You selected too many runners.  Please select under 10.");
+              core.warning("You selected too many runners.  Please select under 10.");
+            }else{
+              for (i=1; i<= ${{ github.event.inputs.number-of-runners }}; i++){
+                matrix.push(`runner-${i}`);
+              }
+            }
+            const matrixObject = { "runners": matrix };
+            core.setCommandEcho("Matrix set: " + JSON.stringify(matrixObject));
+            core.setOutput('matrix',JSON.stringify(matrixObject));
+
+      - name: Annotate Test Paramaters
+        uses: actions/github-script@v6
+        with:
+          script: |
+            var output = `
+              Workflow Inputs =>
+                Environment: ${{ github.event.inputs.env }};
+                Test File: ${{ github.event.inputs.test-file }};
+                Run Name: ${{ github.event.inputs.run-name }};
+                K6 Version: ${{ github.event.inputs.k6-version }};
+                Number of Runners: ${{ github.event.inputs.number-of-runners }};
+                Run NPM Build: ${{ github.event.inputs.run-npm-build }};
+                K6 Paramaters: ${{ github.event.inputs.k6-paramaters }};
+                K6 Default Paramaters: ${{ env.K6_DEFAULT_PARAMATERS }};
+            `;
+            core.notice(`${output}`);
+
   k6_test:
     runs-on: [self-hosted, ubuntu-20.04]
-    steps:
-      - run: echo "The current environment is ${{ github.event.inputs.env-to-test }}"
+    needs: [matrix-setup]
 
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      matrix: ${{ fromJson(needs.matrix-setup.outputs.matrix) }}
+
+    steps:
+      - run: echo "The current environment is ${{ github.event.inputs.env }}"
+
+      - run: echo "${{ needs.matrix-setup.outputs.matrix }}"
       - name: Checkout
         uses: actions/checkout@v1
 
-      - name: Setup K6
+      # TODO: Delete if you don't build your k6 tests
+      - name: Install Node ${{ env.NODE_VERSION }}
+        if: github.event.inputs.run-npm-build == 'true'
+        uses: actions/setup-node@v2
+        with:
+            node-version: ${{ env.NODE_VERSION }}
+
+      # TODO: Delete if you don't build your k6 tests
+      - name: NPM Cache
+        id: npm-cache
+        if: github.event.inputs.run-npm-build == 'true'
+        uses: actions/cache@v2
+        with:
+          path: '${{ github.event.inputs.working-directory }}/node_modules'
+          key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{ github.event.inputs.working-directory }}/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-modules-k6-
+
+      # TODO: Delete if you don't build your k6 tests
+      - name: Install NPM Dependencies
+        if: github.event.inputs.run-npm-build == 'true' && steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm install
+        working-directory: ${{ github.event.inputs.working-directory }}
+
+      # TODO: Delete if you don't build your k6 tests
+      - name: Build K6 Tests via npm build
+        if: github.event.inputs.run-npm-build == 'true'
+        run: npm run build
+        working-directory: ${{ github.event.inputs.working-directory }}
+
+      - name: Install K6 Client
         uses: im-open/setup-k6-perf-testing@v1.0.1
         with:
           version: ${{ github.event.inputs.k6-version }}
@@ -66,7 +160,7 @@ jobs:
       - name: Validate test file exists
         run: |
           echo "Checking if test file exists:"
-          FILE="./${{ github.event.inputs.test-folder-root }}/${{ github.event.inputs.test-file }}"
+          FILE="./${{ github.event.inputs.working-directory }}/${{ github.event.inputs.test-file }}"
           if [[ -f $FILE ]]; then
             echo "$FILE exists."
           else
@@ -74,22 +168,25 @@ jobs:
             exit 1
           fi
 
-      # Depending on the flag set above one of these run k6 steps will execute.  The difference between these two
-      # steps is the number of open connections it configures.  The stress step allows more connections on the OS.
       - name: Run local k6 test
-        if: ${{ github.event.inputs.run-stress-step != 'true' }}
-        working-directory: ${{ github.event.inputs.test-folder-root }}
+        working-directory: ${{ github.event.inputs.working-directory }}
         run: |
-          k6 run ${{ github.event.inputs.test-file }} ${{ github.event.inputs.k6-extra-params }} -e RUN_ENV=${{ github.event.inputs.env-to-test }}
+          k6_args="${{ github.event.inputs.k6-paramaters }}"
 
-      - name: Run local k6 as a stress test
-        if: ${{ github.event.inputs.run-stress-step == 'true' }}
-        working-directory: ${{ github.event.inputs.test-folder-root }}
-        run: |
-          # ulimit must be set in k6 step as it gets reset every session.
-          # The nofile limit cannot exceed the hard limit.  You will get a permission denied if you do.
-          ulimit -n 1048576
-          echo "Open Files, Reuse TCP ports, and Port Range below:"
-          ulimit -Sa | grep 'open files'
-          sudo sysctl -a | grep -E 'net.ipv4.ip_local_port_range|net.ipv4.tcp_tw_reuse|fs.file-max'
-          k6 run ${{ github.event.inputs.test-file }} ${{ github.event.inputs.k6-extra-params }} -e RUN_ENV=${{ github.event.inputs.env-to-test }}
+          k6_test_file_tag="--tag test=${{ github.event.inputs.test-file }}"
+          # Removing slashes from k6_test_file_tag
+          k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
+
+          k6_params=""
+          if [[ -z k6_args ]]; then
+            k6_params="${{ env.K6_DEFAULT_PARAMATERS }} $k6_test_file_tag"
+          else
+            k6_params="${{ env.K6_DEFAULT_PARAMATERS }} $k6_args $k6_test_file_tag"
+          fi
+
+          echo "K6 Parmaters passing in:"
+          echo $k6_params
+          echo "::notice file=k6.params,line=1,col=1,endColumn=1::$k6_params"
+
+          # Running the test
+          k6 run ${{ github.event.inputs.test-file }} $k6_params
