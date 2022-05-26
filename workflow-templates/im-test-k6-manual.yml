@@ -13,7 +13,7 @@
 #    - App Service or Function (Optional Template)
 #    - On-Prem Service         (Optional Template)
 
-name: Manual trigger K6 test
+name: Run K6 test
 
 on:
   workflow_dispatch:
@@ -59,7 +59,7 @@ on:
 
 env:
   NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
-  K6_DEFUALT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }},test=${{ github.event.inputs.test-file }}' # TODO: Set default k6 paramaters
+  K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }},test=${{ github.event.inputs.test-file }} -e RUN_ENV=${{ github.event.inputs.env-to-test }}' # TODO: Set default k6 paramaters
 
 jobs:
   matrix-setup:
@@ -87,11 +87,31 @@ jobs:
             const matrixObject = { "runners": matrix };
             core.setCommandEcho("Matrix set: " + JSON.stringify(matrixObject));
             core.setOutput('matrix',JSON.stringify(matrixObject));
+      
+      - name: Annotate Test Paramaters
+        uses: actions/github-script@v6
+        with:
+          script: |
+            var output = `
+              K6 Test Paramaters =>
+                Environment: ${{ github.event.inputs.env }};
+                Test File: ${{ github.event.inputs.test-file }};
+                Run Name: ${{ github.event.inputs.run-name }};
+                K6 Version: ${{ github.event.inputs.k6-version }};
+                Number of Runners: ${{ github.event.inputs.number-of-runners }};
+                Run NPM Build: ${{ github.event.inputs.run-npm-build }};
+                K6 Paramaters: ${{ github.event.inputs.k6-paramaters }};
+            `;
+            core.notice(`${output}`);
 
   k6_test:
     runs-on: [self-hosted, ubuntu-20.04]
     needs: [matrix-setup]
 
+    defaults:
+      run:
+        shell: bash
+    
     strategy:
       matrix: ${{ fromJson(needs.matrix-setup.outputs.matrix) }}
 
@@ -110,8 +130,18 @@ jobs:
             node-version: ${{ env.NODE_VERSION }}
 
       # TODO: Delete if you don't build your k6 tests
-      - name: Install NPM Dependencies
+      - name: NPM Cache
+        id: npm-cache
         if: github.event.inputs.run-npm-build == 'true'
+        uses: actions/cache@v2
+        with:
+          path: '${{ github.event.inputs.working-directory }}/node_modules'
+          key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{ github.event.inputs.working-directory }}/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-modules-k6-
+
+      # TODO: Delete if you don't build your k6 tests
+      - name: Install NPM Dependencies
+        if: github.event.inputs.run-npm-build == 'true' && steps.npm-cache.outputs.cache-hit != 'true'
         run: npm install
         working-directory: ${{ github.event.inputs.working-directory }}
 
@@ -137,14 +167,19 @@ jobs:
             exit 1
           fi
 
-      - name: Run local k6 test
+      - name: Run k6 test
         working-directory: ${{ github.event.inputs.working-directory }}
         run: |
           k6_args="${{ github.event.inputs.k6-paramaters }}"
           k6_params=""
           if [[ -z k6_args ]]; then
-            k6_params="${{ env.K6_DEFUALT_PARAMATERS }}"
+            k6_params="${{ env.K6_DEFAULT_PARAMATERS }}"
           else
-            k6_params="${{ env.K6_DEFUALT_PARAMATERS }} $k6_args"
+            k6_params="${{ env.K6_DEFAULT_PARAMATERS }} $k6_args"
           fi
+
+          # Removing slashes from k6_paramaters
+          k6_params=$(echo "$k6_params" | tr '/' '-')
+          
+          # Running the test
           k6 run ${{ github.event.inputs.test-file }} $k6_params -e RUN_ENV=${{ github.event.inputs.env-to-test }}
