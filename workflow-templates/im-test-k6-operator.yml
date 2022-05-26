@@ -82,7 +82,7 @@ jobs:
     env:
       TIMEZONE: 'america/denver' # TODO: Verify timezone
       GRAFANA_DASHBOARD_URI: 'https://grafana.dev.mktp.io/d/N0cdP_cnz/k6-load-testing-results?orgId=1&refresh=5s&from=now-15m&to=now' # TODO: Verify link to your dashboard
-      NODE_VERSION: '14.x' # TODO: Set correct node version
+      NODE_VERSION: '16.x' # TODO: Set correct node version
       
       ###### DO NOT EDIT ######
       CLUSTER_NAME: 'BDAIM-D-NA26-PERFTEST-K8-CL'
@@ -124,20 +124,20 @@ jobs:
             core.notice(`${output}`);
 
       # TODO: Delete if you don't build your k6 tests
-      - name: Use Node ${{ env.NODE_VERSION }}
+      - name: Install Node ${{ env.NODE_VERSION }}
         if: github.event.inputs.run-npm-build == 'true'
         uses: actions/setup-node@v2
         with:
             node-version: ${{ env.NODE_VERSION }}
 
       # TODO: Delete if you don't build your k6 tests
-      - name: Install K6 Dependencies
+      - name: Install NPM Dependencies
         if: github.event.inputs.run-npm-build == 'true'
         run: npm install
         working-directory: ${{ github.event.inputs.working-directory }}
 
       # TODO: Delete if you don't build your k6 tests
-      - name: Build K6 Tests
+      - name: Build K6 Tests via npm build
         if: github.event.inputs.run-npm-build == 'true'
         run: npm run build
         working-directory: ${{ github.event.inputs.working-directory }}
