@@ -122,8 +122,11 @@ jobs:
       - run: echo "The current environment is ${{ github.event.inputs.env }}"
 
       - run: echo "${{ needs.matrix-setup.outputs.matrix }}"
-      - name: Checkout
-        uses: actions/checkout@v1
+      
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
 
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}

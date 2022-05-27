@@ -98,8 +98,10 @@ jobs:
       ###### DO NOT EDIT ######
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Show Input Variables
         run: |
@@ -209,7 +211,7 @@ jobs:
         uses: im-practices/run-k6-operator-test@latest
         id: run-k6-operator-test
         with:
-          working-directory: ./tests/k6
+          working-directory: ${{ github.event.inputs.working-directory }}
           test-file: ${{ github.event.inputs.test-file }}
           run-name: ${{ github.event.inputs.run-name }}
           upload-type: ${{ github.event.inputs.upload-type}}
