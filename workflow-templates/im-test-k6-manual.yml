@@ -59,7 +59,9 @@ on:
 
 env:
   NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
-  K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }},test=${{ github.event.inputs.test-file }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
+  # InfluxDB addresses - Prod: http://10.206.234.29:8086/loadtesting ; Dev: http://10.206.225.188:8086/loadtesting
+  # Github action runners are in Prod Subscription, thus you have to use the Prod Influx DB
+  K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.234.29:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }},test=${{ github.event.inputs.test-file }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
 
 jobs:
   matrix-setup:
@@ -168,7 +170,7 @@ jobs:
             exit 1
           fi
 
-      - name: Run local k6 test
+      - name: Run k6 test
         working-directory: ${{ github.event.inputs.working-directory }}
         run: |
           k6_args="${{ github.event.inputs.k6-paramaters }}"

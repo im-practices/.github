@@ -87,6 +87,8 @@ jobs:
       TIMEZONE: 'america/denver' # TODO: Verify timezone
       GRAFANA_DASHBOARD_URI: 'https://grafana.dev.mktp.io/d/N0cdP_cnz/k6-load-testing-results?orgId=1&refresh=5s&from=now-15m&to=now' # TODO: Verify link to your dashboard
       NODE_VERSION: '16.x' # TODO: Set correct node version
+      # InfluxDB addresses - Prod: http://10.206.234.29:8086/loadtesting ; Dev: http://10.206.225.188:8086/loadtesting
+      # K6-Operator AKS Cluster is in the Dev Subscription, thus you have to use the Dev Influx DB
       K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env-to-test }}' # TODO: Set default k6 paramaters
 
       ###### DO NOT EDIT ######

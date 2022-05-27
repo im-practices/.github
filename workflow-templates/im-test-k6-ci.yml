@@ -31,6 +31,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
 
+      # InfluxDB addresses - Prod: http://10.206.234.29:8086/loadtesting ; Dev: http://10.206.225.188:8086/loadtesting
       - name: Run k6 test - docker
         working-directory: tests/k6 # TODO: Verify working directory of k6 tests
         run: |
