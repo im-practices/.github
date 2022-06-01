@@ -223,6 +223,9 @@ jobs:
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
 
+      ### Cleanup K6-Operator test if workflow is cancelled ###
+      
+      # Due to composite actions not supporting post steps, the following workflow steps are required to stop a k6-operator mid stream.
       - name: Upload K6 Deployment Yaml if Cancelled
         if: cancelled()
         continue-on-error: true
@@ -253,6 +256,8 @@ jobs:
           kubectl delete --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
 
           rm -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+      
+      ### Cleanup K6-Operator test if workflow is cancelled ###
 
       - name: Remove kubectl config
         if: always()
