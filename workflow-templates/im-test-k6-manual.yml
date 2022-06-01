@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v9    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v10    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -61,7 +61,7 @@ env:
   NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
   # InfluxDB addresses - Prod: http://10.206.234.29:8086/loadtesting ; Dev: http://10.206.225.188:8086/loadtesting
   # Github action runners are in Prod Subscription, thus you have to use the Prod Influx DB
-  K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.234.29:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }},test=${{ github.event.inputs.test-file }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
+  K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.234.29:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
 
 jobs:
   matrix-setup:
