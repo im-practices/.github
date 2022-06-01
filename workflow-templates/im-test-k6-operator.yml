@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v1    DO NOT REMOVE
+# Workflow Code: ZestyAligator_v2    DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -90,6 +90,7 @@ jobs:
       # InfluxDB addresses - Prod: http://10.206.234.29:8086/loadtesting ; Dev: http://10.206.225.188:8086/loadtesting
       # K6-Operator AKS Cluster is in the Dev Subscription, thus you have to use the Dev Influx DB
       K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
+      RETENTION_IN_DAYS: 1 # # TODO: Set retention in days for uploaded artifacts
 
       ###### DO NOT EDIT ######
       CLUSTER_NAME: 'BDAIM-D-NA26-PERFTEST-K8-CL'
@@ -145,7 +146,7 @@ jobs:
       - name: NPM Cache
         id: npm-cache
         if: github.event.inputs.run-npm-build == 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: '${{ github.event.inputs.working-directory }}/node_modules'
           key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{ github.event.inputs.working-directory }}/package-lock.json') }}
@@ -176,7 +177,7 @@ jobs:
 
       - name: Send Status to Teams - Starting Test
         continue-on-error: true
-        uses: im-open/post-status-to-teams-action@v1.1.2
+        uses: im-open/post-status-to-teams-action@v1.1.3
         with:
           title: "K6 Test Starting Shortly in AKS - ${{ github.event.inputs.run-name }}"
           workflow-status: started
@@ -199,7 +200,7 @@ jobs:
               }
             ]
 
-      - name: Clean Test Tag
+      - name: Clean Test File Name for K6 Tag
         id: test-tag
         run: |
           k6_test_file_tag="--tag test=${{ github.event.inputs.test-file }}"
@@ -220,6 +221,43 @@ jobs:
           k6-default-paramaters: "${{ env.K6_DEFAULT_PARAMATERS }} ${{ steps.test-tag.outputs.test-tag }}"
           parallelism: ${{ github.event.inputs.parallelism }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
+          retention-in-days: ${{ env.RETENTION_IN_DAYS }}
+
+      ### Cleanup K6-Operator test if workflow is cancelled ###
+      
+      # Due to composite actions not supporting post steps, the following workflow steps are required to stop a k6-operator mid stream.
+      - name: Upload K6 Deployment Yaml if Cancelled
+        if: cancelled()
+        continue-on-error: true
+        uses: actions/upload-artifact@v3
+        with:
+            name: ${{ steps.run-k6-operator-test.outputs.deploy-yaml-artifact }}-bk
+            path: ${{ github.event.inputs.working-directory }}/${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+            retention-days: ${{ env.RETENTION_IN_DAYS }}
+      
+      - name: Stop Test and Cleanup if Workflow is Cancelled
+        if: cancelled()
+        continue-on-error: true
+        shell: bash
+        working-directory: ${{ github.event.inputs.working-directory }}
+        run: |
+          #  Cleanup Test Deploy and Configmap
+
+          echo ""
+          echo "Deleting configmap: ${{ steps.run-k6-operator-test.outputs.config-map-name }}"
+          kubectl delete configmap ${{ steps.run-k6-operator-test.outputs.config-map-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
+
+          echo ""
+          echo "Listing folder contents to validate that ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml exists"
+          ls -la ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+          
+          echo ""
+          echo "Deleting runner pods for ${{ steps.run-k6-operator-test.outputs.run-name }}" 
+          kubectl delete --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+
+          rm -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+      
+      ### Cleanup K6-Operator test if workflow is cancelled ###
 
       - name: Remove kubectl config
         if: always()
@@ -232,9 +270,9 @@ jobs:
       - name: Send Status to Teams - Test Finished
         if: always()
         continue-on-error: true
-        uses: im-open/post-status-to-teams-action@v1.1.2
+        uses: im-open/post-status-to-teams-action@v1.1.3
         with:
-          title: "K6 Test AKS Complete - ${{ github.event.inputs.run-name }}"
+          title: "K6 Test in AKS Complete - ${{ github.event.inputs.run-name }}"
           workflow-status: ${{ steps.run-k6-operator-test.outcome }}
           workflow-type: Runbook
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
