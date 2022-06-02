@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v10    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v11    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -97,6 +97,7 @@ jobs:
             var output = `
               Workflow Inputs =>
                 Environment: ${{ github.event.inputs.env }};
+                Working Directory: ${{ github.event.inputs.working-directory }};;
                 Test File: ${{ github.event.inputs.test-file }};
                 Run Name: ${{ github.event.inputs.run-name }};
                 K6 Version: ${{ github.event.inputs.k6-version }};
@@ -146,16 +147,17 @@ jobs:
           restore-keys: ${{ runner.os }}-modules-k6-
 
       # TODO: Delete if you don't build your k6 tests
+      # This step must be modified to support npm workspaces and --ignore-scripts must be used if failures occur on this step with workspaces.
       - name: Install NPM Dependencies
         if: github.event.inputs.run-npm-build == 'true' && steps.npm-cache.outputs.cache-hit != 'true'
-        run: npm install
         working-directory: ${{ github.event.inputs.working-directory }}
+        run: npm ci
 
       # TODO: Delete if you don't build your k6 tests
       - name: Build K6 Tests via npm build
         if: github.event.inputs.run-npm-build == 'true'
-        run: npm run build
         working-directory: ${{ github.event.inputs.working-directory }}
+        run: npm run build
 
       - name: Install K6 Client
         uses: im-open/setup-k6-perf-testing@v1.0.1

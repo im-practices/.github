@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v2    DO NOT REMOVE
+# Workflow Code: ZestyAligator_v3    DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -108,6 +108,7 @@ jobs:
         run: |
           echo "Workflow Inputs:"
           echo "
+            env: ${{ github.event.inputs.env }};
             working-directory: ${{ github.event.inputs.working-directory }}
             test-file: ${{ github.event.inputs.test-file }}
             upload-type: ${{ github.event.inputs.upload-type }}
@@ -125,6 +126,7 @@ jobs:
             var output = `
               Workflow Inputs =>
                 Environment: ${{ github.event.inputs.env }};
+                Working Directory: ${{ github.event.inputs.working-directory }};;
                 Test File: ${{ github.event.inputs.test-file }};
                 Parallelism: ${{ github.event.inputs.parallelism }};
                 Separate Nodes: ${{ github.event.inputs.separate-nodes }};
@@ -153,16 +155,17 @@ jobs:
           restore-keys: ${{ runner.os }}-modules-k6-
 
       # TODO: Delete if you don't build your k6 tests
+      # This step must be modified to support npm workspaces and --ignore-scripts must be used if failures occur on this step.
       - name: Install NPM Dependencies
         if: github.event.inputs.run-npm-build == 'true' && steps.npm-cache.outputs.cache-hit != 'true'
-        run: npm install
         working-directory: ${{ github.event.inputs.working-directory }}
-
+        run: npm ci
+        
       # TODO: Delete if you don't build your k6 tests
       - name: Build K6 Tests via npm build
         if: github.event.inputs.run-npm-build == 'true'
-        run: npm run build
         working-directory: ${{ github.event.inputs.working-directory }}
+        run: npm run build
 
       - name: Setup kubectl config
         uses: im-practices/setup-kubectl-config-for-private-aks@latest
@@ -207,6 +210,7 @@ jobs:
           # Removing slashes from k6_test_file_tag
           k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
           echo "::set-output name=test-tag::$k6_test_file_tag"
+          
 
       - name: Run K6-Operator Test
         uses: im-practices/run-k6-operator-test@latest
