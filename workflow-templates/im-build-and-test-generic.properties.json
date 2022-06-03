@@ -1,0 +1,6 @@
+{
+    "name": "Build - Generic CI",
+    "description": "Workflow template to build and test projects of multiple types for continuous integration",
+    "iconName": "im_build"
+  }
+  
