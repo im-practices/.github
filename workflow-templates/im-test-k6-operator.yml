@@ -45,11 +45,11 @@ on:
         default: test-file # TODO: Update to default upload type
         type: choice
         options:
-          - test-file
-          - single-folder
-          - multiple-files
-          - multiple-folders
-          - working-directory
+          - test-file # When running single test file
+          - single-folder # When your tests reside in a single folder without dependencies
+          - multiple-files # When you have multiple files even in different folders
+          - multiple-folders # When you have multiple folders such as config and test-file folders
+          - working-directory # Upload the whole directory you specified in the working directory input
       upload-files-folder:
         description: "Upload Files or Folders: Comma separated list of files or folders to include in the upload. Specify full path from working-directory root."
         required: false
@@ -90,7 +90,7 @@ jobs:
       # InfluxDB addresses - Prod: http://10.206.234.29:8086/loadtesting ; Dev: http://10.206.225.188:8086/loadtesting
       # K6-Operator AKS Cluster is in the Dev Subscription, thus you have to use the Dev Influx DB
       K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
-      RETENTION_IN_DAYS: 1 # # TODO: Set retention in days for uploaded artifacts
+      RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
 
       ###### DO NOT EDIT ######
       CLUSTER_NAME: 'BDAIM-D-NA26-PERFTEST-K8-CL'
@@ -211,7 +211,6 @@ jobs:
           k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
           echo "::set-output name=test-tag::$k6_test_file_tag"
           
-
       - name: Run K6-Operator Test
         uses: im-practices/run-k6-operator-test@latest
         id: run-k6-operator-test
