@@ -7,6 +7,11 @@
 #    After all the build-test jobs have completed, the create-release job
 #    will upload the built artifacts to a GitHub release asset.
 #
+# NOTE:
+#    This workflow uses one version tag with no prefix for all the deployables
+#    in the repository. If you want each deployable to have it's own version
+#    tag prefix, this workflow is not for you.
+#
 # Frequency:
 #    - This workflow should only be used once per repository
 #
@@ -20,7 +25,8 @@
 name: 🏭 CI Build
 
 on:
-  # This workflow will run for the PR events:
+  # This workflow only works with pull_request triggers.
+  # It will run on these pull request events:
   # opened/reopened: A PR is opened/re-opened,
   # synchronize: The PR's head branch is updated (commits pushed, the base branch changed or the head is updated from the base branch)
   # closed: A PR is merged or closed (The examine-triggers job makes sure we don't build anything if a PR is closed without being merged)
@@ -70,8 +76,6 @@ jobs:
             core.exportVariable('CONTINUE_WORKFLOW', continueWorkflow);
             core.exportVariable('CREATE_RELEASE', doTagRelease);
 
-      # NOTE: This workflow uses one version tag with no prefix for all the deployables in the repository.
-      #       If you want each deployable to have it's own version tag prefix, this workflow is not for you.
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
@@ -84,20 +88,14 @@ jobs:
           calculate-prerelease-version: ${{ env.IS_PRERELEASE }}
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
 
-# start-project Inserts project build-and-test jobs here (don't delete this comment)
+# start-project Inserts project-specific build-and-test jobs here (don't delete this comment)
 # For example
   # Mfe-build-and-test:
   #   runs-on: [self-hosted, ubuntu-20.04]
   #   needs: [examine-triggers]
   #   if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
-  #   defaults:
-  #     run:
-  #       shell: bash
   #   env:
-  #     MFE_PROJECT_ROOT: '/src/SomeDomain.Mfe' # TODO: specify the project directory
-  #     MFE_TESTS_PROJECT_ROOT: '/tests/SomeDomain.Mfe.UnitTests' # TODO: specify the tests project directory
-  #     CONTINUE_WORKFLOW: ${{ needs.examine-triggers.outputs.CONTINUE_WORKFLOW }}
   #     IS_PRERELEASE: ${{ needs.examine-triggers.outputs.IS_PRERELEASE }}
   #     NEXT_VERSION: ${{ needs.examine-triggers.outputs.NEXT_VERSION }}
   #     REF_TO_BUILD_AND_TAG: ${{ needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG }}
@@ -108,95 +106,15 @@ jobs:
   #       with:
   #         fetch-depth: 0
   #         ref: ${{ env.REF_TO_BUILD_AND_TAG }}
-
-  #     # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
-  #     # - name: Authenticate with GitHub Packages
-  #     #   uses: im-open/authenticate-with-gh-package-registries@v1.0.5
-  #     #   with:
-  #     #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-  #     #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
-
-  #     - name: Setup .NET Versions
-  #       uses: actions/setup-dotnet@v1
+  #     - name: Build and Test
+  #       uses: ./src/SomeDomain.Bff/build-and-test-action
   #       with:
-  #         dotnet-version: | # TODO: verify the dotnet version(s) needed
-  #           6.0
+  #         project_root: ./src/SomeDomain.Bff
+  #         test_project_root: ./tests/SomeDomain.Mfe.UnitTests
 
-  #     - name: Setup node.js
-  #       uses: actions/setup-node@v2
-  #       with:
-  #         node-version: '16'
-  #         cache: 'npm'
-
-  #     - name: dotnet build project
-  #       id: build-project
-  #       working-directory: ${{ env.MFE_PROJECT_ROOT }}
-  #       run: |
-  #         VERSION_ONLY=${NEXT_VERSION#?};  # Removes the first character (the 'v') from the NEXT_VERSION environment variable
-  #         dotnet build --configuration Release /p:Version=$VERSION_ONLY
-
-  #     - name: Create Web App project published artifacts
-  #       id: publish-app
-  #       working-directory: ${{ env.MFE_PROJECT_ROOT }}
-  #       run: dotnet publish --no-build --configuration Release --output ./published_app
-
-  #     - name: dotnet test with coverage
-  #       id: test
-  #       working-directory: ${{ env.MFE_TESTS_PROJECT_ROOT }}
-  #       run: dotnet test --results-directory ../../coverage-results/dotnet --logger trx --configuration Release --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
-  #     - name: create comment for test results
-  #       if: always() && steps.test.outcome == 'success' || steps.test.outcome == 'failure'
-  #       uses: im-open/process-dotnet-test-results@v2.1.0
-  #       with:
-  #         github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-  #         timezone: ${{ env.TIMEZONE }}
-  #         create-status-check: false
-  #         create-pr-comment: true
-  #         comment-identifier: 'Mfe'
-  #         # By default this action creates one comment and updates it for each subsequent workflow run.
-  #         # update-comment-if-one-exists: false
-
-  #     - name: create code coverage report
-  #       id: code-coverage-report
-  #       if: always() && steps.test.outcome == 'success' || steps.test.outcome == 'failure'
-  #       uses: im-open/code-coverage-report-generator@4.8.14
-  #       with:
-  #         reports: '*/**/coverage.opencover.xml'
-  #         targetdir: 'coverage-results/dotnet'
-  #         title: '${{ env.MFE_PROJECT_ROOT }} dotnet Code Coverage'
-  #         tag: 'Workflow: ${{ github.workflow }} <br/> Run Number: ${{ github.run_number }} <br/> Run ID: ${{ github.run_id }}'
-  #         # TODO:  Add the appropriate filters of each type.
-  #         # The filters are a ; separated list of items to include(+) or exclude(-).  Wildcards are accepted.
-  #         # For instance: -xunit*;-Dapper;-*.Tests
-  #         assemblyfilters: ''
-  #         filefilters: ''
-  #         classfilters: ''
-
-  #     - name: upload dotnet code coverage report
-  #       if: always() && steps.code-coverage-report.outcome == 'success'
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: '${{ env.MFE_PROJECT_ROOT }} dotnet Code Coverage'
-  #         path: 'coverage-results/dotnet'
-
-  #     - name: Zip the published app
-  #       id: zip-app
-  #       if: always() && steps.publish-app.outcome == 'success'
-  #       shell: pwsh
-  #       working-directory: ${{ env.MFE_PROJECT_ROOT }}
-  #       run: Compress-Archive -Path published_app/* -DestinationPath SomeDomain.Mfe.zip
-
-  #     - name: Upload published app zip to artifacts
-  #       if: always() && steps.zip-app.outcome == 'success'
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: SomeDomain.Mfe
-  #         path: '${{ env.BFF_PROJECT_ROOT }}/SomeDomain.Mfe.zip'
 
   create-release:
     runs-on: [self-hosted, ubuntu-20.04]
-
     needs:
       - examine-triggers
       # start-project Inserts project build-and-test job names here (don't delete this comment)
@@ -252,11 +170,11 @@ jobs:
           branch-name: ${{ github.head_ref }}
 
   finish-build:
-    if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     needs:
       - examine-triggers
       - create-release
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
     env:
       NEXT_VERSION: ${{ needs.examine-triggers.outputs.NEXT_VERSION }}
