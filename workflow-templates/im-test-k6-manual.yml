@@ -62,7 +62,6 @@ env:
   # InfluxDB addresses - Prod: http://10.206.234.29:8086/loadtesting ; Dev: http://10.206.225.188:8086/loadtesting
   # Github action runners are in Prod Subscription, thus you have to use the Prod Influx DB
   K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.234.29:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
-  # K6_EXTENSION_DOWNLOAD_URL: 'https://github.com/im-practices/performance-testing/releases/download/k6-v0.0.1/k6-im_0.0.1_linux_amd64.tar.gz' # TODO: Comment out if you plan on using custom k6 binary with k6 extensions installed.  IE xk6-mock.
 
 jobs:
   matrix-setup:
@@ -164,7 +163,6 @@ jobs:
         uses: im-open/setup-k6-perf-testing@latest
         with:
           version: ${{ github.event.inputs.k6-version }}
-          # extension-download-url: ${{ env.K6_EXTENSION_DOWNLOAD_URL }} # TODO: Uncomment to use custom k6 binary with k6 extensions installed.
 
       - name: Validate test file exists
         run: |
