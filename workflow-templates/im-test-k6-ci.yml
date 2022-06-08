@@ -1,4 +1,4 @@
-# Workflow Code: TroubledJaguar_v1    DO NOT REMOVE
+# Workflow Code: TroubledJaguar_v2    DO NOT REMOVE
 # Purpose: 
 #    Uses a container to run K6 with the file specified in 
 #    the workflow when commits are pushed to the main branch.
@@ -20,19 +20,101 @@ on:
       - main
 
 env:
-  testFile: '' # TODO: Add the name of the test file, like tests/k6/check-health-simple.js
+  NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
+  ENABLE_NPM_STEPS: 'false'
+  WORKING_DIRECTORY: 'tests/k6' # TODO: Add the location of your tests.  Root directory of k6 test files including configs, etc. IE: tests/k6
+  K6_VERSION: '3.38.3' # TODO: Set version of k6. IE. 0.38.3
+  TEST_FILE: '' # TODO: Add test file to run.
+  
+  # InfluxDB addresses - 
+  # DNS: https://influxdb-v1.mktp.io/loadtesting 
+  # Alternatively you can use IPs if the dns doesn't resolve.  
+  # IPS: https://10.206.234.23/loadtesting or https://10.206.234.22/loadtesting  or https://10.206.234.21/loadtesting 
+  K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
+
+  # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
+  # Update to desired version of releases found in https://github.com/im-practices/performance-testing/releases?q=k6&expanded=true
+  # K6_EXTENSION_ASSET_NAME: 'k6-im_0.0.1_linux_amd64.tar.gz' 
+  # K6_EXTENSION_TAG_NAME: 'k6-v0.0.1'
 
 jobs:
   k6_test:
     runs-on: [self-hosted, ubuntu-20.04]
-    container: docker://loadimpact/k6:latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # InfluxDB addresses - Prod: http://10.206.234.29:8086/loadtesting ; Dev: http://10.206.225.188:8086/loadtesting
-      - name: Run k6 test - docker
-        working-directory: tests/k6 # TODO: Verify working directory of k6 tests
+      # TODO: Delete if you don't build your k6 tests
+      - name: Install Node ${{ env.NODE_VERSION }}
+        if: env.ENABLE_NPM_STEPS == 'true'
+        uses: actions/setup-node@v2
+        with:
+            node-version: ${{ env.NODE_VERSION }}
+
+      # TODO: Delete if you don't build your k6 tests
+      - name: NPM Cache
+        id: npm-cache
+        if: env.ENABLE_NPM_STEPS == 'true'
+        uses: actions/cache@v2
+        with:
+          path: '${{ env.WORKING_DIRECTORY }}/node_modules'
+          key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{ env.WORKING_DIRECTORY }}/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-modules-k6-
+
+      # TODO: Delete if you don't build your k6 tests
+      # This step must be modified to support npm workspaces and --ignore-scripts must be used if failures occur on this step with workspaces.
+      - name: Install NPM Dependencies
+        if: env.ENABLE_NPM_STEPS == 'true' && steps.npm-cache.outputs.cache-hit != 'true'
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm ci
+
+      # TODO: Delete if you don't build your k6 tests
+      - name: Build K6 Tests via npm build
+        if: env.ENABLE_NPM_STEPS == 'true'
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run build
+
+      - name: Install K6 Client
+        uses: im-open/setup-k6-perf-testing@latest
+        with:
+          version: ${{ env.K6_VERSION }}
+          # TODO: Uncomment lines below if using custom k6 binary with k6 extensions installed
+          # extension-token: ${{ secrets.PIPELINE_BOT_PAT }}
+          # extension-asset-name: ${{ env.K6_EXTENSION_ASSET_NAME }}
+          # extension-tag-name: ${{ env.K6_EXTENSION_TAG_NAME }}
+          # extension-repository: 'im-practices/performance-testing'
+
+      - name: Validate test file exists
         run: |
-          k6 run ${{ env.testFile }} --vus 1 -i 1 --insecure-skip-tls-verify -out JSON="./k6-output.json"
+          echo "Checking if test file exists:"
+          FILE="./${{ env.WORKING_DIRECTORY }}/${{ env.TEST_FILE }}"
+          if [[ -f $FILE ]]; then
+            echo "$FILE exists."
+          else
+            echo "Could not find test file. $FILE"
+            exit 1
+          fi
+
+      - name: Run k6 test
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          k6_args="${{ env.K6_PARAMATERS }}"
+
+          k6_test_file_tag="--tag test=${{ env.TEST_FILE }}"
+          # Removing slashes from k6_test_file_tag
+          k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
+
+          k6_params=""
+          if [[ -z k6_args ]]; then
+            k6_params="${{ env.K6_DEFAULT_PARAMATERS }} $k6_test_file_tag"
+          else
+            k6_params="${{ env.K6_DEFAULT_PARAMATERS }} $k6_args $k6_test_file_tag"
+          fi
+
+          echo "K6 Parmaters passing in:"
+          echo $k6_params
+          echo "::notice file=k6.params,line=1,col=1,endColumn=1::$k6_params"
+
+          # Running the test
+          k6 run ${{ env.TEST_FILE }} $k6_params

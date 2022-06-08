@@ -46,7 +46,7 @@ on:
       k6-version:
         description: 'K6 version.  Versions lower than 0.32.0 will not work with this action.  Do not include the "v" prefix.'
         required: true
-        default: '0.38.3' # TODO: Set default version of k6. IE. 0.33.0
+        default: '0.38.3' # TODO: Set default version of k6. IE. 0.38.3
       number-of-runners:
         description: 'Number of Runners: specify number of github self hosted runners.  Max: 10 or maxiumum self hosted linux runners.'
         required: true
