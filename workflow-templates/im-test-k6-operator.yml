@@ -87,12 +87,18 @@ jobs:
       TIMEZONE: 'america/denver' # TODO: Verify timezone
       GRAFANA_DASHBOARD_URI: 'https://grafana.dev.mktp.io/d/N0cdP_cnz/k6-load-testing-results?orgId=1&refresh=5s&from=now-15m&to=now' # TODO: Verify link to your dashboard
       NODE_VERSION: '16.x' # TODO: Set correct node version
-      # InfluxDB addresses - Prod: http://10.206.234.29:8086/loadtesting ; Dev: http://10.206.225.188:8086/loadtesting
-      # K6-Operator AKS Cluster is in the Dev Subscription, thus you have to use the Dev Influx DB
-      K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.225.188:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
+      
+      # InfluxDB addresses - 
+      # DNS: https://influxdb-v1.mktp.io/loadtesting 
+      # Alternatively you can use IPs if the dns doesn't resolve.  
+      # IPS: https://10.206.234.23/loadtesting or https://10.206.234.22/loadtesting  or https://10.206.234.21/loadtesting 
+      K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting  --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
       RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
+      # TODO: Uncomment to use custom k6 binary with k6 extensions installed
+      # K6_CONTAINER_IMAGE: "perftest/k6:latest"
 
       ###### DO NOT EDIT ######
+      PRIVATE_CONTAINER_REGISTRY: 'bdaimdna26corecr1.azurecr.io'
       CLUSTER_NAME: 'BDAIM-D-NA26-PERFTEST-K8-CL'
       CLUSTER_RESOURCE_GROUP: 'BDAIM-D-NA26-PerformanceTesting-RGRP'
       CLUSTER_DNS_ZONE_NAME: 'perftest.privatelink.westus2.azmk8s.io'
@@ -160,7 +166,7 @@ jobs:
         if: github.event.inputs.run-npm-build == 'true' && steps.npm-cache.outputs.cache-hit != 'true'
         working-directory: ${{ github.event.inputs.working-directory }}
         run: npm ci
-        
+
       # TODO: Delete if you don't build your k6 tests
       - name: Build K6 Tests via npm build
         if: github.event.inputs.run-npm-build == 'true'
@@ -210,7 +216,7 @@ jobs:
           # Removing slashes from k6_test_file_tag
           k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
           echo "::set-output name=test-tag::$k6_test_file_tag"
-          
+
       - name: Run K6-Operator Test
         uses: im-practices/run-k6-operator-test@latest
         id: run-k6-operator-test
@@ -225,9 +231,10 @@ jobs:
           parallelism: ${{ github.event.inputs.parallelism }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
+          # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: ncomment to use custom k6 binary with k6 extensions installed
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
-      
+
       # Due to composite actions not supporting post steps, the following workflow steps are required to stop a k6-operator mid stream.
       - name: Upload K6 Deployment Yaml if Cancelled
         if: cancelled()
@@ -237,7 +244,7 @@ jobs:
             name: ${{ steps.run-k6-operator-test.outputs.deploy-yaml-artifact }}-bk
             path: ${{ github.event.inputs.working-directory }}/${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
             retention-days: ${{ env.RETENTION_IN_DAYS }}
-      
+
       - name: Stop Test and Cleanup if Workflow is Cancelled
         if: cancelled()
         continue-on-error: true
@@ -253,13 +260,13 @@ jobs:
           echo ""
           echo "Listing folder contents to validate that ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml exists"
           ls -la ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
-          
+
           echo ""
-          echo "Deleting runner pods for ${{ steps.run-k6-operator-test.outputs.run-name }}" 
+          echo "Deleting runner pods for ${{ steps.run-k6-operator-test.outputs.run-name }}"
           kubectl delete --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
 
           rm -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
-      
+
       ### Cleanup K6-Operator test if workflow is cancelled ###
 
       - name: Remove kubectl config

@@ -59,9 +59,17 @@ on:
 
 env:
   NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
-  # InfluxDB addresses - Prod: http://10.206.234.29:8086/loadtesting ; Dev: http://10.206.225.188:8086/loadtesting
-  # Github action runners are in Prod Subscription, thus you have to use the Prod Influx DB
-  K6_DEFAULT_PARAMATERS: '--out influxdb=http://10.206.234.29:8086/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
+  
+  # InfluxDB addresses - 
+  # DNS: https://influxdb-v1.mktp.io/loadtesting 
+  # Alternatively you can use IPs if the dns doesn't resolve.  
+  # IPS: https://10.206.234.23/loadtesting or https://10.206.234.22/loadtesting  or https://10.206.234.21/loadtesting 
+  K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
+
+  # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
+  # Update to desired version of releases found in https://github.com/im-practices/performance-testing/releases?q=k6&expanded=true
+  # K6_EXTENSION_ASSET_NAME: 'k6-im_0.0.1_linux_amd64.tar.gz' 
+  # K6_EXTENSION_TAG_NAME: 'k6-v0.0.1'
 
 jobs:
   matrix-setup:
@@ -123,7 +131,7 @@ jobs:
       - run: echo "The current environment is ${{ github.event.inputs.env }}"
 
       - run: echo "${{ needs.matrix-setup.outputs.matrix }}"
-      
+
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
@@ -163,6 +171,11 @@ jobs:
         uses: im-open/setup-k6-perf-testing@latest
         with:
           version: ${{ github.event.inputs.k6-version }}
+          # TODO: Uncomment lines below if using custom k6 binary with k6 extensions installed
+          # extension-token: ${{ secrets.PIPELINE_BOT_PAT }}
+          # extension-asset-name: ${{ env.K6_EXTENSION_ASSET_NAME }}
+          # extension-tag-name: ${{ env.K6_EXTENSION_TAG_NAME }}
+          # extension-repository: 'im-practices/performance-testing'
 
       - name: Validate test file exists
         run: |
