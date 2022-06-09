@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v3    DO NOT REMOVE
+# Workflow Code: ZestyAligator_v4    DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -21,16 +21,12 @@ on:
         description: "Environment to run test against [dev, qa, stage]"
         required: true
         type: choice
-        options: # TODO: Update for the environments that are available
+        options: # TODO: Update for the environments that are available.
           - dev
           - qa
           - load
           - stage
           - demo
-      working-directory:
-        description: "Working Directory: Test folder root that contains k6 files"
-        required: true
-        default: './tests/k6' # TODO: Update k6 test folder path
       run-name: # Run name is used to separate load test runs from each other.
         description: "Run Name: Name of k6 test run in logs and kubernetes."
         required: true
@@ -85,6 +81,7 @@ jobs:
 
     env:
       TIMEZONE: 'america/denver' # TODO: Verify timezone
+      WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
       GRAFANA_DASHBOARD_URI: 'https://grafana.dev.mktp.io/d/N0cdP_cnz/k6-load-testing-results?orgId=1&refresh=5s&from=now-15m&to=now' # TODO: Verify link to your dashboard
       NODE_VERSION: '16.x' # TODO: Set correct node version
       
@@ -115,7 +112,7 @@ jobs:
           echo "Workflow Inputs:"
           echo "
             env: ${{ github.event.inputs.env }};
-            working-directory: ${{ github.event.inputs.working-directory }}
+            working-directory: ${{ env.WORKING_DIRECTORY }}
             test-file: ${{ github.event.inputs.test-file }}
             upload-type: ${{ github.event.inputs.upload-type }}
             upload-files-folder: '${{ github.event.inputs.upload-files-folder }}'
@@ -132,7 +129,7 @@ jobs:
             var output = `
               Workflow Inputs =>
                 Environment: ${{ github.event.inputs.env }};
-                Working Directory: ${{ github.event.inputs.working-directory }};;
+                Working Directory: ${{ env.WORKING_DIRECTORY }};;
                 Test File: ${{ github.event.inputs.test-file }};
                 Parallelism: ${{ github.event.inputs.parallelism }};
                 Separate Nodes: ${{ github.event.inputs.separate-nodes }};
@@ -156,21 +153,21 @@ jobs:
         if: github.event.inputs.run-npm-build == 'true'
         uses: actions/cache@v3
         with:
-          path: '${{ github.event.inputs.working-directory }}/node_modules'
-          key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{ github.event.inputs.working-directory }}/package-lock.json') }}
+          path: '${{ env.WORKING_DIRECTORY }}/node_modules'
+          key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{ env.WORKING_DIRECTORY }}/package-lock.json') }}
           restore-keys: ${{ runner.os }}-modules-k6-
 
       # TODO: Delete if you don't build your k6 tests
       # This step must be modified to support npm workspaces and --ignore-scripts must be used if failures occur on this step.
       - name: Install NPM Dependencies
         if: github.event.inputs.run-npm-build == 'true' && steps.npm-cache.outputs.cache-hit != 'true'
-        working-directory: ${{ github.event.inputs.working-directory }}
+        working-directory: ${{ env.WORKING_DIRECTORY }}
         run: npm ci
 
       # TODO: Delete if you don't build your k6 tests
       - name: Build K6 Tests via npm build
         if: github.event.inputs.run-npm-build == 'true'
-        working-directory: ${{ github.event.inputs.working-directory }}
+        working-directory: ${{ env.WORKING_DIRECTORY }}
         run: npm run build
 
       - name: Setup kubectl config
@@ -221,7 +218,7 @@ jobs:
         uses: im-practices/run-k6-operator-test@latest
         id: run-k6-operator-test
         with:
-          working-directory: ${{ github.event.inputs.working-directory }}
+          working-directory: ${{ env.WORKING_DIRECTORY }}
           test-file: ${{ github.event.inputs.test-file }}
           run-name: ${{ github.event.inputs.run-name }}
           upload-type: ${{ github.event.inputs.upload-type}}
@@ -242,14 +239,14 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
             name: ${{ steps.run-k6-operator-test.outputs.deploy-yaml-artifact }}-bk
-            path: ${{ github.event.inputs.working-directory }}/${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+            path: ${{ env.WORKING_DIRECTORY }}/${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
             retention-days: ${{ env.RETENTION_IN_DAYS }}
 
       - name: Stop Test and Cleanup if Workflow is Cancelled
         if: cancelled()
         continue-on-error: true
         shell: bash
-        working-directory: ${{ github.event.inputs.working-directory }}
+        working-directory: ${{ env.WORKING_DIRECTORY }}
         run: |
           #  Cleanup Test Deploy and Configmap
 
