@@ -21,7 +21,7 @@ on:
         description: "Environment to run test against [dev, qa, stage]"
         required: true
         type: choice
-        options: # TODO: Update for the environments that are available
+        options: # TODO: Update for the environments that are available.
           - dev
           - qa
           - load

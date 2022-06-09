@@ -23,7 +23,7 @@ on:
         required: true
         default: 'dev'
         type: choice
-        options: # TODO:  Update for the environments your k6 test can be run against
+        options: # TODO: Update for the environments your k6 test can be run against
           - dev
           - qa
           - stage
