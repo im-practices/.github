@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v4    DO NOT REMOVE
+# Workflow Code: ZestyAligator_v5    DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -82,13 +82,11 @@ jobs:
     env:
       TIMEZONE: 'america/denver' # TODO: Verify timezone
       WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
-      GRAFANA_DASHBOARD_URI: 'https://grafana.dev.mktp.io/d/N0cdP_cnz/k6-load-testing-results?orgId=1&refresh=5s&from=now-15m&to=now' # TODO: Verify link to your dashboard
+      GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1' # TODO: Verify link to your dashboard
       NODE_VERSION: '16.x' # TODO: Set correct node version
       
       # InfluxDB addresses - 
       # DNS: https://influxdb-v1.mktp.io/loadtesting 
-      # Alternatively you can use IPs if the dns doesn't resolve.  
-      # IPS: https://10.206.234.23/loadtesting or https://10.206.234.22/loadtesting  or https://10.206.234.21/loadtesting 
       K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting  --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
       RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
       # TODO: Uncomment to use custom k6 binary with k6 extensions installed
