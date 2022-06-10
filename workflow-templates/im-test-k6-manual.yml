@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v12    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v13    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -58,8 +58,7 @@ env:
   NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
   # InfluxDB addresses - 
   # DNS: https://influxdb-v1.mktp.io/loadtesting 
-  # Alternatively you can use IPs if the dns doesn't resolve.  
-  # IPS: https://10.206.234.23/loadtesting or https://10.206.234.22/loadtesting  or https://10.206.234.21/loadtesting 
+  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1' # TODO: Verify link to your dashboard
   K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
 
   # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
@@ -185,6 +184,7 @@ jobs:
           fi
 
       - name: Run k6 test
+        id: k6-run
         working-directory: ${{env.WORKING_DIRECTORY }}
         run: |
           k6_args="${{ github.event.inputs.k6-paramaters }}"
@@ -206,3 +206,30 @@ jobs:
 
           # Running the test
           k6 run ${{ github.event.inputs.test-file }} $k6_params
+
+      - name: Send Status to Teams - Test Finished
+        if: always()
+        continue-on-error: true
+        uses: im-open/post-status-to-teams-action@v1.1.3
+        with:
+          title: "K6 Test for <your project> - ${{ github.event.inputs.run-name }}" # TODO: Update 
+          workflow-status: ${{ steps.k6-run.outcome }}
+          workflow-type: Runbook
+          teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
+          timezone: ${{ env.TIMEZONE }}
+          custom-facts: |
+            [
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" },
+              { "name": "Environment", "value": "${{ github.event.inputs.env }}"},
+              { "name": "K6 Test", "value": "${{ github.event.inputs.test-file }}" },
+              { "name": "K6 Run Name w/Timestamp", "value": "${{ steps.run-k6-operator-test.outputs.run-name }}"}
+            ]
+          custom-actions: |
+            [
+              {
+                "name": "View Grafana Dashboard",
+                "uri": "${{ env.GRAFANA_DASHBOARD_URI }}"
+              }
+            ]
