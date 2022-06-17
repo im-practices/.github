@@ -69,7 +69,7 @@ on:
         type: boolean
         default: false # TODO: Set true if you require npm build to run for your k6 bundle to be created
       loop-count:
-        description: "Number of 1 minute loops to wait for test to complete."
+        description: "Number of loops to wait for test to complete."
         required: false
         default: "50"
 
