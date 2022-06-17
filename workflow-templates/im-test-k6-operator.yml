@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v6   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v7   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -87,6 +87,7 @@ jobs:
       WORKING_DIRECTORY: "./tests/k6" # TODO: Update k6 test folder path
       GRAFANA_DASHBOARD_URI: "https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1" # TODO: Verify link to your dashboard
       NODE_VERSION: "16.x" # TODO: Set correct node version
+      # LOOP_DURATION: "1m" # TODO: Customize run-k6-operator-test action loop sleep duration. Defaults to 1 minute
 
       # InfluxDB addresses -
       # DNS: https://influxdb-v1.mktp.io/loadtesting
@@ -230,6 +231,7 @@ jobs:
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
           loop-count: ${{ github.event.inputs.loop-count }}
+          # loop-duration: ${{ env.LOOP_DURATION }}
           # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: uncomment to use custom k6 binary with k6 extensions installed
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
