@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v5    DO NOT REMOVE
+# Workflow Code: ZestyAligator_v6   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
