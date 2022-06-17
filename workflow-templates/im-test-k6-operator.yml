@@ -231,7 +231,7 @@ jobs:
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
           loop-count: ${{ github.event.inputs.loop-count }}
-          # loop-duration: ${{ env.LOOP_DURATION }}
+          # loop-duration: ${{ env.LOOP_DURATION }} # TODO: uncomment if you want to customize loop duration
           # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: uncomment to use custom k6 binary with k6 extensions installed
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
