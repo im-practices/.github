@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v5    DO NOT REMOVE
+# Workflow Code: ZestyAligator_v7   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -30,7 +30,7 @@ on:
       run-name: # Run name is used to separate load test runs from each other.
         description: "Run Name: Name of k6 test run in logs and kubernetes."
         required: true
-        default: "Test-Check-Health" # TODO: Update Default k6 run name.  
+        default: "Test-Check-Health" # TODO: Update Default k6 run name.
       test-file:
         description: "Test Filename: K6 js test file to run. Please include .js extension"
         required: true
@@ -49,7 +49,7 @@ on:
       upload-files-folder:
         description: "Upload Files or Folders: Comma separated list of files or folders to include in the upload. Specify full path from working-directory root."
         required: false
-        default: '' # TODO: Update to default upload file or folder
+        default: "" # TODO: Update to default upload file or folder
       k6-paramaters:
         description: "K6 paramaters.  This includes any tags or config files."
         required: false
@@ -68,9 +68,12 @@ on:
         required: false
         type: boolean
         default: false # TODO: Set true if you require npm build to run for your k6 bundle to be created
+      loop-count:
+        description: "Number of loops to wait for test to complete."
+        required: false
+        default: "50"
 
 jobs:
-
   run_k6_operator:
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ github.event.inputs.env }}
@@ -80,23 +83,23 @@ jobs:
         shell: bash
 
     env:
-      TIMEZONE: 'america/denver' # TODO: Verify timezone
-      WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
-      GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1' # TODO: Verify link to your dashboard
-      NODE_VERSION: '16.x' # TODO: Set correct node version
-      
-      # InfluxDB addresses - 
-      # DNS: https://influxdb-v1.mktp.io/loadtesting 
-      K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting  --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
+      TIMEZONE: "america/denver" # TODO: Verify timezone
+      WORKING_DIRECTORY: "./tests/k6" # TODO: Update k6 test folder path
+      GRAFANA_DASHBOARD_URI: "https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1" # TODO: Verify link to your dashboard
+      NODE_VERSION: "16.x" # TODO: Set correct node version
+      LOOP_DURATION: "1m" # TODO: Update duration of loop to your specification.  The action im-practices/run-k6-operator-test documenation has more details on setting this paramater.
+
+      # InfluxDB addresses -
+      # DNS: https://influxdb-v1.mktp.io/loadtesting
+      K6_DEFAULT_PARAMATERS: "--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}" # TODO: Set default k6 paramaters
       RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
-      # TODO: Uncomment to use custom k6 binary with k6 extensions installed
-      # K6_CONTAINER_IMAGE: "perftest/k6:latest"
+      K6_CONTAINER_IMAGE: "perftest/k6:latest" # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
       ###### DO NOT EDIT ######
-      PRIVATE_CONTAINER_REGISTRY: 'bdaimdna26corecr1.azurecr.io'
-      CLUSTER_NAME: 'BDAIM-D-NA26-PERFTEST-K8-CL'
-      CLUSTER_RESOURCE_GROUP: 'BDAIM-D-NA26-PerformanceTesting-RGRP'
-      CLUSTER_DNS_ZONE_NAME: 'perftest.privatelink.westus2.azmk8s.io'
+      PRIVATE_CONTAINER_REGISTRY: "bdaimdna26corecr1.azurecr.io"
+      CLUSTER_NAME: "BDAIM-D-NA26-PERFTEST-K8-CL"
+      CLUSTER_RESOURCE_GROUP: "BDAIM-D-NA26-PerformanceTesting-RGRP"
+      CLUSTER_DNS_ZONE_NAME: "perftest.privatelink.westus2.azmk8s.io"
       ###### DO NOT EDIT ######
 
     steps:
@@ -141,9 +144,9 @@ jobs:
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
         if: github.event.inputs.run-npm-build == 'true'
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
-            node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
 
       # TODO: Delete if you don't build your k6 tests
       - name: NPM Cache
@@ -151,7 +154,7 @@ jobs:
         if: github.event.inputs.run-npm-build == 'true'
         uses: actions/cache@v3
         with:
-          path: '${{ env.WORKING_DIRECTORY }}/node_modules'
+          path: "${{ env.WORKING_DIRECTORY }}/node_modules"
           key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{ env.WORKING_DIRECTORY }}/package-lock.json') }}
           restore-keys: ${{ runner.os }}-modules-k6-
 
@@ -176,7 +179,7 @@ jobs:
           aks-resource-group: ${{ env.CLUSTER_RESOURCE_GROUP }}
           aks-cluster-name: ${{ env.CLUSTER_NAME }}
           dns-zone-name: ${{ env.CLUSTER_DNS_ZONE_NAME }}
-          enable-azure-login: 'true'
+          enable-azure-login: "true"
           azure-credentials: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Send Status to Teams - Starting Test
@@ -226,6 +229,8 @@ jobs:
           parallelism: ${{ github.event.inputs.parallelism }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
+          loop-count: ${{ github.event.inputs.loop-count }}
+          loop-duration: ${{ env.LOOP_DURATION }}
           # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: uncomment to use custom k6 binary with k6 extensions installed
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
@@ -236,9 +241,9 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v3
         with:
-            name: ${{ steps.run-k6-operator-test.outputs.deploy-yaml-artifact }}-bk
-            path: ${{ env.WORKING_DIRECTORY }}/${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
-            retention-days: ${{ env.RETENTION_IN_DAYS }}
+          name: ${{ steps.run-k6-operator-test.outputs.deploy-yaml-artifact }}-bk
+          path: ${{ env.WORKING_DIRECTORY }}/${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+          retention-days: ${{ env.RETENTION_IN_DAYS }}
 
       - name: Stop Test and Cleanup if Workflow is Cancelled
         if: cancelled()
