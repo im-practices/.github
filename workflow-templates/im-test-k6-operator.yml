@@ -87,14 +87,13 @@ jobs:
       WORKING_DIRECTORY: "./tests/k6" # TODO: Update k6 test folder path
       GRAFANA_DASHBOARD_URI: "https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1" # TODO: Verify link to your dashboard
       NODE_VERSION: "16.x" # TODO: Set correct node version
-      # LOOP_DURATION: "1m" # TODO: Customize run-k6-operator-test action loop sleep duration. Defaults to 1 minute
+      LOOP_DURATION: "1m" # TODO: Update duration of loop to your specification.  The action im-practices/run-k6-operator-test documenation has more details on setting this paramater.
 
       # InfluxDB addresses -
       # DNS: https://influxdb-v1.mktp.io/loadtesting
       K6_DEFAULT_PARAMATERS: "--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}" # TODO: Set default k6 paramaters
       RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
-      # TODO: Uncomment to use custom k6 binary with k6 extensions installed
-      # K6_CONTAINER_IMAGE: "perftest/k6:latest"
+      K6_CONTAINER_IMAGE: "perftest/k6:latest" # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
       ###### DO NOT EDIT ######
       PRIVATE_CONTAINER_REGISTRY: "bdaimdna26corecr1.azurecr.io"
@@ -231,7 +230,7 @@ jobs:
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
           loop-count: ${{ github.event.inputs.loop-count }}
-          # loop-duration: ${{ env.LOOP_DURATION }} # TODO: uncomment if you want to customize loop duration
+          loop-duration: ${{ env.LOOP_DURATION }}
           # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: uncomment to use custom k6 binary with k6 extensions installed
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
