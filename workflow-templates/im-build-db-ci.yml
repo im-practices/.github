@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v7    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v8    DO NOT REMOVE
 # Purpose:
 #    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #    In addition to that, however, there are three other things this workflow template is set up to do.
@@ -136,7 +136,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install Flyway
-        uses: im-open/setup-flyway@v1.0.2
+        uses: im-open/setup-flyway@v1.0.4
         with:
           version: 7.2.0 # This version works with the current version of build-database-ci-action. Newer versions might, but they should be tested.
 
@@ -232,7 +232,7 @@ jobs:
 
       # Remove this if you don't need to publish mock sql objects
       # - name: Create and publish views from tables
-      #   uses: im-open/sql-view-to-table-generator@v1.0.3
+      #   uses: im-open/sql-view-to-table-generator@v1.0.5
       #   with:
       #     schema-names: 'dbo,CustomSchema' # TODO: Replace this with an actual list
       #     db-name: ${{ env.DB_NAME }}

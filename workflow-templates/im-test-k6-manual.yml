@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v13    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v14    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -33,9 +33,9 @@ on:
         required: true
         default: '' # TODO: Add default test file  IE: check-health-simple.js
       run-name: # Run name is used to separate load test runs from each other.
-        description: "Run Name: Name of k6 test run in logs and kubernetes."
+        description: 'Run Name: Name of k6 test run in logs and kubernetes.'
         required: true
-        default: "Test-Check-Health" # TODO: Update Default k6 run name.  
+        default: 'Test-Check-Health' # TODO: Update Default k6 run name.
       k6-paramaters:
         description: 'K6 extra paramaters. IE: -tag product=TEST,family=TEST'
         required: false
@@ -48,7 +48,7 @@ on:
         required: true
         default: '1'
       run-npm-build: # TODO: Delete input if you don't build your k6 tests with npm
-        description: "Run NPM Build: Run npm build to create packages k6 tests"
+        description: 'Run NPM Build: Run npm build to create packages k6 tests'
         required: false
         type: boolean
         default: false # TODO: Set true if you require npm build to run for your k6 bundle to be created
@@ -56,14 +56,14 @@ on:
 env:
   WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
   NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
-  # InfluxDB addresses - 
-  # DNS: https://influxdb-v1.mktp.io/loadtesting 
+  # InfluxDB addresses -
+  # DNS: https://influxdb-v1.mktp.io/loadtesting
   GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1' # TODO: Verify link to your dashboard
   K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
 
   # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
   # Update to desired version of releases found in https://github.com/im-practices/performance-testing/releases?q=k6&expanded=true
-  # K6_EXTENSION_ASSET_NAME: 'k6-im_0.0.1_linux_amd64.tar.gz' 
+  # K6_EXTENSION_ASSET_NAME: 'k6-im_0.0.1_linux_amd64.tar.gz'
   # K6_EXTENSION_TAG_NAME: 'k6-v0.0.1'
 
 jobs:
@@ -137,7 +137,7 @@ jobs:
         if: github.event.inputs.run-npm-build == 'true'
         uses: actions/setup-node@v2
         with:
-            node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
 
       # TODO: Delete if you don't build your k6 tests
       - name: NPM Cache
@@ -210,9 +210,9 @@ jobs:
       - name: Send Status to Teams - Test Finished
         if: always()
         continue-on-error: true
-        uses: im-open/post-status-to-teams-action@v1.1.3
+        uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: "K6 Test for <your project> - ${{ github.event.inputs.run-name }}" # TODO: Update 
+          title: 'K6 Test for <your project> - ${{ github.event.inputs.run-name }}' # TODO: Update
           workflow-status: ${{ steps.k6-run.outcome }}
           workflow-type: Runbook
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
