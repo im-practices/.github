@@ -1,4 +1,4 @@
-# Workflow Code: ShinySQUIRREL_v13    DO NOT REMOVE
+# Workflow Code: ShinySQUIRREL_v14    DO NOT REMOVE
 # Purpose:
 #    Validates that the deployed terraform matches what is supposed to be deployed
 #    when it runs at a scheduled time or when someone kicks it off manually.
@@ -124,7 +124,7 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.0.5
+        uses: im-open/setup-deploy-keys@v1.0.6
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
@@ -150,7 +150,7 @@ jobs:
 
       - name: Trigger PagerDuty when there are changes
         if: steps.plan.outputs.exitcode == '2'
-        uses: im-open/create-pagerduty-incident@v1.0.5
+        uses: im-open/create-pagerduty-incident@v1.0.7
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
