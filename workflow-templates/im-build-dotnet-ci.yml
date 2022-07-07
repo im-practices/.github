@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v30    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v31    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -324,6 +324,11 @@ jobs:
       PUBLISHED_APP: 'published_app' # Value will be used in the deployment workflow
       DEPLOY_ZIP: 'published_app.zip' # Value will be used in the deployment workflow
 
+      # TODO: If publishing Azure Event Hubs events, and wishing to create an AsyncAPI Document to describe the events, uncomment and fill out the following two variables
+      #       For more information on AsyncAPI Document generation, see https://github.com/im-practices/cloud-events/blob/main/src/Mktp.Messaging.Events.Publisher.AsyncApi/README.md.
+      # ASYNCAPI_GENERATION_PROJECT_PATH: '' # TODO: Add the path to the console application that generates the AsyncAPI Document
+      # ASYNCAPI_DOCUMENT_PATH: '' # TODO: Add the path to the directory where the AsyncAPI Document should be generated
+
       # TODO: For multiple deployables, each deployable should have a block with the appropriate values and delete the single-deployable block above.
       # PROJECT_ROOT_SITE: '' # TODO: Fill in the path to the folder containing the project that will be deployed, like ./src/MyBff
       # PUBLISHED_SITE: 'published_site' # Value will be used in the deployment workflow
@@ -385,6 +390,16 @@ jobs:
           calculate-prerelease-version: ${{ env.IS_PRERELEASE }}
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
           # tag-prefix: '' # TODO: If you prefix your tags like (mfe/db/etc) uncomment and add that value here
+
+      # TODO: If the project being built publishes to Azure Event Hubs, this step is needed to build an AsyncAPI Document.
+      #       It runs a console application that calls the Mktp.Messaging.Events.Publisher.AsyncApi library.
+      #       See https://github.com/im-practices/cloud-events/blob/main/src/Mktp.Messaging.Events.Publisher.AsyncApi/README.md for more information.
+      # - name: Build AsyncAPI Document
+      # # TODO: Add the path to your console application that builds the AsyncAPI Document. Double check the directories where the AsyncAPI Document gets copied to/from.
+      # run: |
+      #   dotnet run ${{ env.ASYNCAPI_GENERATION_PROJECT_PATH }} -- ${{ env.ASYNCAPI_DOCUMENT_PATH }}
+      #   mkdir ./${{ env.PUBLISHED_APP }}/AsyncAPI_Document/
+      #   cp ${{ env.ASYNCAPI_DOCUMENT_PATH }}/asyncapi-document.yaml ./${{ env.PUBLISHED_APP }}/AsyncAPI_Document/
 
       # TODO: If there are multiple deployables, duplicate this step once per deployable project and update the PROJECT_ROOT, PUBLISHED_APP and DEPLOY_ZIP variables with the updated names.
       - name: Build and Publish
