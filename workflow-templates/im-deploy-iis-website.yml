@@ -2,26 +2,25 @@
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
-#    stops the app pool, deploys the pre-built artifacts to an on-prem machine then starts the app pool.
+#    stops the app pool, deploys the pre-built artifacts to a target machine then starts the app pool.
 #    Each deployable project in a solution should have their own deployment workflow.
 #
 # Frequency:
-#    Each deployable on-prem site in the repository should have their own copy of this workflow rather than trying to deploy several
-#    on-prem websites with the same workflow.  If the site is deployed as part of a group, the site still needs its own copy of this
+#    Each deployable site in the repository should have their own copy of this workflow rather than trying to deploy several
+#    websites with the same workflow.  If the site is deployed as part of a group, the site still needs its own copy of this
 #    workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
 #
 # Projects to use this Template with:
-#    - On-Prem Site (Core Template)
+#    - IIS Site (Core Template)
 #
 # TODO: Prerequisites:
 #    - Make sure the Service account secrets have been added to the environment
 #    - Make sure the host IIS server has been prepped to accept incoming WinRM Requests
-#      See the IIS App Pool action README for more details: https://github.com/im-open/iis-service-action/#readme
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
-#      Generally one board should be set up per on-prem site in the repository.
+#      Generally one board should be set up per IIS site in the repository.
 
-name: Deploy On Prem Website # TODO: If there are multiple on prem sites in the repo, append the site name to this workflow's file name and update this name
+name: Deploy IIS Website # TODO: If there are multiple sites in the repo, append the site name to this workflow's file name and update this name
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger
@@ -48,13 +47,13 @@ on:
   #       2. Delete the workflow_dispatch trigger
   #       3. Change the env.ENVIRONMENT value from "${{ github.event.inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
   #       4. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
-  #       5. Under the 'set-vars' job:
+  #       5. Under the 'verify-tag-extis' job:
   #          a. Delete the 'Checkout Repository' step
   #          b. Delete the 'Verify Tag Exists' step
   #       6. Delete the 'stakeholder-approval' job
   #       7. Delete the 'attestor-approval' job
   #       8. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
-  #       9. Under the 'deploy-site' job, update the needs property to be: "needs: [set-vars]"
+  #       9. Under the 'deploy-site' job, update the needs property to be: "needs: [verify-tag-extis]"
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
@@ -65,20 +64,8 @@ env:
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
-  set-vars:
+  verify-tag-extis:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    outputs:
-      ON_PREM_WINDOWS_SERVER: ${{ steps.set-variables.outputs.ON_PREM_WINDOWS_SERVER }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
-      WEBSITE_NAME: ${{ steps.set-variables.outputs.WEBSITE_NAME }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_NAME }}
-      APP_POOL_NAME: ${{ steps.set-variables.outputs.APP_POOL_NAME }} # To use this value: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
-      WEBSITE_HOST_HEADER: ${{ steps.set-variables.outputs.WEBSITE_HOST_HEADER }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_HOST_HEADER }}
-      WEBSITE_PATH: ${{ steps.set-variables.outputs.WEBSITE_PATH }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_PATH }}
-      WEBSITE_CERT_PATH: ${{ steps.set-variables.outputs.WEBSITE_CERT_PATH }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_PATH }}
-      WEBSITE_CERT_FRIENDLY_NAME: ${{ steps.set-variables.outputs.WEBSITE_CERT_FRIENDLY_NAME }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_FRIENDLY_NAME }}
-      WEBSITE_CERT_PASSWORD: ${{ steps.set-variables.outputs.WEBSITE_CERT_PASSWORD }} # To use this value: ${{ needs.set-vars.outputs.WEBSITE_CERT_PASSWORD }}
-      ON_PREM_DEPLOYMENT_SA_ID: ${{ steps.set-variables.outputs.ON_PREM_DEPLOYMENT_SA_ID }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
-      ON_PREM_DEPLOYMENT_SA_SECRET: ${{ steps.set-variables.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -93,7 +80,79 @@ jobs:
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
 
-      # TODO: If any of the following deployment vars do not vary from environment to environment, they should
+  # Each env has their own stakeholder approval environment.  If no required reviewers are set for
+  # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  stakeholder-approval:
+    needs: [verify-tag-extis]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
+    steps:
+      - name: Approval Received
+        run: |
+          echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "Stakeholder approval was received or no required reviewers were set for this environment."
+
+  # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
+  # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  attestor-approval:
+    needs: [verify-tag-extis]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    environment: '${{ github.event.inputs.environment }} Attestor Approval' # Use inputs context because env context is not available to environment:
+    steps:
+      - run: |
+          echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          echo "Attestor approval was received or no required reviewers were set for this environment."
+
+  # This job needs to run for all environments because deploy-site relies
+  # on it but the steps inside this job will only run for the Prod env.
+  validate-tag-is-in-main-for-prod-deploys:
+    needs: [verify-tag-extis, stakeholder-approval, attestor-approval]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    steps:
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+
+      # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
+      # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
+      - name: Checkout Repository
+        if: env.ENVIRONMENT == 'prod'
+        uses: actions/checkout@v2
+        with:
+          ref: 'main' # TODO: verify the name of your default branch
+          fetch-depth: 0
+
+      - uses: im-open/is-tag-reachable-from-default-branch@v1.0.1
+        if: env.ENVIRONMENT == 'prod'
+        with:
+          tag: ${{ env.RELEASE_TAG }}
+
+      - uses: im-open/is-release-production-ready@v1.0.1
+        if: env.ENVIRONMENT == 'prod'
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-tag: ${{ env.RELEASE_TAG }}
+          fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
+
+  # If you want to verify that the Jira ticket being deployed has the proper attestations, there is an action for that.
+  # https://github.com/im-open/verify-fields-on-jira-task
+  # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
+  # Details on how to use the action can be found in the action's README.
+
+  deploy-site:
+    needs: [verify-tag-extis, validate-tag-is-in-main-for-prod-deploys]
+    runs-on: [self-hosted, windows-2019]
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
+
+    env:
+      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions' # TODO: Verify this PD Maintenance Window Description
+      ASSET_ZIP: 'published_app.zip' # TODO: Verify that this wasn't changed in the CI build.  This is the value in that workflow by default.
+      UNZIPPED_ASSET: 'published_app'
+      DEPLOY_ZIP: 'deploy.zip'
+
+    steps:
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+
+        # TODO: If any of the following deployment vars do not vary from environment to environment, they should
       #      be converted to a global env var at the top of the workflow and the output in this job should be removed
 
       # For more information and best practices on the usage and options available
@@ -106,14 +165,14 @@ jobs:
           create-output-variables: true
         env:
           # TODO: Fill in the iis-server and remove the environments that are not used.
-          # This should be a FQDN name (on-prem-server.extendhealth.com) for the DNS request
+          # This should be a FQDN name (target-server.extendhealth.com) for the DNS request
           # to resolve correctly
-          ON_PREM_WINDOWS_SERVER@dev: ''
-          ON_PREM_WINDOWS_SERVER@qa: ''
-          ON_PREM_WINDOWS_SERVER@stage: ''
-          ON_PREM_WINDOWS_SERVER@demo: ''
-          ON_PREM_WINDOWS_SERVER@uat: ''
-          ON_PREM_WINDOWS_SERVER@prod: ''
+          IIS_SERVER@dev: ''
+          IIS_SERVER@qa: ''
+          IIS_SERVER@stage: ''
+          IIS_SERVER@demo: ''
+          IIS_SERVER@uat: ''
+          IIS_SERVER@prod: ''
           # TODO: Fill in the website-name and remove the environments that are not used.
           WEBSITE_NAME@dev: ''
           WEBSITE_NAME@qa: ''
@@ -163,93 +222,35 @@ jobs:
           WEBSITE_CERT_PASSWORD@demo: ''
           WEBSITE_CERT_PASSWORD@uat: ''
           WEBSITE_CERT_PASSWORD@prod: ''
-          # TODO: Fill in the on-prem-deployment-sa-id for WinRm access to the IIS Server and remove the environments that are not used.
-          # This user id should be prefixed with the domain of the service account (extendhealth\svc-app-sa-env)
-          ON_PREM_DEPLOYMENT_SA_ID@dev: ''
-          ON_PREM_DEPLOYMENT_SA_ID@qa: ''
-          ON_PREM_DEPLOYMENT_SA_ID@stage: ''
-          ON_PREM_DEPLOYMENT_SA_ID@demo: ''
-          ON_PREM_DEPLOYMENT_SA_ID@uat: ''
-          ON_PREM_DEPLOYMENT_SA_ID@prod: ''
-          # TODO: Fill in the on-prem-deployment-sa-secret for WinRm access to the IIS Server and remove the environments that are not used.
-          ON_PREM_DEPLOYMENT_SA_SECRET@dev: ''
-          ON_PREM_DEPLOYMENT_SA_SECRET@qa: ''
-          ON_PREM_DEPLOYMENT_SA_SECRET@stage: ''
-          ON_PREM_DEPLOYMENT_SA_SECRET@demo: ''
-          ON_PREM_DEPLOYMENT_SA_SECRET@uat: ''
-          ON_PREM_DEPLOYMENT_SA_SECRET@prod: ''
-
-  # Each env has their own stakeholder approval environment.  If no required reviewers are set for
-  # that environment, the workflow will continue without requiring anyone to approve the deployment.
-  stakeholder-approval:
-    needs: [set-vars]
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
-    steps:
-      - name: Approval Received
-        run: |
-          echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-          echo "Stakeholder approval was received or no required reviewers were set for this environment."
-
-  # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
-  # that environment, the workflow will continue without requiring anyone to approve the deployment.
-  attestor-approval:
-    needs: [set-vars]
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ github.event.inputs.environment }} Attestor Approval' # Use inputs context because env context is not available to environment:
-    steps:
-      - run: |
-          echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-          echo "Attestor approval was received or no required reviewers were set for this environment."
-
-  # This job needs to run for all environments because deploy-site relies
-  # on it but the steps inside this job will only run for the Prod env.
-  validate-tag-is-in-main-for-prod-deploys:
-    needs: [set-vars, stakeholder-approval, attestor-approval]
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
-      # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
-      # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
-      - name: Checkout Repository
-        if: env.ENVIRONMENT == 'prod'
-        uses: actions/checkout@v2
-        with:
-          ref: 'main' # TODO: verify the name of your default branch
-          fetch-depth: 0
-
-      - uses: im-open/is-tag-reachable-from-default-branch@v1.0.1
-        if: env.ENVIRONMENT == 'prod'
-        with:
-          tag: ${{ env.RELEASE_TAG }}
-
-      - uses: im-open/is-release-production-ready@v1.0.1
-        if: env.ENVIRONMENT == 'prod'
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          release-tag: ${{ env.RELEASE_TAG }}
-          fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
-
-  # If you want to verify that the Jira ticket being deployed has the proper attestations, there is an action for that.
-  # https://github.com/im-open/verify-fields-on-jira-task
-  # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
-  # Details on how to use the action can be found in the action's README.
-
-  deploy-site:
-    needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
-    runs-on: [self-hosted, windows-2019]
-    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
-
-    env:
-      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
-      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions' # TODO: Verify this PD Maintenance Window Description
-      ASSET_ZIP: 'published_app.zip' # TODO: Verify that this wasn't changed in the CI build.  This is the value in that workflow by default.
-      UNZIPPED_ASSET: 'published_app'
-      DEPLOY_ZIP: 'deploy.zip'
-
-    steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+          # TODO: Fill in the website-service-account-id and remove the environments that are not used.
+          WEBSITE_SERVICE_ACCOUNT_ID@dev: ''
+          WEBSITE_SERVICE_ACCOUNT_ID@qa: ''
+          WEBSITE_SERVICE_ACCOUNT_ID@stage: ''
+          WEBSITE_SERVICE_ACCOUNT_ID@demo: ''
+          WEBSITE_SERVICE_ACCOUNT_ID@uat: ''
+          WEBSITE_SERVICE_ACCOUNT_ID@prod: ''
+          # TODO: Fill in the website-service-account-secret and remove the environments that are not used.
+          WEBSITE_SERVICE_ACCOUNT_SECRET@dev: ''
+          WEBSITE_SERVICE_ACCOUNT_SECRET@qa: ''
+          WEBSITE_SERVICE_ACCOUNT_SECRET@stage: ''
+          WEBSITE_SERVICE_ACCOUNT_SECRET@demo: ''
+          WEBSITE_SERVICE_ACCOUNT_SECRET@uat: ''
+          WEBSITE_SERVICE_ACCOUNT_SECRET@prod: ''
+          # TODO: Fill in the deployment-sa-id for WinRm access to the IIS Server and remove the environments that are not used.
+          # This user id should be prefixed with the domain of the service account (svc-app-sa-env@extendhealth.com or extendhealth\svc-app-sa-env)
+          DEPLOYMENT_SA_ID@dev: ''
+          DEPLOYMENT_SA_ID@qa: ''
+          DEPLOYMENT_SA_ID@stage: ''
+          DEPLOYMENT_SA_ID@demo: ''
+          DEPLOYMENT_SA_ID@uat: ''
+          DEPLOYMENT_SA_ID@prod: ''
+          # TODO: Fill in the deployment-sa-secret for WinRm access to the IIS Server and remove the environments that are not used.
+          DEPLOYMENT_SA_SECRET@dev: ''
+          DEPLOYMENT_SA_SECRET@qa: ''
+          DEPLOYMENT_SA_SECRET@stage: ''
+          DEPLOYMENT_SA_SECRET@demo: ''
+          DEPLOYMENT_SA_SECRET@uat: ''
+          DEPLOYMENT_SA_SECRET@prod: ''
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -284,7 +285,7 @@ jobs:
         env:
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
-          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of set-vars.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
+          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of verify-tag-extis.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
           # Auth0_Domain@dev: 'wtw-im-dev.auth0.com'
           # Auth0_Domain@qa: 'wtw-im-qa.auth0.com'
@@ -318,49 +319,49 @@ jobs:
       # Uncomment this if the site hasn't been created before
       # This action does work better if the website cert is already installed
       # - name: Create Web Site
-      #   uses: im-open/iis-site-create@v2.0.0
+      #   uses: im-open/iis-site-create@v2.0.3
       #   with:
-      #     server: '${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}'
-      #     website-name: '${{ needs.set-vars.outputs.WEBSITE_NAME }}'
-      #     app-pool-name: '${{ needs.set-vars.outputs.APP_POOL_NAME }}'
-      #     website-host-header: '${{ needs.set-vars.outputs.WEBSITE_HOST_HEADER }}'
-      #     website-path: '${{ needs.set-vars.outputs.WEBSITE_PATH }}'
-      #     website-cert-path: '${{ needs.set-vars.outputs.WEBSITE_CERT_PATH }}'
-      #     website-cert-friendly-name: '${{ needs.set-vars.outputs.WEBSITE_CERT_FRIENDLY_NAME }}'
-      #     website-cert-password: '${{ needs.set-vars.outputs.WEBSITE_CERT_PASSWORD }}'
-      #     service-account-id: '${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}'
-      #     service-account-password: '${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}'
+      #     server: '${{ env.IIS_SERVER }}'
+      #     website-name: '${{ env.WEBSITE_NAME }}'
+      #     app-pool-name: '${{ env.APP_POOL_NAME }}'
+      #     website-host-header: '${{ env.WEBSITE_HOST_HEADER }}'
+      #     website-path: '${{ env.WEBSITE_PATH }}'
+      #     website-cert-path: '${{ env.WEBSITE_CERT_PATH }}'
+      #     website-cert-friendly-name: '${{ env.WEBSITE_CERT_FRIENDLY_NAME }}'
+      #     website-cert-password: '${{ env.WEBSITE_CERT_PASSWORD }}'
+      #     service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
+      #     service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
       - name: Stop App Pool
         id: app-pool-stop
         if: always()
-        uses: im-open/app-pool-action@v2.0.0
+        uses: im-open/app-pool-action@v2.0.2
         with:
           action: 'stop'
-          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
-          app-pool-name: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
-          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          server: ${{ env.IIS_SERVER }}
+          app-pool-name: ${{ env.APP_POOL_NAME }}
+          service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ env.DEPLOYMENT_SA_SECRET }}
 
       - name: Deploy deployment package
         if: steps.app-pool-stop.outcome == 'success'
-        uses: im-open/deploy-windows-files@v2.0.2
+        uses: im-open/deploy-windows-files@v2.0.3
         with:
-          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
+          server: ${{ env.IIS_SERVER }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
-          deployment-folder-path: ${{ needs.set-vars.outputs.WEBSITE_PATH }}
+          deployment-folder-path: ${{ env.WEBSITE_PATH }}
           clean-deployment-folder: 'true'
-          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
       - name: Start App Pool
-        uses: im-open/app-pool-action@v2.0.0
+        uses: im-open/app-pool-action@v2.0.2
         with:
           action: 'start'
-          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
-          app-pool-name: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
-          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          server: ${{ env.IIS_SERVER }}
+          app-pool-name: ${{ env.APP_POOL_NAME }}
+          service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ env.DEPLOYMENT_SA_SECRET }}
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'
@@ -379,7 +380,7 @@ jobs:
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: [set-vars, deploy-site]
+    needs: [verify-tag-extis, deploy-site]
     if: always()
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -412,7 +413,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.1.2
         with:
-          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
+          title: ${{ env.WEBSITE_NAME }} Deployment to ${{ env.IIS_SERVER }}
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -429,7 +430,7 @@ jobs:
         if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.2
         with:
-          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
+          title: ${{ env.WEBSITE_NAME }} Deployment to ${{ env.IIS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret

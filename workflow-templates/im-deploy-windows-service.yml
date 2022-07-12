@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v21    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v22    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -11,7 +11,7 @@
 #    workflow but it will be streamlined (instructions below) since the Deploy Multiple Items workflow handles many of these checks.
 #
 # Projects to use this Template with:
-#    - On-Prem Service (Core Template)
+#    - Windows Service (Core Template)
 #
 # TODO: Prerequisites:
 #     - Make sure the Service account secrets have been added to the environment
@@ -20,7 +20,7 @@
 #     - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 #       Generally one board should be set up per windows service in the repository.
 
-name: Deploy On Prem Windows Service # TODO: If there are multiple on prem services in the repo, append the service name to this workflow's file name and update this name
+name: Deploy Windows Service # TODO: If there are multiple on prem services in the repo, append the service name to this workflow's file name and update this name
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger
@@ -47,13 +47,13 @@ on:
   #       2. Delete the workflow_dispatch trigger
   #       3. Change the env.ENVIRONMENT value from "${{ github.event.inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
   #       4. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
-  #       5. Under the 'set-vars' job:
+  #       5. Under the 'verify-tag' job:
   #          a. Delete the 'Checkout Repository' step
   #          b. Delete the 'Verify Tag Exists' step
   #       6. Delete the 'stakeholder-approval' job
   #       7. Delete the 'attestor-approval' job
   #       8. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
-  #       9. Under the 'deploy-service' job, update the needs property to be: "needs: [set-vars]"
+  #       9. Under the 'deploy-service' job, update the needs property to be: "needs: [verify-tag]"
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
@@ -64,17 +64,8 @@ env:
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
-  set-vars:
+  verify-tag:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    outputs:
-      ON_PREM_WINDOWS_SERVER: ${{ steps.windows-server.outputs.ON_PREM_WINDOWS_SERVER }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
-      SERVICE_NAME: ${{ steps.windows-server.outputs.SERVICE_NAME }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_NAME }}
-      SERVICE_USER_NAME: ${{ steps.windows-server.outputs.SERVICE_USER_NAME }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_USER_NAME }}
-      SERVICE_USER_SECRET: ${{ steps.windows-server.outputs.SERVICE_USER_SECRET }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_USER_SECRET }}
-      SERVICE_PATH: ${{ steps.windows-server.outputs.SERVICE_PATH }} # To use this value: ${{ needs.set-vars.outputs.SERVICE_PATH }}
-      ON_PREM_DEPLOYMENT_SA_ID: ${{ steps.windows-server.outputs.ON_PREM_DEPLOYMENT_SA_ID }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
-      ON_PREM_DEPLOYMENT_SA_SECRET: ${{ steps.windows-server.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }} # To use this value: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
     steps:
       - name: Checkout Repository
@@ -89,75 +80,10 @@ jobs:
 
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
-      # TODO: If any of the following deployment vars do not vary from environment to environment, they should
-      #      be converted to a global env var at the top of the workflow and the output in this job should be removed
-
-      # For more information and best practices on the usage and options available
-      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
-      - name: Set Variables
-        id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.0.4
-        with:
-          scope: ${{ env.ENVIRONMENT }}
-          create-output-variables: true
-        env:
-          # TODO: Fill in the iis-server and remove the environments that are not used.
-          # This should be a FQDN name (on-prem-server.extendhealth.com) for the DNS request
-          # to resolve correctly
-          ON_PREM_WINDOWS_SERVER@dev: ''
-          ON_PREM_WINDOWS_SERVER@qa: ''
-          ON_PREM_WINDOWS_SERVER@stage: ''
-          ON_PREM_WINDOWS_SERVER@demo: ''
-          ON_PREM_WINDOWS_SERVER@uat: ''
-          ON_PREM_WINDOWS_SERVER@prod: ''
-          # TODO: Fill in the service-name and remove the environments that are not used.
-          SERVICE_NAME@dev: ''
-          SERVICE_NAME@qa: ''
-          SERVICE_NAME@stage: ''
-          SERVICE_NAME@demo: ''
-          SERVICE_NAME@uat: ''
-          SERVICE_NAME@prod: ''
-          # TODO: Fill in the service-path and remove the environments that are not used.
-          SERVICE_PATH@dev: ''
-          SERVICE_PATH@qa: ''
-          SERVICE_PATH@stage: ''
-          SERVICE_PATH@demo: ''
-          SERVICE_PATH@uat: ''
-          SERVICE_PATH@prod: ''
-          # TODO: Fill in the on-prem-deployment-sa-id for WinRm access to the IIS Server and remove the environments that are not used.
-          # This user id should be prefixed with the domain of the service account (extendhealth\svc-app-sa-env)
-          ON_PREM_DEPLOYMENT_SA_ID@dev: ''
-          ON_PREM_DEPLOYMENT_SA_ID@qa: ''
-          ON_PREM_DEPLOYMENT_SA_ID@stage: ''
-          ON_PREM_DEPLOYMENT_SA_ID@demo: ''
-          ON_PREM_DEPLOYMENT_SA_ID@uat: ''
-          ON_PREM_DEPLOYMENT_SA_ID@prod: ''
-          # TODO: Fill in the windows-server-service-password for WinRm access to the Windows machine and remove the environments that are not used.
-          ON_PREM_DEPLOYMENT_SA_SECRET@dev: ''
-          ON_PREM_DEPLOYMENT_SA_SECRET@qa: ''
-          ON_PREM_DEPLOYMENT_SA_SECRET@stage: ''
-          ON_PREM_DEPLOYMENT_SA_SECRET@demo: ''
-          ON_PREM_DEPLOYMENT_SA_SECRET@uat: ''
-          ON_PREM_DEPLOYMENT_SA_SECRET@prod: ''
-          # TODO: Fill in the service-user-name for that the windows service uses remove if using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
-          SERVICE_USER_NAME@dev: ''
-          SERVICE_USER_NAME@qa: ''
-          SERVICE_USER_NAME@stage: ''
-          SERVICE_USER_NAME@demo: ''
-          SERVICE_USER_NAME@uat: ''
-          SERVICE_USER_NAME@prod: ''
-          # TODO: Fill in the service-user-secret for that the windows service uses remove if using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
-          SERVICE_USER_SECRET@dev: ''
-          SERVICE_USER_SECRET@qa: ''
-          SERVICE_USER_SECRET@stage: ''
-          SERVICE_USER_SECRET@demo: ''
-          SERVICE_USER_SECRET@uat: ''
-          SERVICE_USER_SECRET@prod: ''
-
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
-    needs: [set-vars]
+    needs: [verify-tag]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
@@ -169,7 +95,7 @@ jobs:
   # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   attestor-approval:
-    needs: [set-vars]
+    needs: [verify-tag]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ github.event.inputs.environment }} Attestor Approval' # Use inputs context because env context is not available to environment:
     steps:
@@ -180,7 +106,7 @@ jobs:
   # This job needs to run for all environments because deploy-service relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
-    needs: [set-vars, stakeholder-approval, attestor-approval]
+    needs: [verify-tag, stakeholder-approval, attestor-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -212,7 +138,11 @@ jobs:
   # Details on how to use the action can be found in the action's README.
 
   deploy-service:
-    needs: [set-vars, stakeholder-approval, validate-tag-for-prod-deploys]
+    needs: |
+      - verify-tag
+      - stakeholder-approval
+      - attestor-approval
+      - validate-tag-for-prod-deploys
     runs-on: [self-hosted, windows-2019]
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
@@ -239,24 +169,57 @@ jobs:
       - run: |
           echo "The maintenance window ID is: ${{ steps.open-window.outputs.maintenance-window-id }}"
 
-      - name: Download artifacts from release
-        uses: im-open/download-release-asset@v1.0.2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          asset-name: ${{ env.ASSET_ZIP }}
-          tag-name: ${{ github.event.inputs.tag}}
+      # TODO: If any of the following deployment vars do not vary from environment to environment, they should
+      #      be converted to a global env var at the top of the workflow or the env section of this job
 
-      - name: Unzip release asset
-        shell: powershell
-        run: Expand-Archive -LiteralPath ${{ env.ASSET_ZIP }} -DestinationPath ./${{ env.UNZIPPED_ASSET }}
-
-      - name: Set Service Configuration and Substitution Values
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
+      - name: Set Variables
+        id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.0.4
         with:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
-          input-file: '' # TODO: if you have an input file with your variable substitutions, add them here
         env:
+          # TODO: Fill in the target windows server and remove the environments that are not used.
+          # This should be a FQDN name (target-server.extendhealth.com) for the DNS request
+          # to resolve correctly
+          TARGET_SERVER@dev: ''
+          TARGET_SERVER@qa: ''
+          TARGET_SERVER@stage: ''
+          TARGET_SERVER@demo: ''
+          TARGET_SERVER@uat: ''
+          TARGET_SERVER@prod: ''
+          # TODO: Fill in the service name and remove the environments that are not used.
+          SERVICE_NAME@dev: ''
+          SERVICE_NAME@qa: ''
+          SERVICE_NAME@stage: ''
+          SERVICE_NAME@demo: ''
+          SERVICE_NAME@uat: ''
+          SERVICE_NAME@prod: ''
+          # TODO: Fill in the target machine local path where the service's executeable files are
+          #       kept and remove the environments that are not used.
+          SERVICE_PATH@dev: ''
+          SERVICE_PATH@qa: ''
+          SERVICE_PATH@stage: ''
+          SERVICE_PATH@demo: ''
+          SERVICE_PATH@uat: ''
+          SERVICE_PATH@prod: ''
+          # TODO: Fill in the service user account name that the windows service runs under.  If the windows service uses the a
+          #       local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          RUN_TIME_ID@dev: ''
+          RUN_TIME_ID@qa: ''
+          RUN_TIME_ID@stage: ''
+          RUN_TIME_ID@demo: ''
+          RUN_TIME_ID@uat: ''
+          RUN_TIME_ID@prod: ''
+          # TODO: Fill in the service user account secret that the windows service runs under.  If the windows service uses the a
+          #       local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.RUN_TIME_SECRET@dev: ''
+          RUN_TIME_SECRET@qa: ''
+          RUN_TIME_SECRET@stage: ''
+          RUN_TIME_SECRET@demo: ''
+          RUN_TIME_SECRET@uat: ''
+          RUN_TIME_SECRET@prod: ''
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
           #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of env.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
@@ -266,13 +229,24 @@ jobs:
           # Auth0_Domain@stage demo: 'wtw-im-stage.auth0.com'
           # Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
 
+      - name: Download artifacts from release
+        uses: im-open/download-release-asset@v1.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          asset-name: ${{ env.ASSET_ZIP }}
+          tag-name: ${{ github.event.inputs.tag }}
+
+      - name: Unzip release asset
+        shell: powershell
+        run: Expand-Archive -LiteralPath ${{ env.ASSET_ZIP }} -DestinationPath ./${{ env.UNZIPPED_ASSET }}
+
       # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
       # https://github.com/im-open/octostache-action
       - uses: im-open/octostache-action@v4.0.0
         with:
-          variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
-          files-with-substitutions: '' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
+          variables-file: '' # TODO: Add the ./path/file containing the variabl¬e substitutions to make, you will need to create this file  See the action for more details.
+          files-with-substitutions: './${{ env.UNZIPPED_ASSET }}/**' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
         # env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variables-file with the same name.
 
       # TODO: If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
@@ -288,54 +262,54 @@ jobs:
 
       - name: Zip the published app for faster deployment and uploads
         working-directory: ${{ env.UNZIPPED_ASSET }}
-        run: zip -r ../${{env.DEPLOY_ZIP}} .
+        run: zip -r ../${{ env.DEPLOY_ZIP }} .
 
       - name: Stop Service
         id: stop-service
         if: always()
-        uses: im-open/windows-service-action@v2.0.0
+        uses: im-open/windows-service-action@v2.0.2
         with:
           action: 'stop'
-          service-name: ${{ needs.set-vars.outputs.SERVICE_NAME }}
-          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
-          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          server: ${{ env.TARGET_SERVER }}
+          service-name: ${{ env.SERVICE_NAME }}
+          service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
         continue-on-error: true
 
       - name: Deploy Deployment Package
         id: deploy
         if: steps.app-pool-stop.outcome == 'success'
-        uses: im-open/deploy-windows-files@v2.0.2
+        uses: im-open/deploy-windows-files@v2.0.3
         with:
-          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
-          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          server: ${{ env.TARGET_SERVER }}
+          service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
-          deployment-folder-path: ${{ needs.set-vars.outputs.SERVICE_PATH }}
+          deployment-folder-path: ${{ env.SERVICE_PATH }}
           clean-deployment-folder: 'true'
 
       - name: Register Service
         id: register
         if: steps.deploy.outcome == 'success'
-        uses: im-open/register-windows-service@v2.0.0
+        uses: im-open/register-windows-service@v3.0.0
         with:
-          service-name: '${{ needs.set-vars.outputs.SERVICE_NAME }}'
-          deployment-path: '${{ needs.set-vars.outputs.SERVICE_PATH }}\\win-service.exe'
-          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
-          service-credential-user: ${{ needs.set-vars.outputs.SERVICE_USER_NAME }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
-          service-credential-password: ${{ needs.set-vars.outputs.SERVICE_USER_SECRET }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
-          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          service-name: '${{ env.SERVICE_NAME }}'
+          deployment-path: '${{ env.SERVICE_PATH }}\\win-service.exe' # TODO: Make sure the right service file name is
+          server: ${{ env.TARGET_SERVER }}
+          run-time-id: ${{ env.RUN_TIME_ID }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          run-time-secret: ${{ env.RUN_TIME_SECRET }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          deployment-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
+          deployment-secret: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
       - name: Start Service
         if: steps.register.outcome == 'success'
-        uses: im-open/windows-service-action@v2.0.0
+        uses: im-open/windows-service-action@v2.0.2
         with:
           action: 'start'
-          service-name: ${{ needs.set-vars.outputs.SERVICE_NAME }}
-          server: ${{ needs.set-vars.outputs.ON_PREM_WINDOWS_SERVER }}
-          service-account-id: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ needs.set-vars.outputs.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          server: ${{ env.TARGET_SERVER }}
+          service-name: ${{ env.SERVICE_NAME }}
+          service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'
@@ -354,7 +328,7 @@ jobs:
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: [set-vars, deploy-service]
+    needs: [verify-tag, deploy-service]
     if: always()
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -387,7 +361,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.1.2
         with:
-          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.IIS_SERVER }}
+          title: ${{ env.WEBSITE_NAME }} Deployment to ${{ env.IIS_SERVER }}
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -404,7 +378,7 @@ jobs:
         if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.2
         with:
-          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.IIS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
+          title: ${{ env.WEBSITE_NAME }} Deployment to ${{ env.IIS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret

@@ -1,0 +1,5 @@
+{
+    "name": "Deploy - IIS Web Site",
+    "description": "Workflow template for deploying an IIS web site.",
+    "iconName": "im_deploy"
+}
