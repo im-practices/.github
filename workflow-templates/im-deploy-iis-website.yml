@@ -327,7 +327,7 @@ jobs:
       # Uncomment this if the site hasn't been created before
       # This action does work better if the website cert is already installed
       # - name: Create Web Site
-      #   uses: im-open/iis-site-create@v2.0.3
+      #   uses: im-open/iis-site-create@v3.0
       #   with:
       #     server: '${{ env.IIS_SERVER }}'
       #     website-name: '${{ env.WEBSITE_NAME }}'
@@ -337,8 +337,8 @@ jobs:
       #     website-cert-path: '${{ env.WEBSITE_CERT_PATH }}'
       #     website-cert-friendly-name: '${{ env.WEBSITE_CERT_FRIENDLY_NAME }}'
       #     website-cert-password: '${{ env.WEBSITE_CERT_PASSWORD }}'
-      #     service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
-      #     service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
+      #     deployment-service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
+      #     deployment-service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
       - name: Stop App Pool
         id: app-pool-stop
