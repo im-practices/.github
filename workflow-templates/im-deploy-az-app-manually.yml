@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v29    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v30    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -200,9 +200,10 @@ jobs:
           tag-name: ${{ env.RELEASE_TAG }}
 
       - name: Unzip release asset
-        run: |
-          unzip -qq ${{ env.ASSET_ZIP }} -d ./${{ env.UNZIPPED_ASSET }}
-          sudo chmod -R +rw ./${{ env.UNZIPPED_ASSET }}/
+        shell: pwsh
+        run: Expand-Archive -LiteralPath './${{ env.ASSET_ZIP }}' -DestinationPath  './${{ env.UNZIPPED_ASSET }}'
+
+      - run: sudo chmod -R +rw ./${{ env.UNZIPPED_ASSET }}/
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
