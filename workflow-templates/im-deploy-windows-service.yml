@@ -14,8 +14,6 @@
 #    - Windows Service (Core Template)
 #
 # TODO: Prerequisites:
-#     - Make sure the Service account secrets have been added to the environment
-#     - Make sure the host windows server has been prepped to accept incoming WinRM Requests
 #     - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 #     - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 #       Generally one board should be set up per windows service in the repository.
@@ -24,6 +22,7 @@
 #     - Create an ITHD ticket to have an ExtendHealth Active directory service account created for each deployment environment.
 #       That service account should then be added to an AD Group Policy Object (GPO); that GPO will then be applied to target
 #       servers/deployment environments
+#     - Make sure the Service account secrets have been added to the environment
 #     - Do not use the instructions in the windows server action to prep the target server for WinRM connections,
 #       those instructions are more for an open-source user. Instead, create an ITHD ticket to have the WinRM listeners
 #       added to the target server
@@ -150,7 +149,7 @@ jobs:
       - verify-tag
       - stakeholder-approval
       - attestor-approval
-      - validate-tag-for-prod-deploys
+      - validate-tag-is-in-main-for-prod-deploys
     runs-on: [self-hosted, windows-2019]
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
@@ -253,7 +252,7 @@ jobs:
       # https://github.com/im-open/octostache-action
       - uses: im-open/octostache-action@v4.0.0
         with:
-          variables-file: '' # TODO: Add the ./path/file containing the variabl¬e substitutions to make, you will need to create this file  See the action for more details.
+          variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
           files-with-substitutions: './${{ env.UNZIPPED_ASSET }}/**' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
         # env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variables-file with the same name.
 

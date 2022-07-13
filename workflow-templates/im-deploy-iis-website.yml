@@ -14,7 +14,6 @@
 #    - IIS Site (Core Template)
 #
 # TODO: Prerequisites:
-#    - Make sure the Service account secrets have been added to the environment
 #    - Make sure the host IIS server has been prepped to accept incoming WinRM Requests
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
@@ -24,6 +23,7 @@
 #    - Create an ITHD ticket to have an ExtendHealth Active directory service account created for each deployment environment.
 #      That service account should then be added to an AD Group Policy Object (GPO); that GPO will then be applied to target
 #      servers/deployment environments
+#    - Make sure the Service account secrets have been added to the environment
 #    - Do not use the instructions in the windows server action to prep the target server for WinRM connections,
 #      those instructions are more for an open-source user. Instead, create an ITHD ticket to have the WinRM listeners
 #      added to the target server
@@ -55,13 +55,13 @@ on:
   #       2. Delete the workflow_dispatch trigger
   #       3. Change the env.ENVIRONMENT value from "${{ github.event.inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
   #       4. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
-  #       5. Under the 'verify-tag-extis' job:
+  #       5. Under the 'verify-tag-exists' job:
   #          a. Delete the 'Checkout Repository' step
   #          b. Delete the 'Verify Tag Exists' step
   #       6. Delete the 'stakeholder-approval' job
   #       7. Delete the 'attestor-approval' job
   #       8. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
-  #       9. Under the 'deploy-site' job, update the needs property to be: "needs: [verify-tag-extis]"
+  #       9. Under the 'deploy-site' job, update the needs property to be: "needs: [verify-tag-exists]"
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
@@ -72,7 +72,7 @@ env:
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
-  verify-tag-extis:
+  verify-tag-exists:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     steps:
@@ -91,7 +91,7 @@ jobs:
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
-    needs: [verify-tag-extis]
+    needs: [verify-tag-exists]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
@@ -103,7 +103,7 @@ jobs:
   # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   attestor-approval:
-    needs: [verify-tag-extis]
+    needs: [verify-tag-exists]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ github.event.inputs.environment }} Attestor Approval' # Use inputs context because env context is not available to environment:
     steps:
@@ -114,7 +114,7 @@ jobs:
   # This job needs to run for all environments because deploy-site relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
-    needs: [verify-tag-extis, stakeholder-approval, attestor-approval]
+    needs: [verify-tag-exists, stakeholder-approval, attestor-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -146,7 +146,7 @@ jobs:
   # Details on how to use the action can be found in the action's README.
 
   deploy-site:
-    needs: [verify-tag-extis, validate-tag-is-in-main-for-prod-deploys]
+    needs: [verify-tag-exists, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, windows-2019]
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
@@ -293,7 +293,7 @@ jobs:
         env:
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
-          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of verify-tag-extis.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
+          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of env.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
           # Auth0_Domain@dev: 'wtw-im-dev.auth0.com'
           # Auth0_Domain@qa: 'wtw-im-qa.auth0.com'
@@ -388,7 +388,7 @@ jobs:
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: [verify-tag-extis, deploy-site]
+    needs: [verify-tag-exists, deploy-site]
     if: always()
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
