@@ -18,11 +18,12 @@
 #       the ExtendHealth domain for service account authentication
 #     - Create an ITHD ticket to have an ExtendHealth Active directory service account created for each deployment environment.
 #       That service account should then be added to an AD Group Policy Object (GPO); that GPO will then be applied to target
-#       servers/deployment environments
+#       servers/deployment environments. If this deployment process and the service accounts are no longer needed at some point, let
+#       let infrastructure know that they can remove the accounts and GPOs
 #     - Make sure the Service account secrets have been added to the environment
 #     - Do not use the instructions in the windows server action to prep the target server for WinRM connections,
-#       those instructions are more for an open-source user. Instead, create an ITHD ticket to have the WinRM listeners
-#       added to the target server
+#       those instructions are more for an open-source user. Instead, WinRM listners should already be configured on target servers.
+#       If a WinRM connection can't be established create an ITHD ticket to have the WinRM listeners fixed or created
 
 name: Deploy Windows Server Files
 on:
@@ -215,10 +216,6 @@ jobs:
           Value1: 'Value1' # Example showing replacement at a root level node
           Nested.Value.Name: 'Value2' # Example showing replacement at a nested node
           SecretValue: ${{ secrets.VALUE }} # Example showing replacement with a secret
-
-      - name: Zip the published app for faster deployment and uploads
-        working-directory: ${{ env.UNZIPPED_ASSET }}
-        run: zip -r ../${{env.DEPLOY_ZIP}} .
 
       - name: Zip the published app for faster deployment and uploads
         working-directory: ./${{ env.UNZIPPED_ASSET }}

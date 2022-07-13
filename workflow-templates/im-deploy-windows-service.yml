@@ -21,11 +21,12 @@
 #       the ExtendHealth domain for service account authentication
 #     - Create an ITHD ticket to have an ExtendHealth Active directory service account created for each deployment environment.
 #       That service account should then be added to an AD Group Policy Object (GPO); that GPO will then be applied to target
-#       servers/deployment environments
+#       servers/deployment environments. If this deployment process and the service accounts are no longer needed at some point, let
+#       let infrastructure know that they can remove the accounts and GPOs
 #     - Make sure the Service account secrets have been added to the environment
 #     - Do not use the instructions in the windows server action to prep the target server for WinRM connections,
-#       those instructions are more for an open-source user. Instead, create an ITHD ticket to have the WinRM listeners
-#       added to the target server
+#       those instructions are more for an open-source user. Instead, WinRM listners should already be configured on target servers.
+#       If a WinRM connection can't be established create an ITHD ticket to have the WinRM listeners fixed or created
 
 name: Deploy Windows Service # TODO: If there are multiple on prem services in the repo, append the service name to this workflow's file name and update this name
 on:
@@ -212,21 +213,7 @@ jobs:
           SERVICE_PATH@demo: ''
           SERVICE_PATH@uat: ''
           SERVICE_PATH@prod: ''
-          # TODO: Fill in the service user account name that the windows service runs under.  If the windows service uses the a
-          #       local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
-          RUN_TIME_ID@dev: ''
-          RUN_TIME_ID@qa: ''
-          RUN_TIME_ID@stage: ''
-          RUN_TIME_ID@demo: ''
-          RUN_TIME_ID@uat: ''
-          RUN_TIME_ID@prod: ''
-          # TODO: Fill in the service user account secret that the windows service runs under.  If the windows service uses the a
-          #       local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.RUN_TIME_SECRET@dev: ''
-          RUN_TIME_SECRET@qa: ''
-          RUN_TIME_SECRET@stage: ''
-          RUN_TIME_SECRET@demo: ''
-          RUN_TIME_SECRET@uat: ''
-          RUN_TIME_SECRET@prod: ''
+
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
           #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of env.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
@@ -303,8 +290,10 @@ jobs:
           service-name: '${{ env.SERVICE_NAME }}'
           deployment-path: '${{ env.SERVICE_PATH }}\\win-service.exe' # TODO: Make sure the right service file name is
           server: ${{ env.TARGET_SERVER }}
-          run-time-id: ${{ env.RUN_TIME_ID }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
-          run-time-secret: ${{ env.RUN_TIME_SECRET }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          # TODO: Verify the run time service account ids and secrets for all environments
+          #       and put them in the GitHub Actions Environments Secrets store
+          run-time-id: ${{ secrets.RUN_TIME_ID }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          run-time-secret: ${{ secrets.RUN_TIME_SECRET }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
           deployment-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
           deployment-secret: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
 

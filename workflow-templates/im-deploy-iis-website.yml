@@ -14,19 +14,20 @@
 #    - IIS Site (Core Template)
 #
 # TODO: Prerequisites:
-#    - Make sure the host IIS server has been prepped to accept incoming WinRM Requests
-#    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
-#      Generally one board should be set up per IIS site in the repository.
-#    - The target server must be domain joined. If this is not the case already, create an ITHD ticket to have it joined to
-#      the ExtendHealth domain for service account authentication
-#    - Create an ITHD ticket to have an ExtendHealth Active directory service account created for each deployment environment.
-#      That service account should then be added to an AD Group Policy Object (GPO); that GPO will then be applied to target
-#      servers/deployment environments
-#    - Make sure the Service account secrets have been added to the environment
-#    - Do not use the instructions in the windows server action to prep the target server for WinRM connections,
-#      those instructions are more for an open-source user. Instead, create an ITHD ticket to have the WinRM listeners
-#      added to the target server
+#     - Make sure the host IIS server has been prepped to accept incoming WinRM Requests
+#     - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
+#     - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#       Generally one board should be set up per IIS site in the repository.
+#     - The target server must be domain joined. If this is not the case already, create an ITHD ticket to have it joined to
+#       the ExtendHealth domain for service account authentication
+#     - Create an ITHD ticket to have an ExtendHealth Active directory service account created for each deployment environment.
+#       That service account should then be added to an AD Group Policy Object (GPO); that GPO will then be applied to target
+#       servers/deployment environments. If this deployment process and the service accounts are no longer needed at some point, let
+#       let infrastructure know that they can remove the accounts and GPOs
+#     - Make sure the Service account secrets have been added to the environment
+#     - Do not use the instructions in the windows server action to prep the target server for WinRM connections,
+#       those instructions are more for an open-source user. Instead, WinRM listners should already be configured on target servers.
+#       If a WinRM connection can't be established create an ITHD ticket to have the WinRM listeners fixed or created
 
 name: Deploy IIS Website # TODO: If there are multiple sites in the repo, append the site name to this workflow's file name and update this name
 on:
@@ -223,13 +224,6 @@ jobs:
           WEBSITE_CERT_FRIENDLY_NAME@demo: ''
           WEBSITE_CERT_FRIENDLY_NAME@uat: ''
           WEBSITE_CERT_FRIENDLY_NAME@prod: ''
-          # TODO: Fill in the website-cert-password and remove the environments that are not used.
-          WEBSITE_CERT_PASSWORD@dev: ''
-          WEBSITE_CERT_PASSWORD@qa: ''
-          WEBSITE_CERT_PASSWORD@stage: ''
-          WEBSITE_CERT_PASSWORD@demo: ''
-          WEBSITE_CERT_PASSWORD@uat: ''
-          WEBSITE_CERT_PASSWORD@prod: ''
           # TODO: Fill in the website-service-account-id and remove the environments that are not used.
           WEBSITE_SERVICE_ACCOUNT_ID@dev: ''
           WEBSITE_SERVICE_ACCOUNT_ID@qa: ''
@@ -244,21 +238,6 @@ jobs:
           WEBSITE_SERVICE_ACCOUNT_SECRET@demo: ''
           WEBSITE_SERVICE_ACCOUNT_SECRET@uat: ''
           WEBSITE_SERVICE_ACCOUNT_SECRET@prod: ''
-          # TODO: Fill in the deployment-sa-id for WinRm access to the IIS Server and remove the environments that are not used.
-          # This user id should be prefixed with the domain of the service account (svc-app-sa-env@extendhealth.com or extendhealth\svc-app-sa-env)
-          DEPLOYMENT_SA_ID@dev: ''
-          DEPLOYMENT_SA_ID@qa: ''
-          DEPLOYMENT_SA_ID@stage: ''
-          DEPLOYMENT_SA_ID@demo: ''
-          DEPLOYMENT_SA_ID@uat: ''
-          DEPLOYMENT_SA_ID@prod: ''
-          # TODO: Fill in the deployment-sa-secret for WinRm access to the IIS Server and remove the environments that are not used.
-          DEPLOYMENT_SA_SECRET@dev: ''
-          DEPLOYMENT_SA_SECRET@qa: ''
-          DEPLOYMENT_SA_SECRET@stage: ''
-          DEPLOYMENT_SA_SECRET@demo: ''
-          DEPLOYMENT_SA_SECRET@uat: ''
-          DEPLOYMENT_SA_SECRET@prod: ''
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -336,7 +315,7 @@ jobs:
       #     website-path: '${{ env.WEBSITE_PATH }}'
       #     website-cert-path: '${{ env.WEBSITE_CERT_PATH }}'
       #     website-cert-friendly-name: '${{ env.WEBSITE_CERT_FRIENDLY_NAME }}'
-      #     website-cert-password: '${{ env.WEBSITE_CERT_PASSWORD }}'
+      #     website-cert-password: '${{ secrets.WEBSITE_CERT_PASSWORD }}'
       #     deployment-service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
       #     deployment-service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
 
