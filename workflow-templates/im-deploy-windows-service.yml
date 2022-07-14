@@ -25,7 +25,7 @@
 #       let infrastructure know that they can remove the accounts and GPOs
 #     - Make sure the Service account secrets have been added to the environment
 #     - Do not use the instructions in the windows server action to prep the target server for WinRM connections,
-#       those instructions are more for an open-source user. Instead, WinRM listners should already be configured on target servers.
+#       those instructions are more for an open-source user. Instead, WinRM listeners should already be configured on target servers.
 #       If a WinRM connection can't be established create an ITHD ticket to have the WinRM listeners fixed or created
 
 name: Deploy Windows Service # TODO: If there are multiple on prem services in the repo, append the service name to this workflow's file name and update this name

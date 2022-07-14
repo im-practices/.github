@@ -7,7 +7,7 @@
 #
 # Frequency:
 #    If files from this repository are being deployed at different intervals to one or more places, having a seperate deployment
-#    workflow is preferable.  The same workflow can be used even if multple server targets are deployed to at during the same deployment
+#    workflow is preferable.  The same workflow can be used even if multple server targets are deployed to during the same deployment
 #    cycle.
 #
 # TODO: Prerequisites:
@@ -18,11 +18,11 @@
 #       the ExtendHealth domain for service account authentication
 #     - Create an ITHD ticket to have an ExtendHealth Active directory service account created for each deployment environment.
 #       That service account should then be added to an AD Group Policy Object (GPO); that GPO will then be applied to target
-#       servers/deployment environments. If this deployment process and the service accounts are no longer needed at some point, let
+#       servers/deployment environments. If this deployment process and the service accounts are no longer needed at some point,
 #       let infrastructure know that they can remove the accounts and GPOs
 #     - Make sure the Service account secrets have been added to the environment
 #     - Do not use the instructions in the windows server action to prep the target server for WinRM connections,
-#       those instructions are more for an open-source user. Instead, WinRM listners should already be configured on target servers.
+#       those instructions are more for an open-source user. Instead, WinRM listeners should already be configured on target servers.
 #       If a WinRM connection can't be established create an ITHD ticket to have the WinRM listeners fixed or created
 
 name: Deploy Windows Server Files
