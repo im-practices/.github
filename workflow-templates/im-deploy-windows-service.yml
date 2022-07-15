@@ -266,8 +266,8 @@ jobs:
           action: 'stop'
           server: ${{ env.TARGET_SERVER }}
           service-name: ${{ env.SERVICE_NAME }}
-          service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
         continue-on-error: true
 
       - name: Deploy Deployment Package
@@ -276,8 +276,8 @@ jobs:
         uses: im-open/deploy-windows-files@v2.0.3
         with:
           server: ${{ env.TARGET_SERVER }}
-          service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
           deployment-folder-path: ${{ env.SERVICE_PATH }}
           clean-deployment-folder: 'true'
@@ -294,8 +294,8 @@ jobs:
           #       and put them in the GitHub Actions Environments Secrets store
           run-time-id: ${{ secrets.RUN_TIME_ID }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
           run-time-secret: ${{ secrets.RUN_TIME_SECRET }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
-          deployment-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
-          deployment-secret: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          deployment-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          deployment-secret: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Start Service
         if: steps.register.outcome == 'success'
@@ -304,8 +304,8 @@ jobs:
           action: 'start'
           server: ${{ env.TARGET_SERVER }}
           service-name: ${{ env.SERVICE_NAME }}
-          service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'
@@ -357,7 +357,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: ${{ env.WEBSITE_NAME }} Deployment to ${{ env.IIS_SERVER }}
+          title: '<<Project Name>> Deployment to ${{ env.TARGET_SERVER }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -374,7 +374,7 @@ jobs:
         if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: ${{ env.WEBSITE_NAME }} Deployment to ${{ env.IIS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
+          title: '<<Project Name>> Deployment to ${{ env.TARGET_SERVER }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the production deployment channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret

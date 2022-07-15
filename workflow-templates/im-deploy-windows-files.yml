@@ -226,10 +226,10 @@ jobs:
         uses: im-open/deploy-windows-files@v2.0.3
         with:
           server: ${{ env.WINDOWS_SERVER }}
-          service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
-          deployment-folder-path: '${{ env.DEPLOY_DIRECTORY_ROOT }}\${{ env.DEPLOYMENT_PATH }}'
+          deployment-folder-path: '${{ env.DEPLOYMENT_PATH }}'
           clean-deployment-folder: 'true' # TODO: Verify that all files not in the deployment package should be removed.
 
       - name: Delete .zips and folder that contains sensitive info

@@ -224,20 +224,6 @@ jobs:
           WEBSITE_CERT_FRIENDLY_NAME@demo: ''
           WEBSITE_CERT_FRIENDLY_NAME@uat: ''
           WEBSITE_CERT_FRIENDLY_NAME@prod: ''
-          # TODO: Fill in the website-service-account-id and remove the environments that are not used.
-          WEBSITE_SERVICE_ACCOUNT_ID@dev: ''
-          WEBSITE_SERVICE_ACCOUNT_ID@qa: ''
-          WEBSITE_SERVICE_ACCOUNT_ID@stage: ''
-          WEBSITE_SERVICE_ACCOUNT_ID@demo: ''
-          WEBSITE_SERVICE_ACCOUNT_ID@uat: ''
-          WEBSITE_SERVICE_ACCOUNT_ID@prod: ''
-          # TODO: Fill in the website-service-account-secret and remove the environments that are not used.
-          WEBSITE_SERVICE_ACCOUNT_SECRET@dev: ''
-          WEBSITE_SERVICE_ACCOUNT_SECRET@qa: ''
-          WEBSITE_SERVICE_ACCOUNT_SECRET@stage: ''
-          WEBSITE_SERVICE_ACCOUNT_SECRET@demo: ''
-          WEBSITE_SERVICE_ACCOUNT_SECRET@uat: ''
-          WEBSITE_SERVICE_ACCOUNT_SECRET@prod: ''
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -306,7 +292,7 @@ jobs:
       # Uncomment this if the site hasn't been created before
       # This action does work better if the website cert is already installed
       # - name: Create Web Site
-      #   uses: im-open/iis-site-create@v3.0
+      #   uses: im-open/iis-site-create@v3.0.1
       #   with:
       #     server: '${{ env.IIS_SERVER }}'
       #     website-name: '${{ env.WEBSITE_NAME }}'
@@ -316,8 +302,10 @@ jobs:
       #     website-cert-path: '${{ env.WEBSITE_CERT_PATH }}'
       #     website-cert-friendly-name: '${{ env.WEBSITE_CERT_FRIENDLY_NAME }}'
       #     website-cert-password: '${{ secrets.WEBSITE_CERT_PASSWORD }}'
-      #     deployment-service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
-      #     deployment-service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
+      #     app-pool-service-account-id: ${{ env.APP_POOL_SA_ID }}
+      #     app-pool-service-account-secret: ${{ env.APP_POOL_SA_SECRET }}
+      #     deployment-service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+      #     deployment-service-account-secret: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Stop App Pool
         id: app-pool-stop
@@ -327,8 +315,8 @@ jobs:
           action: 'stop'
           server: ${{ env.IIS_SERVER }}
           app-pool-name: ${{ env.APP_POOL_NAME }}
-          service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ env.DEPLOYMENT_SA_SECRET }}
+          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Deploy deployment package
         if: steps.app-pool-stop.outcome == 'success'
@@ -338,8 +326,8 @@ jobs:
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
           deployment-folder-path: ${{ env.WEBSITE_PATH }}
           clean-deployment-folder: 'true'
-          service-account-id: ${{ secrets.ON_PREM_DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ secrets.ON_PREM_DEPLOYMENT_SA_SECRET }}
+          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Start App Pool
         uses: im-open/app-pool-action@v2.0.2
@@ -347,8 +335,8 @@ jobs:
           action: 'start'
           server: ${{ env.IIS_SERVER }}
           app-pool-name: ${{ env.APP_POOL_NAME }}
-          service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ env.DEPLOYMENT_SA_SECRET }}
+          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'
