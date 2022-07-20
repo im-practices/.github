@@ -158,6 +158,10 @@ jobs:
       UNZIPPED_ASSET: 'published_app'
       DEPLOY_ZIP: 'deploy.zip'
 
+    outputs:
+      WEBSITE_NAME: ${{ steps.set-variables.outputs.WEBSITE_NAME }}
+      IIS_SERVER: ${{ steps.set-variables.outputs.IIS_SERVER }}
+
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
@@ -224,6 +228,20 @@ jobs:
           WEBSITE_CERT_FRIENDLY_NAME@demo: ''
           WEBSITE_CERT_FRIENDLY_NAME@uat: ''
           WEBSITE_CERT_FRIENDLY_NAME@prod: ''
+          # TODO: Fill in the website-cert-friendly-name and remove the environments that are not used.
+          APP_POOL_SA_ID@dev: ''
+          APP_POOL_SA_ID@qa: ''
+          APP_POOL_SA_ID@stage: ''
+          APP_POOL_SA_ID@demo: ''
+          APP_POOL_SA_ID@uat: ''
+          APP_POOL_SA_ID@prod: ''
+          # TODO: Fill in the website-cert-friendly-name and remove the environments that are not used.
+          DEPLOYMENT_SA_ID@dev: ''
+          DEPLOYMENT_SA_ID@qa: ''
+          DEPLOYMENT_SA_ID@stage: ''
+          DEPLOYMENT_SA_ID@demo: ''
+          DEPLOYMENT_SA_ID@uat: ''
+          DEPLOYMENT_SA_ID@prod: ''
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -303,8 +321,8 @@ jobs:
       #     website-cert-friendly-name: '${{ env.WEBSITE_CERT_FRIENDLY_NAME }}'
       #     website-cert-password: '${{ secrets.WEBSITE_CERT_PASSWORD }}'
       #     app-pool-service-account-id: ${{ env.APP_POOL_SA_ID }}
-      #     app-pool-service-account-secret: ${{ env.APP_POOL_SA_SECRET }}
-      #     deployment-service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+      #     app-pool-service-account-secret: ${{ secrets.APP_POOL_SA_SECRET }}
+      #     deployment-service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
       #     deployment-service-account-secret: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Stop App Pool
@@ -315,7 +333,7 @@ jobs:
           action: 'stop'
           server: ${{ env.IIS_SERVER }}
           app-pool-name: ${{ env.APP_POOL_NAME }}
-          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
           service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Deploy deployment package
@@ -326,7 +344,7 @@ jobs:
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
           deployment-folder-path: ${{ env.WEBSITE_PATH }}
           clean-deployment-folder: 'true'
-          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
           service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Start App Pool
@@ -335,7 +353,7 @@ jobs:
           action: 'start'
           server: ${{ env.IIS_SERVER }}
           app-pool-name: ${{ env.APP_POOL_NAME }}
-          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
           service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Close the PagerDuty Maintenance Window
@@ -388,7 +406,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: ${{ env.WEBSITE_NAME }} Deployment to ${{ env.IIS_SERVER }}
+          title: ${{ needs.deploy-sites.outputs.WEBSITE_NAME }} Deployment to ${{ needs.deploy-sites.outputs.IIS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the team channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -405,7 +423,7 @@ jobs:
         if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: ${{ env.WEBSITE_NAME }} Deployment to ${{ env.IIS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
+          title: ${{ needs.deploy-sites.outputs.WEBSITE_NAME }} Deployment to ${{ needs.deploy-sites.outputs.IIS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret

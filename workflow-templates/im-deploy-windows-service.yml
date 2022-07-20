@@ -161,6 +161,10 @@ jobs:
       UNZIPPED_ASSET: 'published_app'
       DEPLOY_ZIP: 'deploy.zip'
 
+    outputs:
+      TARGET_SERVER: '${{ steps.set-variables.outputs.TARGET_SERVER }}''
+      SERVICE_NAME: '${{ steps.set-variables.outputs.SERVICE_NAME }}'
+
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
@@ -213,6 +217,22 @@ jobs:
           SERVICE_PATH@demo: ''
           SERVICE_PATH@uat: ''
           SERVICE_PATH@prod: ''
+          # TODO: Fill in the run time service account id and remove the environments that are not used.
+          RUN_TIME_ID@dev: ''
+          RUN_TIME_ID@qa: ''
+          RUN_TIME_ID@stage: ''
+          RUN_TIME_ID@demo: ''
+          RUN_TIME_ID@uat: ''
+          RUN_TIME_ID@prod: ''
+          # TODO: Fill in the deployment service account id and remove the environments that are not used.
+          DEPLOYMENT_SA_ID@dev: ''
+          DEPLOYMENT_SA_ID@qa: ''
+          DEPLOYMENT_SA_ID@stage: ''
+          DEPLOYMENT_SA_ID@demo: ''
+          DEPLOYMENT_SA_ID@uat: ''
+          DEPLOYMENT_SA_ID@prod: ''
+
+          # TODO: Fill in the website-cert-friendly-name and remove the environments that are not used.
 
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
@@ -266,7 +286,7 @@ jobs:
           action: 'stop'
           server: ${{ env.TARGET_SERVER }}
           service-name: ${{ env.SERVICE_NAME }}
-          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
           service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
         continue-on-error: true
 
@@ -276,7 +296,7 @@ jobs:
         uses: im-open/deploy-windows-files@v2.0.3
         with:
           server: ${{ env.TARGET_SERVER }}
-          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
           service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
           deployment-folder-path: ${{ env.SERVICE_PATH }}
@@ -292,9 +312,9 @@ jobs:
           server: ${{ env.TARGET_SERVER }}
           # TODO: Verify the run time service account ids and secrets for all environments
           #       and put them in the GitHub Actions Environments Secrets store
-          run-time-id: ${{ secrets.RUN_TIME_ID }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
+          run-time-id: ${{ env.RUN_TIME_ID }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
           run-time-secret: ${{ secrets.RUN_TIME_SECRET }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
-          deployment-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          deployment-id: ${{ env.DEPLOYMENT_SA_ID }}
           deployment-secret: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Start Service
@@ -304,7 +324,7 @@ jobs:
           action: 'start'
           server: ${{ env.TARGET_SERVER }}
           service-name: ${{ env.SERVICE_NAME }}
-          service-account-id: ${{ secrets.DEPLOYMENT_SA_ID }}
+          service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
           service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
 
       - name: Close the PagerDuty Maintenance Window
@@ -357,7 +377,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: '<<Project Name>> Deployment to ${{ env.TARGET_SERVER }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
+          title: '${{ needs.deploy-service.outputs.SERVICE_NAME }} Deployment to ${{ needs.deploy-service.outputs.TARGET_SERVER }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -374,7 +394,7 @@ jobs:
         if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: '<<Project Name>> Deployment to ${{ env.TARGET_SERVER }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the production deployment channel
+          title: '${{ needs.deploy-service.outputs.SERVICE_NAME }} Deployment to ${{ needs.deploy-service.outputs.TARGET_SERVER }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret
