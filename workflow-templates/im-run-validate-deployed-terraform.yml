@@ -1,4 +1,4 @@
-# Workflow Code: ShinySQUIRREL_v14    DO NOT REMOVE
+# Workflow Code: ShinySQUIRREL_v15    DO NOT REMOVE
 # Purpose:
 #    Validates that the deployed terraform matches what is supposed to be deployed
 #    when it runs at a scheduled time or when someone kicks it off manually.
@@ -46,7 +46,7 @@ jobs:
       ARM_ENVIRONMENT: 'public'
       TF_IN_AUTOMATION: 'true'
       TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
-      TF_WORKING_DIR: './${{ matrix.environment }}' # TODO: Verify this directory structure would be correct for your repository
+      TF_WORKING_DIR: './infrastructure/${{ matrix.environment }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
       REPO_URL: https://github.com/${{ github.repository }}
       # The following SSH_* secrets are org-level secrets
       SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
