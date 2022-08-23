@@ -275,13 +275,13 @@ jobs:
           input-file: '' # TODO: if you have an input file with your variable substitutions, add them here
         env:
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
-          #  - The name of the env (left side of @) (ex: Auth0_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
+          #  - The name of the env (left side of @) (ex: FedAuth_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
           #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of env.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
-          #  - The value for the environment should be included in '' after the colon. (ex: 'wtw-im-dev.auth0.com')
-          # Auth0_Domain@dev: 'wtw-im-dev.auth0.com'
-          # Auth0_Domain@qa: 'wtw-im-qa.auth0.com'
-          # Auth0_Domain@stage demo: 'wtw-im-stage.auth0.com'
-          # Auth0_Domain@prod: 'wtw-im-prod.auth0.com'
+          #  - The value for the environment should be included in '' after the colon. (ex: 'fedauth.dev.viabenefits.com')
+          # FedAuth_Domain@dev: 'fedauth.dev.viabenefits.com'
+          # FedAuth_Domain@qa: 'fedauth.qa.viabenefits.com'
+          # FedAuth_Domain@stage demo: 'fedauth.stage.viabenefits.com'
+          # FedAuth_Domain@prod: 'fedauth.viabenefits.com'
 
       # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action will be utilized by this one.
@@ -299,9 +299,8 @@ jobs:
           files: '' # TODO: add a comma separated list of files and the patterns, like './src/MyProj/We*.config, ./src/MyProj/Nlog.config'
         env:
           # TODO: replace examples with actual substitutions
-          Value1: 'Value1' # Example showing replacement at a root level node
-          Nested.Value.Name: 'Value2' # Example showing replacement at a nested node
-          SecretValue: ${{ secrets.VALUE }} # Example showing replacement with a secret
+          # FedAuth.Domain: ${{ env.FedAuth_Domain }} # Example showing replacement at a nested node (left side) & using the env set in the set-environment-variables-by-scope step above (right side)
+          # SecretValue: ${{ secrets.VALUE }} # Example showing replacement of a root level value (left side) with a secret (right side)
 
       - name: Zip the published app for faster deployment and uploads
         working-directory: ${{ env.UNZIPPED_ASSET }}
