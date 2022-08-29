@@ -1,4 +1,4 @@
-# Workflow Code: DigitalWerewolf_v2    DO NOT REMOVE
+# Workflow Code: DigitalWerewolf_v3    DO NOT REMOVE
 # Purpose:
 #    Runs the SAM YAML Validation action and exports the
 #    output JSON into the Stewardship Mapping document repository
@@ -29,7 +29,7 @@ on:
 jobs:
   sam-yaml:
     name: Validate and Export SAM YAML
-    runs-on: [ubuntu-latest]
+    runs-on: [self-hosted, ubuntu-20.04]
 
     steps:
       - name: Checkout Repository
