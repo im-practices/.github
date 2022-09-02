@@ -123,7 +123,7 @@ jobs:
             separate-nodes: '${{ github.event.inputs.separate-nodes }}'
           "
 
-      - name: Annotate Test parameters
+      - name: Annotate Test Parameters
         uses: actions/github-script@v6
         with:
           script: |
@@ -136,8 +136,8 @@ jobs:
                 Separate Nodes: ${{ github.event.inputs.separate-nodes }};
                 Upload Type: ${{ github.event.inputs.upload-type }};
                 Upload File/Folders: ${{ github.event.inputs.upload-files-folder}};
-                K6 parameters: ${{ github.event.inputs.k6-parameters }};
-                K6 Default parameters: ${{ env.K6_DEFAULT_PARAMETERS }};
+                K6 Parameters: ${{ github.event.inputs.k6-parameters }};
+                K6 Default Parameters: ${{ env.K6_DEFAULT_PARAMETERS }};
             `;
             core.notice(`${output}`);
 
