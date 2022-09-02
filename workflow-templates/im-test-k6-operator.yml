@@ -91,7 +91,7 @@ jobs:
 
       # InfluxDB addresses -
       # DNS: https://influxdb-v1.mktp.io/loadtesting
-      K6_DEFAULT_parameters: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 parameters
+      K6_DEFAULT_PARAMETERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 parameters
       RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
       K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
@@ -118,7 +118,7 @@ jobs:
             upload-type: ${{ github.event.inputs.upload-type }}
             upload-files-folder: '${{ github.event.inputs.upload-files-folder }}'
             k6-parameters: '${{ github.event.inputs.k6-parameters }}'
-            k6-default-parameters: '${{ env.K6_DEFAULT_parameters }}'
+            k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }}'
             parallelism: '${{ github.event.inputs.parallelism }}'
             separate-nodes: '${{ github.event.inputs.separate-nodes }}'
           "
@@ -137,7 +137,7 @@ jobs:
                 Upload Type: ${{ github.event.inputs.upload-type }};
                 Upload File/Folders: ${{ github.event.inputs.upload-files-folder}};
                 K6 parameters: ${{ github.event.inputs.k6-parameters }};
-                K6 Default parameters: ${{ env.K6_DEFAULT_parameters }};
+                K6 Default parameters: ${{ env.K6_DEFAULT_PARAMETERS }};
             `;
             core.notice(`${output}`);
 
@@ -225,7 +225,7 @@ jobs:
           upload-type: ${{ github.event.inputs.upload-type}}
           upload-files-folder: ${{ github.event.inputs.upload-files-folder }}
           k6-parameters: '${{ github.event.inputs.k6-parameters }}'
-          k6-default-parameters: '${{ env.K6_DEFAULT_parameters }} ${{ steps.test-tag.outputs.test-tag }}'
+          k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }} ${{ steps.test-tag.outputs.test-tag }}'
           parallelism: ${{ github.event.inputs.parallelism }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
