@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v8   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v9   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -50,8 +50,8 @@ on:
         description: 'Upload Files or Folders: Comma separated list of files or folders to include in the upload. Specify full path from working-directory root.'
         required: false
         default: '' # TODO: Update to default upload file or folder
-      k6-paramaters:
-        description: 'K6 paramaters.  This includes any tags or config files.'
+      k6-parameters:
+        description: 'K6 parameters.  This includes any tags or config files.'
         required: false
         default: '--tag product=TEST,family=TEST' # TODO: Update default tags for grafana dashboard filtering.
       parallelism:
@@ -91,7 +91,7 @@ jobs:
 
       # InfluxDB addresses -
       # DNS: https://influxdb-v1.mktp.io/loadtesting
-      K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
+      K6_DEFAULT_PARAMETERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 parameters
       RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
       K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
@@ -117,13 +117,13 @@ jobs:
             test-file: ${{ github.event.inputs.test-file }}
             upload-type: ${{ github.event.inputs.upload-type }}
             upload-files-folder: '${{ github.event.inputs.upload-files-folder }}'
-            k6-paramaters: '${{ github.event.inputs.k6-paramaters }}'
-            k6-default-paramaters: '${{ env.K6_DEFAULT_PARAMATERS }}'
+            k6-parameters: '${{ github.event.inputs.k6-parameters }}'
+            k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }}'
             parallelism: '${{ github.event.inputs.parallelism }}'
             separate-nodes: '${{ github.event.inputs.separate-nodes }}'
           "
 
-      - name: Annotate Test Paramaters
+      - name: Annotate Test Parameters
         uses: actions/github-script@v6
         with:
           script: |
@@ -136,8 +136,8 @@ jobs:
                 Separate Nodes: ${{ github.event.inputs.separate-nodes }};
                 Upload Type: ${{ github.event.inputs.upload-type }};
                 Upload File/Folders: ${{ github.event.inputs.upload-files-folder}};
-                K6 Paramaters: ${{ github.event.inputs.k6-paramaters }};
-                K6 Default Paramaters: ${{ env.K6_DEFAULT_PARAMATERS }};
+                K6 Parameters: ${{ github.event.inputs.k6-parameters }};
+                K6 Default Parameters: ${{ env.K6_DEFAULT_PARAMETERS }};
             `;
             core.notice(`${output}`);
 
@@ -224,8 +224,8 @@ jobs:
           run-name: ${{ github.event.inputs.run-name }}
           upload-type: ${{ github.event.inputs.upload-type}}
           upload-files-folder: ${{ github.event.inputs.upload-files-folder }}
-          k6-paramaters: '${{ github.event.inputs.k6-paramaters }}'
-          k6-default-paramaters: '${{ env.K6_DEFAULT_PARAMATERS }} ${{ steps.test-tag.outputs.test-tag }}'
+          k6-parameters: '${{ github.event.inputs.k6-parameters }}'
+          k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }} ${{ steps.test-tag.outputs.test-tag }}'
           parallelism: ${{ github.event.inputs.parallelism }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
