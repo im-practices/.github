@@ -237,6 +237,7 @@ jobs:
           loop-count: ${{ github.event.inputs.loop-count }}
           loop-duration: ${{ env.LOOP_DURATION }}
           # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: uncomment to use custom k6 binary with k6 extensions installed
+          # pod-log-lines-to-output: 500 # TODO: uncomment if you want to change the number of lines in github actions that the pod logs output.
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
 
