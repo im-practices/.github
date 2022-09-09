@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v9   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v10   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -87,7 +87,7 @@ jobs:
       WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
       GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1' # TODO: Verify link to your dashboard
       NODE_VERSION: '16.x' # TODO: Set correct node version
-      LOOP_DURATION: '1m' # TODO: Update duration of loop to your specification.  The action im-practices/run-k6-operator-test documenation has more details on setting this paramater.
+      LOOP_DURATION: '1m' # TODO: Update duration of loop to your specification.  The action im-practices/run-k6-operator-test documenation has more details on setting this parameter.
 
       # InfluxDB addresses -
       # DNS: https://influxdb-v1.mktp.io/loadtesting
@@ -182,6 +182,11 @@ jobs:
           enable-azure-login: 'true'
           azure-credentials: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Stop test if Cluster is off
+        if: steps.kube-config.outputs.cluster-powerstate != 'Running'
+        run:
+          exit 1
+      
       - name: Send Status to Teams - Starting Test
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.1.4
@@ -232,6 +237,8 @@ jobs:
           loop-count: ${{ github.event.inputs.loop-count }}
           loop-duration: ${{ env.LOOP_DURATION }}
           # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: uncomment to use custom k6 binary with k6 extensions installed
+          # pod-log-lines-gha-output: 500 # TODO: uncomment if you want to change the number of lines in github actions that the pod logs output.
+          # pod-log-lines-file-output: 3000 # TODO: uncomment if you want to change the number of lines to file that the pod logs output.
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
 
@@ -294,7 +301,8 @@ jobs:
               { "name": "Actor", "value": "${{ github.actor }}" },
               { "name": "Environment", "value": "${{ github.event.inputs.env }}"},
               { "name": "K6 Test", "value": "${{ github.event.inputs.test-file }}" },
-              { "name": "K6 Run Name w/Timestamp", "value": "${{ steps.run-k6-operator-test.outputs.run-name }}"}
+              { "name": "K6 Run Name w/Timestamp", "value": "${{ steps.run-k6-operator-test.outputs.run-name }}"},
+              { "name": "K6 Cluster Powerstate", "value": "${{ steps.kube-config.outputs.cluster-powerstate }}"}
             ]
           custom-actions: |
             [
