@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v27    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v28    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -56,13 +56,13 @@ on:
   #       2. Delete the workflow_dispatch trigger
   #       3. Change the env.ENVIRONMENT value from "${{ github.event.inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
   #       4. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
-  #       5. Under the 'verify-tag-exists' job:
+  #       5. Under the 'set-vars' job:
   #          a. Delete the 'Checkout Repository' step
   #          b. Delete the 'Verify Tag Exists' step
   #       6. Delete the 'stakeholder-approval' job
   #       7. Delete the 'attestor-approval' job
   #       8. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
-  #       9. Under the 'deploy-site' job, update the needs property to be: "needs: [verify-tag-exists]"
+  #       9. Under the 'deploy-site-to-machine' job, update the needs property to be: "needs: [set-vars]"
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
@@ -73,8 +73,19 @@ env:
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
-  verify-tag-exists:
+  set-vars:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    outputs:
+      IIS_SERVERS: ${{ steps.set-variables.outputs.IIS_SERVERS }}
+      DEPLOYMENT_SA_ID: ${{ steps.set-variables.outputs.DEPLOYMENT_SA_ID }}
+      APP_POOL_NAME: ${{ steps.set-variables.outputs.APP_POOL_NAME }}
+      APP_POOL_SA_ID: ${{ steps.set-variables.outputs.APP_POOL_SA_ID }}
+      WEBSITE_NAME: ${{ steps.set-variables.outputs.WEBSITE_NAME }}
+      WEBSITE_HOST_HEADER: ${{ steps.set-variables.outputs.WEBSITE_HOST_HEADER }}
+      WEBSITE_PATH: ${{ steps.set-variables.outputs.WEBSITE_PATH }}
+      WEBSITE_CERT_PATH: ${{ steps.set-variables.outputs.WEBSITE_CERT_PATH }}
+      WEBSITE_CERT_FRIENDLY_NAME: ${{ steps.set-variables.outputs.WEBSITE_CERT_FRIENDLY_NAME }}
 
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -88,11 +99,98 @@ jobs:
         uses: im-open/verify-git-ref@v1.1.0
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
+      
+      - run: |
+          echo $'### Build Info
+          - Environment = ${{ env.ENVIRONMENT }}
+          - Tag = ${{ env.RELEASE_TAG }}' >> $GITHUB_STEP_SUMMARY
+
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
+      - name: Set Variables
+        id: set-variables
+        uses: im-open/set-environment-variables-by-scope@v1.0.4
+        with:
+          scope: ${{ env.ENVIRONMENT }}
+          create-output-variables: true
+        env:
+          # This should be a FQDN name (target-server.extendhealth.com) for the DNS request
+          # format for IIS_SERVERS: [env-machine-name-1.extendhealth.com, env-machine-name-2.extendhealth.com]
+          # TODO:  Fill in the list of machines for each environment.  Remove environments that are not applicable.
+          IIS_SERVERS@dev: []
+          IIS_SERVERS@qa: []
+          IIS_SERVERS@stage: []
+          IIS_SERVERS@demo: []
+          IIS_SERVERS@uat: []
+          IIS_SERVERS@prod: []
+          # TODO: Fill in the deployment service account id and remove the environments that are not used. 
+          # These are the service accounts that have permission to remotely connect to the machine an execute commands.
+          DEPLOYMENT_SA_ID@dev: ''
+          DEPLOYMENT_SA_ID@qa: ''
+          DEPLOYMENT_SA_ID@stage: ''
+          DEPLOYMENT_SA_ID@demo: ''
+          DEPLOYMENT_SA_ID@uat: ''
+          DEPLOYMENT_SA_ID@prod: ''
+          # TODO: Fill in the APP_POOL_NAME and remove the environments that are not used.
+          APP_POOL_NAME@dev: ''
+          APP_POOL_NAME@qa: ''
+          APP_POOL_NAME@stage: ''
+          APP_POOL_NAME@demo: ''
+          APP_POOL_NAME@uat: ''
+          APP_POOL_NAME@prod: ''
+          # TODO: Fill in the APP_POOL_SA_ID and remove the environments that are not used if the website has not already been created.
+          #       If the site already exists, this does not need to be provided and should be removed.
+          # These are the service accounts that the app pool will run under.
+          APP_POOL_SA_ID@dev: ''
+          APP_POOL_SA_ID@qa: ''
+          APP_POOL_SA_ID@stage: ''
+          APP_POOL_SA_ID@demo: ''
+          APP_POOL_SA_ID@uat: ''
+          APP_POOL_SA_ID@prod: ''
+          # TODO: Fill in the WEBSITE_PATH and remove the environments that are not used.
+          WEBSITE_PATH@dev: ''
+          WEBSITE_PATH@qa: ''
+          WEBSITE_PATH@stage: ''
+          WEBSITE_PATH@demo: ''
+          WEBSITE_PATH@uat: ''
+          WEBSITE_PATH@prod: ''
+          # TODO:  Fill in the website name for each environment.  Remove environments that are not applicable.
+          WEBSITE_NAME@dev: ''
+          WEBSITE_NAME@qa: ''
+          WEBSITE_NAME@stage: ''
+          WEBSITE_NAME@demo: ''
+          WEBSITE_NAME@uat: ''
+          WEBSITE_NAME@prod: ''
+          # TODO: Fill in the WEBSITE_HOST_HEADER and remove the environments that are not used if the website has not already been created.
+          #       If the site already exists, this does not need to be provided and should be removed.
+          WEBSITE_HOST_HEADER@dev: ''
+          WEBSITE_HOST_HEADER@qa: ''
+          WEBSITE_HOST_HEADER@stage: ''
+          WEBSITE_HOST_HEADER@demo: ''
+          WEBSITE_HOST_HEADER@uat: ''
+          WEBSITE_HOST_HEADER@prod: ''
+          # TODO: Fill in the WEBSITE_CERT_PATH and remove the environments that are not used if the website has not already been created.
+          #       If the site already exists, this does not need to be provided and should be removed.
+          WEBSITE_CERT_PATH@dev: ''
+          WEBSITE_CERT_PATH@qa: ''
+          WEBSITE_CERT_PATH@stage: ''
+          WEBSITE_CERT_PATH@demo: ''
+          WEBSITE_CERT_PATH@uat: ''
+          WEBSITE_CERT_PATH@prod: ''
+          # TODO: Fill in the WEBSITE_CERT_FRIENDLY_NAME and remove the environments that are not used if the website has not already been created.
+          #       If the site already exists, this does not need to be provided and should be removed..
+          WEBSITE_CERT_FRIENDLY_NAME@dev: ''
+          WEBSITE_CERT_FRIENDLY_NAME@qa: ''
+          WEBSITE_CERT_FRIENDLY_NAME@stage: ''
+          WEBSITE_CERT_FRIENDLY_NAME@demo: ''
+          WEBSITE_CERT_FRIENDLY_NAME@uat: ''
+          WEBSITE_CERT_FRIENDLY_NAME@prod: ''
+          
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
-    needs: [verify-tag-exists]
+    needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
@@ -104,7 +202,7 @@ jobs:
   # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   attestor-approval:
-    needs: [verify-tag-exists]
+    needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ github.event.inputs.environment }} Attestor Approval' # Use inputs context because env context is not available to environment:
     steps:
@@ -112,10 +210,10 @@ jobs:
           echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
-  # This job needs to run for all environments because deploy-site relies
+  # This job needs to run for all environments because deploy-site-to-machine relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
-    needs: [verify-tag-exists, stakeholder-approval, attestor-approval]
+    needs: [set-vars, stakeholder-approval, attestor-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -146,10 +244,22 @@ jobs:
   # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
   # Details on how to use the action can be found in the action's README.
 
-  deploy-site:
-    needs: [verify-tag-exists, validate-tag-is-in-main-for-prod-deploys]
+  deploy-site-to-machine:
+    needs: [set-vars, stakeholder-approval, attestor-approval, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, windows-2019]
-    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to 'environment:'
+
+    strategy:
+      fail-fast: false # Don't cancel all deploy jobs if one of the deployments fails
+      max-parallel: 1 # Only deploy to one machine at a time, to minimize downtime
+      matrix:
+        # This should be an array of windows iis server machine names.
+        # One job will spawn for each server listed in the array
+        iis-server: ${{ needs.set-vars.outputs.IIS_SERVERS }}
+
+    defaults:
+      run:
+        shell: pwsh
 
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
@@ -157,13 +267,17 @@ jobs:
       ASSET_ZIP: 'published_app.zip' # TODO: Verify that this wasn't changed in the CI build.  This is the value in that workflow by default.
       UNZIPPED_ASSET: 'published_app'
       DEPLOY_ZIP: 'deploy.zip'
-
-    outputs:
-      WEBSITE_NAME: ${{ steps.set-variables.outputs.WEBSITE_NAME }}
-      IIS_SERVER: ${{ steps.set-variables.outputs.IIS_SERVER }}
+      DEPLOYMENT_SA_ID: ${{ needs.set-vars.outputs.DEPLOYMENT_SA_ID }}
+      APP_POOL_NAME: ${{ needs.set-vars.outputs.APP_POOL_NAME }}
+      APP_POOL_SA_ID: ${{ needs.set-vars.outputs.APP_POOL_SA_ID }}
+      WEBSITE_NAME: ${{ needs.set-vars.outputs.WEBSITE_NAME }}
+      WEBSITE_HOST_HEADER: ${{ needs.set-vars.outputs.WEBSITE_HOST_HEADER }}
+      WEBSITE_PATH: ${{ needs.set-vars.outputs.WEBSITE_PATH }}
+      WEBSITE_CERT_PATH: ${{ needs.set-vars.outputs.WEBSITE_CERT_PATH }}
+      WEBSITE_CERT_FRIENDLY_NAME: ${{ needs.set-vars.outputs.WEBSITE_CERT_FRIENDLY_NAME }}
 
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}.  The current machine is ${{ matrix.windows-machine }}"
 
         # TODO: If any of the following deployment vars do not vary from environment to environment, they should
       #      be converted to a global env var at the top of the workflow and the output in this job should be removed
@@ -177,71 +291,7 @@ jobs:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # TODO: Fill in the iis-server and remove the environments that are not used.
-          # This should be a FQDN name (target-server.extendhealth.com) for the DNS request
-          # to resolve correctly
-          IIS_SERVER@dev: ''
-          IIS_SERVER@qa: ''
-          IIS_SERVER@stage: ''
-          IIS_SERVER@demo: ''
-          IIS_SERVER@uat: ''
-          IIS_SERVER@prod: ''
           # TODO: Fill in the website-name and remove the environments that are not used.
-          WEBSITE_NAME@dev: ''
-          WEBSITE_NAME@qa: ''
-          WEBSITE_NAME@stage: ''
-          WEBSITE_NAME@demo: ''
-          WEBSITE_NAME@uat: ''
-          WEBSITE_NAME@prod: ''
-          # TODO: Fill in the app-pool-name and remove the environments that are not used.
-          APP_POOL_NAME@dev: ''
-          APP_POOL_NAME@qa: ''
-          APP_POOL_NAME@stage: ''
-          APP_POOL_NAME@demo: ''
-          APP_POOL_NAME@uat: ''
-          APP_POOL_NAME@prod: ''
-          # TODO: Fill in the website-host-header and remove the environments that are not used.
-          WEBSITE_HOST_HEADER@dev: ''
-          WEBSITE_HOST_HEADER@qa: ''
-          WEBSITE_HOST_HEADER@stage: ''
-          WEBSITE_HOST_HEADER@demo: ''
-          WEBSITE_HOST_HEADER@uat: ''
-          WEBSITE_HOST_HEADER@prod: ''
-          # TODO: Fill in the website-path and remove the environments that are not used.
-          WEBSITE_PATH@dev: ''
-          WEBSITE_PATH@qa: ''
-          WEBSITE_PATH@stage: ''
-          WEBSITE_PATH@demo: ''
-          WEBSITE_PATH@uat: ''
-          WEBSITE_PATH@prod: ''
-          # TODO: Fill in the website-cert-path and remove the environments that are not used.
-          WEBSITE_CERT_PATH@dev: ''
-          WEBSITE_CERT_PATH@qa: ''
-          WEBSITE_CERT_PATH@stage: ''
-          WEBSITE_CERT_PATH@demo: ''
-          WEBSITE_CERT_PATH@uat: ''
-          WEBSITE_CERT_PATH@prod: ''
-          # TODO: Fill in the website-cert-friendly-name and remove the environments that are not used.
-          WEBSITE_CERT_FRIENDLY_NAME@dev: ''
-          WEBSITE_CERT_FRIENDLY_NAME@qa: ''
-          WEBSITE_CERT_FRIENDLY_NAME@stage: ''
-          WEBSITE_CERT_FRIENDLY_NAME@demo: ''
-          WEBSITE_CERT_FRIENDLY_NAME@uat: ''
-          WEBSITE_CERT_FRIENDLY_NAME@prod: ''
-          # TODO: Fill in the website-cert-friendly-name and remove the environments that are not used.
-          APP_POOL_SA_ID@dev: ''
-          APP_POOL_SA_ID@qa: ''
-          APP_POOL_SA_ID@stage: ''
-          APP_POOL_SA_ID@demo: ''
-          APP_POOL_SA_ID@uat: ''
-          APP_POOL_SA_ID@prod: ''
-          # TODO: Fill in the website-cert-friendly-name and remove the environments that are not used.
-          DEPLOYMENT_SA_ID@dev: ''
-          DEPLOYMENT_SA_ID@qa: ''
-          DEPLOYMENT_SA_ID@stage: ''
-          DEPLOYMENT_SA_ID@demo: ''
-          DEPLOYMENT_SA_ID@uat: ''
-          DEPLOYMENT_SA_ID@prod: ''
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -253,9 +303,6 @@ jobs:
           service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
-      - run: |
-          echo "The maintenance window ID is: ${{ steps.open-window.outputs.maintenance-window-id }}"
-
       - name: Download artifacts from release
         uses: im-open/download-release-asset@v1.0.2
         with:
@@ -264,7 +311,6 @@ jobs:
           tag-name: ${{ github.event.inputs.tag}}
 
       - name: Unzip release asset
-        shell: powershell
         run: Expand-Archive -LiteralPath ${{ env.ASSET_ZIP }} -DestinationPath ./${{ env.UNZIPPED_ASSET }}
 
       - name: Set Website Configuration and Substitution Values
@@ -289,29 +335,30 @@ jobs:
       - uses: im-open/octostache-action@v4.0.0
         with:
           variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
-          files-with-substitutions: '' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
+          files-with-substitutions: '' # TODO: Add the paths to the files to make substitutions in, e.g. .${{ env.UNZIPPED_ASSET }}/**/*.config
         # env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variables-file with the same name.
 
       # TODO: If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
       - uses: microsoft/variable-substitution@v1
         with:
-          files: '' # TODO: add a comma separated list of files and the patterns, like './src/MyProj/We*.config, ./src/MyProj/Nlog.config'
+          files: '' # TODO: add a comma separated list of files and the patterns, like '${{ env.UNZIPPED_ASSET }}/*.config', ./src/MyProj/We*.config, ./src/MyProj/Nlog.config'
         env:
           # TODO: replace examples with actual substitutions
           # FedAuth.Domain: ${{ env.FedAuth_Domain }} # Example showing replacement at a nested node (left side) & using the env set in the set-environment-variables-by-scope step above (right side)
           # SecretValue: ${{ secrets.VALUE }} # Example showing replacement of a root level value (left side) with a secret (right side)
 
       - name: Zip the published app for faster deployment and uploads
-        working-directory: ${{ env.UNZIPPED_ASSET }}
-        run: 7z a -tzip ../${{ env.DEPLOY_ZIP }} .
+        run: |
+          # On a Windows build runner, the 'zip' commandline tool isn't available. Use PowerShell functions instead.
+          Compress-Archive -Path .\${{ env.UNZIPPED_ASSET }}\* -DestinationPath ${{ env.DEPLOY_ZIP }}
 
       # Uncomment this if the site hasn't been created before
       # This action does work better if the website cert is already installed
       # - name: Create Web Site
       #   uses: im-open/iis-site-create@v3.0.1
       #   with:
-      #     server: '${{ env.IIS_SERVER }}'
+      #     server: '${{ matrix.iis-server }}'
       #     website-name: '${{ env.WEBSITE_NAME }}'
       #     app-pool-name: '${{ env.APP_POOL_NAME }}'
       #     website-host-header: '${{ env.WEBSITE_HOST_HEADER }}'
@@ -330,7 +377,7 @@ jobs:
         uses: im-open/app-pool-action@v2.0.2
         with:
           action: 'stop'
-          server: ${{ env.IIS_SERVER }}
+          server: ${{ matrix.iis-server }}
           app-pool-name: ${{ env.APP_POOL_NAME }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
           service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
@@ -339,7 +386,7 @@ jobs:
         if: steps.app-pool-stop.outcome == 'success'
         uses: im-open/deploy-windows-files@v2.0.3
         with:
-          server: ${{ env.IIS_SERVER }}
+          server: ${{ matrix.iis-server }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
           deployment-folder-path: ${{ env.WEBSITE_PATH }}
           clean-deployment-folder: 'true'
@@ -350,7 +397,7 @@ jobs:
         uses: im-open/app-pool-action@v2.0.2
         with:
           action: 'start'
-          server: ${{ env.IIS_SERVER }}
+          server: ${{ matrix.iis-server }}
           app-pool-name: ${{ env.APP_POOL_NAME }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
           service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
@@ -365,6 +412,7 @@ jobs:
       - name: Delete .zips and folder that contains sensitive info
         continue-on-error: true
         working-directory: ${{ env.PROJECT_ROOT }}
+        shell: bash
         run: |
           rm -f ${{ env.ASSET_ZIP }}
           rm -f ${{ env.DEPLOY_ZIP }}
@@ -372,7 +420,7 @@ jobs:
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: [verify-tag-exists, deploy-site]
+    needs: [set-vars, deploy-site-to-machine]
     if: always()
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -405,7 +453,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: ${{ needs.deploy-site.outputs.WEBSITE_NAME }} Deployment to ${{ needs.deploy-site.outputs.IIS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the team channel
+          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.IIS_SERVERS }} # TODO Verify this title gives enough info since it will be posted to the team channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -422,7 +470,7 @@ jobs:
         if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: ${{ needs.deploy-site.outputs.WEBSITE_NAME }} Deployment to ${{ needs.deploy-site.outputs.IIS_SERVER }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
+          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.IIS_SERVERS }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret

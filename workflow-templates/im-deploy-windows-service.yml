@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v22    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v23    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -55,13 +55,13 @@ on:
   #       2. Delete the workflow_dispatch trigger
   #       3. Change the env.ENVIRONMENT value from "${{ github.event.inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
   #       4. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
-  #       5. Under the 'verify-tag' job:
+  #       5. Under the 'set-vars' job:
   #          a. Delete the 'Checkout Repository' step
   #          b. Delete the 'Verify Tag Exists' step
   #       6. Delete the 'stakeholder-approval' job
   #       7. Delete the 'attestor-approval' job
   #       8. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
-  #       9. Under the 'deploy-service' job, update the needs property to be: "needs: [verify-tag]"
+  #       9. Under the 'deploy-service-to-machine' job, update the needs property to be: "needs: [set-vars]"
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
@@ -72,9 +72,17 @@ env:
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
-  verify-tag:
+  set-vars:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
+    outputs:
+      WINDOWS_SERVERS: ${{ steps.set-variables.outputs.WINDOWS_SERVERS }}
+      SERVICE_NAME: ${{ steps.set-variables.outputs.SERVICE_NAME }}
+      SERVICE_PATH: ${{ steps.set-variables.outputs.SERVICE_PATH }}
+      RUN_TIME_ID: ${{ steps.set-variables.outputs.RUN_TIME_ID }}
+      DEPLOYMENT_SA_ID: ${{ steps.set-variables.outputs.DEPLOYMENT_SA_ID }}
+      
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -86,12 +94,61 @@ jobs:
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
 
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: |
+          echo $'### Build Info
+          - Environment = ${{ env.ENVIRONMENT }}
+          - Tag = ${{ env.RELEASE_TAG }}' >> $GITHUB_STEP_SUMMARY
+
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
+      - name: Set Variables
+        id: set-variables
+        uses: im-open/set-environment-variables-by-scope@v1.0.4
+        with:
+          scope: ${{ env.ENVIRONMENT }}
+          create-output-variables: true
+        env:
+          # This should be a FQDN name (target-server.extendhealth.com) for the DNS request
+          # Format for WINDOWS_SERVERS: [env-machine-name-1.extendhealth.com, env-machine-name-2.extendhealth.com]
+          # TODO:  Fill in the list of machines for each environment.  Remove environments that are not applicable.
+          WINDOWS_SERVERS@dev: []
+          WINDOWS_SERVERS@qa: []
+          WINDOWS_SERVERS@stage: []
+          WINDOWS_SERVERS@prod: []
+          # TODO: Fill in the SERVICE_NAME and remove the environments that are not used.
+          SERVICE_NAME@dev: ''
+          SERVICE_NAME@qa: ''
+          SERVICE_NAME@stage: ''
+          SERVICE_NAME@demo: ''
+          SERVICE_NAME@uat: ''
+          SERVICE_NAME@prod: ''
+          # TODO: Fill in the SERVICE_PATH (location where the service is deployed) and remove the environments that are not used.
+          SERVICE_PATH@dev: ''
+          SERVICE_PATH@qa: ''
+          SERVICE_PATH@stage: ''
+          SERVICE_PATH@demo: ''
+          SERVICE_PATH@uat: ''
+          SERVICE_PATH@prod: ''
+          # TODO: Fill in the RUN_TIME_ID and remove the environments that are not used.
+          # These are the service accounts that the service will run under.
+          RUN_TIME_ID@dev: ''
+          RUN_TIME_ID@qa: ''
+          RUN_TIME_ID@stage: ''
+          RUN_TIME_ID@demo: ''
+          RUN_TIME_ID@uat: ''
+          RUN_TIME_ID@prod: ''
+          # TODO: Fill in the deployment service account id and remove the environments that are not used. 
+          # These are the service accounts that have permission to remotely connect to the machine an execute commands.
+          DEPLOYMENT_SA_ID@dev: ''
+          DEPLOYMENT_SA_ID@qa: '' 
+          DEPLOYMENT_SA_ID@stage:  '' 
+          DEPLOYMENT_SA_ID@prod: '' 
+          
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
-    needs: [verify-tag]
+    needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
@@ -103,7 +160,7 @@ jobs:
   # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   attestor-approval:
-    needs: [verify-tag]
+    needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ github.event.inputs.environment }} Attestor Approval' # Use inputs context because env context is not available to environment:
     steps:
@@ -111,10 +168,10 @@ jobs:
           echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
-  # This job needs to run for all environments because deploy-service relies
+  # This job needs to run for all environments because deploy-service-to-machine relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
-    needs: [verify-tag, stakeholder-approval, attestor-approval]
+    needs: [set-vars, stakeholder-approval, attestor-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -137,7 +194,7 @@ jobs:
         if: env.ENVIRONMENT == 'prod'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.RELEASE_TAG }}
+          release-tag: ${{ env.RELEASE_TAG }}
           fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
 
   # If you want to verify that the Jira ticket being deployed has the proper attestations, there is an action for that.
@@ -145,14 +202,26 @@ jobs:
   # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
   # Details on how to use the action can be found in the action's README.
 
-  deploy-service:
+  deploy-service-to-machine:
     needs: |
-      - verify-tag
+      - set-vars
       - stakeholder-approval
       - attestor-approval
       - validate-tag-is-in-main-for-prod-deploys
     runs-on: [self-hosted, windows-2019]
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
+
+    strategy:
+      fail-fast: false # Don't cancel all deploy jobs if one of the deployments fails
+      max-parallel: 1 # Only deploy to one machine at a time, to minimize downtime
+      matrix:
+        # This should be an array of windows machine names.
+        # One job will spawn for each server listed in the array
+        windows-server: ${{ needs.set-vars.outputs.WINDOWS_SERVERS }}
+
+    defaults:
+      run:
+        shell: pwsh
 
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
@@ -160,13 +229,17 @@ jobs:
       ASSET_ZIP: 'published_app.zip' # TODO: Verify that this wasn't changed in the CI build.  This is the value in that workflow by default.
       UNZIPPED_ASSET: 'published_app'
       DEPLOY_ZIP: 'deploy.zip'
-
-    outputs:
-      TARGET_SERVER: '${{ steps.set-variables.outputs.TARGET_SERVER }}''
-      SERVICE_NAME: '${{ steps.set-variables.outputs.SERVICE_NAME }}'
-
+      # The username/secret of the admin account that can deploy to the machine
+      DEPLOYMENT_SA_ID: ${{ needs.set-vars.outputs.DEPLOYMENT_SA_ID }}
+      DEPLOYMENT_SA_SECRET: ${{ secrets.DEPLOYMENT_SA_SECRET }}
+      # The username/secret that the windows service runs under
+      RUN_TIME_ID: ${{ needs.set-vars.outputs.RUN_TIME_ID }}
+      RUN_TIME_SECRET: ${{ secrets.RUN_TIME_SECRET }}
+      SERVICE_NAME: ${{ needs.set-vars.outputs.SERVICE_NAME }}
+      SERVICE_PATH: ${{ needs.set-vars.outputs.SERVICE_PATH }}
+      
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}.  The current machine is ${{ matrix.windows-server }}"
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -178,12 +251,6 @@ jobs:
           service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
-      - run: |
-          echo "The maintenance window ID is: ${{ steps.open-window.outputs.maintenance-window-id }}"
-
-      # TODO: If any of the following deployment vars do not vary from environment to environment, they should
-      #      be converted to a global env var at the top of the workflow or the env section of this job
-
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
@@ -193,47 +260,6 @@ jobs:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # TODO: Fill in the target windows server and remove the environments that are not used.
-          # This should be a FQDN name (target-server.extendhealth.com) for the DNS request
-          # to resolve correctly
-          TARGET_SERVER@dev: ''
-          TARGET_SERVER@qa: ''
-          TARGET_SERVER@stage: ''
-          TARGET_SERVER@demo: ''
-          TARGET_SERVER@uat: ''
-          TARGET_SERVER@prod: ''
-          # TODO: Fill in the service name and remove the environments that are not used.
-          SERVICE_NAME@dev: ''
-          SERVICE_NAME@qa: ''
-          SERVICE_NAME@stage: ''
-          SERVICE_NAME@demo: ''
-          SERVICE_NAME@uat: ''
-          SERVICE_NAME@prod: ''
-          # TODO: Fill in the target machine local path where the service's executeable files are
-          #       kept and remove the environments that are not used.
-          SERVICE_PATH@dev: ''
-          SERVICE_PATH@qa: ''
-          SERVICE_PATH@stage: ''
-          SERVICE_PATH@demo: ''
-          SERVICE_PATH@uat: ''
-          SERVICE_PATH@prod: ''
-          # TODO: Fill in the run time service account id and remove the environments that are not used.
-          RUN_TIME_ID@dev: ''
-          RUN_TIME_ID@qa: ''
-          RUN_TIME_ID@stage: ''
-          RUN_TIME_ID@demo: ''
-          RUN_TIME_ID@uat: ''
-          RUN_TIME_ID@prod: ''
-          # TODO: Fill in the deployment service account id and remove the environments that are not used.
-          DEPLOYMENT_SA_ID@dev: ''
-          DEPLOYMENT_SA_ID@qa: ''
-          DEPLOYMENT_SA_ID@stage: ''
-          DEPLOYMENT_SA_ID@demo: ''
-          DEPLOYMENT_SA_ID@uat: ''
-          DEPLOYMENT_SA_ID@prod: ''
-
-          # TODO: Fill in the website-cert-friendly-name and remove the environments that are not used.
-
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: FedAuth_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
           #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of env.ENVIRONMENT to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
@@ -251,7 +277,6 @@ jobs:
           tag-name: ${{ github.event.inputs.tag }}
 
       - name: Unzip release asset
-        shell: powershell
         run: Expand-Archive -LiteralPath ${{ env.ASSET_ZIP }} -DestinationPath ./${{ env.UNZIPPED_ASSET }}
 
       # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
@@ -260,22 +285,23 @@ jobs:
       - uses: im-open/octostache-action@v4.0.0
         with:
           variables-file: '' # TODO: Add the ./path/file containing the variable substitutions to make, you will need to create this file  See the action for more details.
-          files-with-substitutions: './${{ env.UNZIPPED_ASSET }}/**' # TODO: Add the paths to the files to make substitutions in, e.g. ./path/file, ./path/another-file
+          files-with-substitutions: '' # TODO: Add the paths to the files to make substitutions in, e.g. .${{ env.UNZIPPED_ASSET }}/**/*.config
         # env: # TODO: Environment variables can be added that will also be used for substitution (good for secrets). These will override any variable in the variables-file with the same name.
 
       # TODO: If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
       - uses: microsoft/variable-substitution@v1
         with:
-          files: '' # TODO: add a comma separated list of files and the patterns, like './src/MyProj/We*.config, ./src/MyProj/Nlog.config'
+          files: '' # TODO: add a comma separated list of files and the patterns, like '${{ env.UNZIPPED_ASSET }}/*.config', ./src/MyProj/We*.config, ./src/MyProj/Nlog.config'
         env:
           # TODO: replace examples with actual substitutions
           # FedAuth.Domain: ${{ env.FedAuth_Domain }} # Example showing replacement at a nested node (left side) & using the env set in the set-environment-variables-by-scope step above (right side)
           # SecretValue: ${{ secrets.VALUE }} # Example showing replacement of a root level value (left side) with a secret (right side)
 
       - name: Zip the published app for faster deployment and uploads
-        working-directory: ${{ env.UNZIPPED_ASSET }}
-        run: zip -r ../${{ env.DEPLOY_ZIP }} .
+        run: |
+          # On a Windows build runner, the 'zip' commandline tool isn't available. Use PowerShell functions instead.
+          Compress-Archive -Path .\${{ env.UNZIPPED_ASSET }}\* -DestinationPath ${{ env.DEPLOY_ZIP }}
 
       - name: Stop Service
         id: stop-service
@@ -283,10 +309,10 @@ jobs:
         uses: im-open/windows-service-action@v2.0.2
         with:
           action: 'stop'
-          server: ${{ env.TARGET_SERVER }}
+          server: ${{ matrix.windows-server }}
           service-name: ${{ env.SERVICE_NAME }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
+          service-account-password: ${{ env.DEPLOYMENT_SA_SECRET }}
         continue-on-error: true
 
       - name: Deploy Deployment Package
@@ -294,9 +320,9 @@ jobs:
         if: steps.app-pool-stop.outcome == 'success'
         uses: im-open/deploy-windows-files@v2.0.3
         with:
-          server: ${{ env.TARGET_SERVER }}
+          server: ${{ matrix.windows-server }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
-          service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
+          service-account-password: ${{ env.DEPLOYMENT_SA_SECRET }}
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
           deployment-folder-path: ${{ env.SERVICE_PATH }}
           clean-deployment-folder: 'true'
@@ -308,7 +334,7 @@ jobs:
         with:
           service-name: '${{ env.SERVICE_NAME }}'
           deployment-path: '${{ env.SERVICE_PATH }}\\win-service.exe' # TODO: Make sure the right service file name is
-          server: ${{ env.TARGET_SERVER }}
+          server: ${{ matrix.windows-server }}
           # TODO: Verify the run time service account ids and secrets for all environments
           #       and put them in the GitHub Actions Environments Secrets store
           run-time-id: ${{ env.RUN_TIME_ID }} # TODO: If using the a local system account (NT AUTHORITY\LOCAL SYSTEM), remove this variable.
@@ -321,7 +347,7 @@ jobs:
         uses: im-open/windows-service-action@v2.0.2
         with:
           action: 'start'
-          server: ${{ env.TARGET_SERVER }}
+          server: ${{ matrix.windows-server }}
           service-name: ${{ env.SERVICE_NAME }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
           service-account-password: ${{ secrets.DEPLOYMENT_SA_SECRET }}
@@ -336,6 +362,7 @@ jobs:
       - name: Delete .zips and folder that contains sensitive info
         continue-on-error: true
         working-directory: ${{ env.PROJECT_ROOT }}
+        shell: bash
         run: |
           rm -f ${{ env.ASSET_ZIP }}
           rm -f ${{ env.DEPLOY_ZIP }}
@@ -343,7 +370,7 @@ jobs:
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: [verify-tag, deploy-service]
+    needs: [set-vars, deploy-service-to-machine]
     if: always()
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -376,7 +403,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: '${{ needs.deploy-service.outputs.SERVICE_NAME }} Deployment to ${{ needs.deploy-service.outputs.TARGET_SERVER }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
+          title: '${{ needs.set-vars.outputs.SERVICE_NAME }} Deployment to ${{ needs.set-vars.outputs.WINDOWS_SERVERS }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -393,7 +420,7 @@ jobs:
         if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: '${{ needs.deploy-service.outputs.SERVICE_NAME }} Deployment to ${{ needs.deploy-service.outputs.TARGET_SERVER }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
+          title: '${{ needs.set-vars.outputs.SERVICE_NAME }} Deployment to ${{ needs.set-vars.outputs.WINDOWS_SERVERS }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret
