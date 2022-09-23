@@ -412,6 +412,7 @@ jobs:
       - name: Delete .zips and folder that contains sensitive info
         continue-on-error: true
         working-directory: ${{ env.PROJECT_ROOT }}
+        shell: bash
         run: |
           rm -f ${{ env.ASSET_ZIP }}
           rm -f ${{ env.DEPLOY_ZIP }}

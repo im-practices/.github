@@ -219,6 +219,10 @@ jobs:
         # One job will spawn for each server listed in the array
         windows-server: ${{ needs.set-vars.outputs.WINDOWS_SERVERS }}
 
+    defaults:
+      run:
+        shell: pwsh
+
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
       PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions' # TODO: Verify this PD Maintenance Window Description
@@ -235,7 +239,7 @@ jobs:
       SERVICE_PATH: ${{ needs.set-vars.outputs.SERVICE_PATH }}
       
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}.  The current machine is ${{ matrix.windows-server }}"
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
@@ -273,7 +277,6 @@ jobs:
           tag-name: ${{ github.event.inputs.tag }}
 
       - name: Unzip release asset
-        shell: powershell
         run: Expand-Archive -LiteralPath ${{ env.ASSET_ZIP }} -DestinationPath ./${{ env.UNZIPPED_ASSET }}
 
       # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
@@ -359,6 +362,7 @@ jobs:
       - name: Delete .zips and folder that contains sensitive info
         continue-on-error: true
         working-directory: ${{ env.PROJECT_ROOT }}
+        shell: bash
         run: |
           rm -f ${{ env.ASSET_ZIP }}
           rm -f ${{ env.DEPLOY_ZIP }}
