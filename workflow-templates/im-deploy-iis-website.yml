@@ -89,8 +89,13 @@ jobs:
       WEBSITE_CERT_FRIENDLY_NAME: ${{ steps.set-variables.outputs.WEBSITE_CERT_FRIENDLY_NAME }}
 
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                   |
+          | ---             |  ---                    |
+          | Environment     | `${{ env.ENVIRONMENT}}` |
+          | Tag             | `${{ env.RELEASE_TAG}}` |' >> $GITHUB_STEP_SUMMARY
+      
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
@@ -100,11 +105,6 @@ jobs:
         uses: im-open/verify-git-ref@v1.1.0
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
-      
-      - run: |
-          echo $'### Build Info
-          - Environment = ${{ env.ENVIRONMENT }}
-          - Tag = ${{ env.RELEASE_TAG }}' >> $GITHUB_STEP_SUMMARY
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions

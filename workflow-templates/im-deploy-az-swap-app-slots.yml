@@ -57,8 +57,15 @@ jobs:
       OPEN_WINDOW: ${{ github.event.inputs.open-pagerduty-window || github.event.client_payload.open-pagerduty-window }}
 
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                    |
+          | ---             |  ---                     |
+          | Environment     | `${{ env.ENVIRONMENT }}` |
+          | Target Slot     | `${{ env.TARGET_SLOT }}` |
+          | Source Slot     | `${{ env.SOURCE_SLOT }}` |
+          | Open PD Window  | `${{ env.OPEN_WINDOW }}` |' >> $GITHUB_STEP_SUMMARY
+      
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables

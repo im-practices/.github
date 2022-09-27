@@ -47,8 +47,15 @@ jobs:
     environment: ${{ github.event.inputs.environment }}
 
     steps:
-      - run: echo "The current environment is ${{ github.event.inputs.environment }}."
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                                             |
+          | ---             |  ---                                              |
+          | Environment     | `${{ github.event.inputs.environment }}`          |
+          | Storage Acct    | `${{ github.event.inputs.storage-account-name }}` |
+          | Container       | `${{ github.event.inputs.container-name }}`       |
+          | Blob Name       | `${{ github.event.inputs.blob-name }}`            |' >> $GITHUB_STEP_SUMMARY
+          
       - name: AZ Login
         id: login
         uses: azure/login@v1

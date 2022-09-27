@@ -50,8 +50,13 @@ jobs:
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                    |
+          | ---             |  ---                     |
+          | Environment     | `${{ env.ENVIRONMENT }}` |
+          | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
+                
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
