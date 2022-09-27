@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v18    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v19    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures tags
 #    are valid for production deployments and runs the migrations against an on-prem
@@ -21,6 +21,7 @@
 #      Generally one board should be set up per database in the repository.
 
 name: Deploy Database to On-Prem Server # TODO: If there are multiple on prem databases in the repo, append the db name to this workflow's file name and update this name
+run-name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }} DB
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger

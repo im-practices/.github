@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v10    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v11    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc app insights annotation for a specified
 #    environment when someone kicks it off manually.
@@ -16,7 +16,7 @@
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Runbook - Annotate App Insights
-
+run-name: Annotate ${{ inputs.eventName }} in ${{ inputs.environment }} App Insights
 on:
   workflow_dispatch:
     inputs:

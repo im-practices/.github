@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v12    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v13    DO NOT REMOVE
 # Purpose:
 #    Swaps deployment slots in a specified environment for an Azure App Service
 #    or Function outside of a deployment when someone kicks it off manually.
@@ -13,7 +13,7 @@
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Swap Azure App Slots
-
+run-name: Swap ${{ inputs.environment }} AZ App Slots
 # This workflow can be kicked off manually and it can also be kicked off automatically from
 # another workflow by using the repository_dispatch event trigger.  This workflow is designed
 # to know about each of your environments, so the only thing you need to input is the

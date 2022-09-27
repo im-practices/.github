@@ -1,4 +1,4 @@
-# Workflow Code: MysteriousStranger_v1    DO NOT REMOVE
+# Workflow Code: MysteriousStranger_v2    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -26,6 +26,7 @@
 #       If a WinRM connection can't be established create an ITHD ticket to have the WinRM listeners fixed or created
 
 name: Deploy Windows Server Files
+run-name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }} Windows Server
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger

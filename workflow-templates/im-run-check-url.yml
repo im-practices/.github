@@ -1,4 +1,4 @@
-# Workflow Code: distressedstoat_v1    DO NOT REMOVE
+# Workflow Code: distressedstoat_v2    DO NOT REMOVE
 # Purpose: 
 #    Pings a url and fails by default if the status code is 400+
 #    
@@ -12,7 +12,7 @@
 
 
 name: Runbook - Check Url
-
+run-name: Check ${{ inputs.url-to-check }}
 on:
   workflow_dispatch:
     inputs:

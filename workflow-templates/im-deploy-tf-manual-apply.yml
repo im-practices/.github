@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v28    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v29    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform at a specified tag to a specified
 #    environment when someone kicks off the build manually.
@@ -14,6 +14,7 @@
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
 name: Apply Terraform
+run-name: Apply ${{ inputs.branch-tag-sha }} terraform to ${{ inputs.environment }}
 on:
   workflow_dispatch:
     inputs:
