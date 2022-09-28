@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v29    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v30    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -95,7 +95,7 @@ jobs:
           | ---             |  ---                    |
           | Environment     | `${{ env.ENVIRONMENT}}` |
           | Tag             | `${{ env.RELEASE_TAG}}` |' >> $GITHUB_STEP_SUMMARY
-      
+
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
@@ -115,16 +115,17 @@ jobs:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # This should be a FQDN name (target-server.extendhealth.com) for the DNS request
-          # format for IIS_SERVERS: [env-machine-name-1.extendhealth.com, env-machine-name-2.extendhealth.com]
+          # Each server should be a FQDN name (target-server.extendhealth.com) for the DNS request
+          # Format for IIS_SERVERS: "['env-machine-name-1.extendhealth.com', 'env-machine-name-2.extendhealth.com']"
           # TODO:  Fill in the list of machines for each environment.  Remove environments that are not applicable.
-          IIS_SERVERS@dev: []
-          IIS_SERVERS@qa: []
-          IIS_SERVERS@stage: []
-          IIS_SERVERS@demo: []
-          IIS_SERVERS@uat: []
-          IIS_SERVERS@prod: []
-          # TODO: Fill in the deployment service account id and remove the environments that are not used. 
+          IIS_SERVERS@dev: "['', '']"
+          IIS_SERVERS@qa: "['', '']"
+          IIS_SERVERS@stage: "['', '']"
+          IIS_SERVERS@demo: "['', '']"
+          IIS_SERVERS@uat: "['', '']"
+          IIS_SERVERS@prod: "['', '']"
+
+          # TODO: Fill in the deployment service account id and remove the environments that are not used.
           # These are the service accounts that have permission to remotely connect to the machine an execute commands.
           DEPLOYMENT_SA_ID@dev: ''
           DEPLOYMENT_SA_ID@qa: ''
@@ -186,7 +187,6 @@ jobs:
           WEBSITE_CERT_FRIENDLY_NAME@demo: ''
           WEBSITE_CERT_FRIENDLY_NAME@uat: ''
           WEBSITE_CERT_FRIENDLY_NAME@prod: ''
-          
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
@@ -225,7 +225,7 @@ jobs:
         if: env.ENVIRONMENT == 'prod'
         uses: actions/checkout@v2
         with:
-          ref: 'main' # TODO: verify the name of your default branch
+          ref: 'main'
           fetch-depth: 0
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.1
@@ -246,7 +246,13 @@ jobs:
   # Details on how to use the action can be found in the action's README.
 
   deploy-site-to-machine:
-    needs: [set-vars, stakeholder-approval, attestor-approval, validate-tag-is-in-main-for-prod-deploys]
+    needs:
+      [
+        set-vars,
+        stakeholder-approval,
+        attestor-approval,
+        validate-tag-is-in-main-for-prod-deploys,
+      ]
     runs-on: [self-hosted, windows-2019]
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to 'environment:'
 
@@ -256,7 +262,7 @@ jobs:
       matrix:
         # This should be an array of windows iis server machine names.
         # One job will spawn for each server listed in the array
-        iis-server: ${{ needs.set-vars.outputs.IIS_SERVERS }}
+        iis-server: ${{ fromJSON(needs.set-vars.outputs.IIS_SERVERS) }}
 
     defaults:
       run:
@@ -278,7 +284,7 @@ jobs:
       WEBSITE_CERT_FRIENDLY_NAME: ${{ needs.set-vars.outputs.WEBSITE_CERT_FRIENDLY_NAME }}
 
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}.  The current machine is ${{ matrix.windows-machine }}"
+      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}.  The current machine is ${{ matrix.iis-server }}"
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
@@ -289,7 +295,7 @@ jobs:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
-          
+
       - name: Open a PagerDuty Maintenance Window
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.1.4
