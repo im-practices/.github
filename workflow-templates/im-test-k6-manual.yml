@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v14    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v15    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -14,7 +14,7 @@
 #    - On-Prem Service         (Optional Template)
 
 name: Run K6 test
-
+run-name: Run ${{ inputs.test-file }} in ${{ inputs.env }}
 on:
   workflow_dispatch:
     inputs:

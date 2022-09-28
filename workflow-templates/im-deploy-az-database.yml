@@ -1,4 +1,4 @@
-# Workflow Code: BetrayedCod_v16    DO NOT REMOVE
+# Workflow Code: BetrayedCod_v17    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures
 #    tags are valid for production deployments and runs the migrations against
@@ -20,6 +20,7 @@
 #      Generally one board should be set up per database in the repository.
 
 name: Deploy Database to Azure # TODO: If there are multiple az databases in the repo, append the db name to this workflow's file name and update the workflow name below
+run-name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }} AZ DB
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger
@@ -67,6 +68,13 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     steps:
+      - run: |
+          echo $'
+          | Build Arguments | Value                    |
+          | ---             |  ---                     |
+          | Environment     | `${{ env.ENVIRONMENT }}` |
+          | Tag             | `${{ env.RELEASE_TAG }}` |' >> $GITHUB_STEP_SUMMARY
+                
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:

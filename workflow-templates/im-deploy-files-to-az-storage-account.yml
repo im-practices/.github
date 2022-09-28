@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v15    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v16    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and deploys a directory to the
 #    specified storage account when someone kicks it off manually.
@@ -15,7 +15,7 @@
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
 name: Deploy Files to Azure Storage
-
+run-name: Deploy ${{ inputs.branch-tag-sha }} Files to ${{ inputs.environment }} AZ Storage
 # TODO: Evaluate the appropriate triggers
 on:
   workflow_dispatch:
@@ -50,8 +50,13 @@ jobs:
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                    |
+          | ---             |  ---                     |
+          | Environment     | `${{ env.ENVIRONMENT }}` |
+          | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
+                
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:

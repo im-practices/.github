@@ -1,4 +1,4 @@
-# Workflow Code: MercifulLlama_v6    DO NOT REMOVE
+# Workflow Code: MercifulLlama_v7    DO NOT REMOVE
 # Purpose:
 #    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.)
 #    but they need each item to be deployed together.
@@ -22,6 +22,7 @@
 #    -  Any project that needs to be deployed at the same time as others
 
 name: Deploy Multiple Items
+run-name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }}
 on:
   workflow_dispatch:
     inputs:
@@ -49,6 +50,13 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     steps:
+      - run: |
+          echo $'
+          | Build Arguments | Value                    |
+          | ---             |  ---                     |
+          | Environment     | `${{ env.ENVIRONMENT }}` |
+          | Tag             | `${{ env.RELEASE_TAG }}` |' >> $GITHUB_STEP_SUMMARY
+                
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:

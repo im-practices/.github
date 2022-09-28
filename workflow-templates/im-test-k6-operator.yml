@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v10   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v11   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -13,7 +13,7 @@
 #    - Ensure each of the repo-level MS_TEAMS_URI and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Run K6 Operator Test
-
+run-name: Run ${{ inputs.test-file }} in ${{ inputs.env }}
 on:
   workflow_dispatch:
     inputs:

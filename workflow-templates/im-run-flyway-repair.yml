@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v10    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v11    DO NOT REMOVE
 # Purpose:
 #    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
@@ -14,7 +14,7 @@
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Runbook - Flyway Repair
-
+run-name: Repair ${{ inputs.environment }} with ${{ inputs.branch-tag-sha }}
 on:
   workflow_dispatch:
     inputs:
@@ -47,8 +47,13 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}."
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                    |
+          | ---             |  ---                     |
+          | Environment     | `${{ env.ENVIRONMENT }}` |
+          | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
+          
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:

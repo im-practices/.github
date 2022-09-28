@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v30    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v31    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -23,6 +23,7 @@
 #      Generally one board should be set up per app service/function in the repository.
 
 name: Manually deploy AZ App # TODO: If there are multiple app service/functions in the repo, append the project name (svc/bff/mfe/etc) to this and the actual file name
+run-name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }} AZ App
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger
@@ -75,8 +76,14 @@ jobs:
       APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }}
 
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                    |
+          | ---             |  ---                     |
+          | Environment     | `${{ env.ENVIRONMENT }}` |
+          | Tag             | `${{ env.RELEASE_TAG }}` |' >> $GITHUB_STEP_SUMMARY
+      
+      
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:

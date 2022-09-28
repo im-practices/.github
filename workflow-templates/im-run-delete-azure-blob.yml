@@ -1,4 +1,4 @@
-# Workflow Code: ScornfulFlamingo_v3   DO NOT REMOVE
+# Workflow Code: ScornfulFlamingo_v4   DO NOT REMOVE
 # Purpose:
 #    Deletes a blob from a specified Azure Storage Account when someone kicks it off manually.
 #
@@ -14,7 +14,7 @@
 #      https://docs.microsoft.com/en-us/azure/storage/blobs/assign-azure-role-data-access?tabs=portal
 
 name: Delete Azure Blob
-
+run-name: Delete ${{ inputs.environment }} blob ${{ inputs.blob-name }}
 # TODO: Evaluate the appropriate triggers
 on:
   workflow_dispatch:
@@ -47,8 +47,15 @@ jobs:
     environment: ${{ github.event.inputs.environment }}
 
     steps:
-      - run: echo "The current environment is ${{ github.event.inputs.environment }}."
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                                             |
+          | ---             |  ---                                              |
+          | Environment     | `${{ github.event.inputs.environment }}`          |
+          | Storage Acct    | `${{ github.event.inputs.storage-account-name }}` |
+          | Container       | `${{ github.event.inputs.container-name }}`       |
+          | Blob Name       | `${{ github.event.inputs.blob-name }}`            |' >> $GITHUB_STEP_SUMMARY
+          
       - name: AZ Login
         id: login
         uses: azure/login@v1

@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v28    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v29    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -30,6 +30,7 @@
 #       If a WinRM connection can't be established create an ITHD ticket to have the WinRM listeners fixed or created
 
 name: Deploy IIS Website # TODO: If there are multiple sites in the repo, append the site name to this workflow's file name and update this name
+run-name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }}
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger
@@ -88,8 +89,13 @@ jobs:
       WEBSITE_CERT_FRIENDLY_NAME: ${{ steps.set-variables.outputs.WEBSITE_CERT_FRIENDLY_NAME }}
 
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                   |
+          | ---             |  ---                    |
+          | Environment     | `${{ env.ENVIRONMENT}}` |
+          | Tag             | `${{ env.RELEASE_TAG}}` |' >> $GITHUB_STEP_SUMMARY
+      
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
@@ -99,11 +105,6 @@ jobs:
         uses: im-open/verify-git-ref@v1.1.0
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
-      
-      - run: |
-          echo $'### Build Info
-          - Environment = ${{ env.ENVIRONMENT }}
-          - Tag = ${{ env.RELEASE_TAG }}' >> $GITHUB_STEP_SUMMARY
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
@@ -279,9 +280,6 @@ jobs:
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}.  The current machine is ${{ matrix.windows-machine }}"
 
-        # TODO: If any of the following deployment vars do not vary from environment to environment, they should
-      #      be converted to a global env var at the top of the workflow and the output in this job should be removed
-
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
@@ -291,8 +289,7 @@ jobs:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # TODO: Fill in the website-name and remove the environments that are not used.
-
+          
       - name: Open a PagerDuty Maintenance Window
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.1.4
@@ -453,7 +450,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.IIS_SERVERS }} # TODO Verify this title gives enough info since it will be posted to the team channel
+          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ env.ENVIRONMENT }} # TODO Verify this title gives enough info since it will be posted to the team channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -470,7 +467,7 @@ jobs:
         if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ needs.set-vars.outputs.IIS_SERVERS }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
+          title: ${{ needs.set-vars.outputs.WEBSITE_NAME }} Deployment to ${{ env.ENVIRONMENT }} # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret

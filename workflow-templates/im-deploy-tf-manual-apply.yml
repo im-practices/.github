@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v28    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v29    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform at a specified tag to a specified
 #    environment when someone kicks off the build manually.
@@ -14,6 +14,7 @@
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
 name: Apply Terraform
+run-name: Apply ${{ inputs.branch-tag-sha }} terraform to ${{ inputs.environment }}
 on:
   workflow_dispatch:
     inputs:
@@ -64,6 +65,13 @@ jobs:
       STORAGE_ACCOUNT: ${{ steps.set-variables.outputs.STORAGE_ACCOUNT }} # To use this value: ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}
 
     steps:
+      - run: |
+          echo $'
+          | Build Arguments | Value                    |
+          | ---             |  ---                     |
+          | Environment     | `${{ env.ENVIRONMENT }}` |
+          | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
+      
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
@@ -73,8 +81,6 @@ jobs:
         uses: im-open/verify-git-ref@v1.1.0
         with:
           branch-tag-sha: ${{ env.GITHUB_REF }}
-
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions

@@ -1,4 +1,4 @@
-# Workflow Code: EnthralledOyster_v5    DO NOT REMOVE
+# Workflow Code: EnthralledOyster_v6    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and initiates a checkmarx scan on a schedule,
 #    when someone kicks it off manually or when it is triggered by another
@@ -15,7 +15,7 @@
 #    -  On-Prem Site                  (Core Template)
 
 name: Checkmarx CLI SAST Scan
-
+run-name: Scan ${{ inputs.branch-tag-sha || github.event.client_payload.ref || 'main (scheduled)' }}
 on:
   # TODO: Verify the triggers that will be used
   workflow_dispatch:

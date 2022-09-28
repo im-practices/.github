@@ -1,4 +1,4 @@
-# Workflow Code: NeedyPig_v9    DO NOT REMOVE
+# Workflow Code: NeedyPig_v10    DO NOT REMOVE
 # Purpose:
 #    Performs a start, stop or restart on an app service in the
 #    specified environment when someone kicks it off manually.
@@ -12,8 +12,9 @@
 # TODO: Prerequisites:
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
-name: Runbook - Start, stop or restart azure app
-#TODO:  You may wish to add the name of the app service/function to the name above and the file name if there are multiple app services or functions within the repository
+name: Runbook - Start, stop or restart Azure App
+run-name: ${{ inputs.action }} Azure App in ${{ inputs.environment }}
+#TODO:  You may wish to add the name of the app service/function to the names above and the file name if there are multiple app services or functions within the repository
 
 on:
   workflow_dispatch:
@@ -52,8 +53,14 @@ jobs:
       AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function change the value to 'functionapp'
 
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
-
+      
+      - run: |
+          echo $'
+          | Build Arguments | Value                   |
+          | ---             |  ---                    |
+          | Environment     | `${{ env.ENVIRONMENT }}`|
+          | Action          | `${{ env.ACTION }}`     |' >> $GITHUB_STEP_SUMMARY
+              
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables

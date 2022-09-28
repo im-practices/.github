@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v23    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v24    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -29,6 +29,7 @@
 #       If a WinRM connection can't be established create an ITHD ticket to have the WinRM listeners fixed or created
 
 name: Deploy Windows Service # TODO: If there are multiple on prem services in the repo, append the service name to this workflow's file name and update this name
+run-name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }} Windows Service
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger
@@ -84,6 +85,13 @@ jobs:
       DEPLOYMENT_SA_ID: ${{ steps.set-variables.outputs.DEPLOYMENT_SA_ID }}
       
     steps:
+      - run: |
+          echo $'
+          | Build Arguments | Value                    |
+          | ---             |  ---                     |
+          | Environment     | `${{ env.ENVIRONMENT }}` |
+          | Tag             | `${{ env.RELEASE_TAG }}` |' >> $GITHUB_STEP_SUMMARY
+          
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
@@ -93,11 +101,6 @@ jobs:
         uses: im-open/verify-git-ref@v1.1.0
         with:
           branch-tag-sha: ${{ env.RELEASE_TAG }}
-
-      - run: |
-          echo $'### Build Info
-          - Environment = ${{ env.ENVIRONMENT }}
-          - Tag = ${{ env.RELEASE_TAG }}' >> $GITHUB_STEP_SUMMARY
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
@@ -403,7 +406,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: '${{ needs.set-vars.outputs.SERVICE_NAME }} Deployment to ${{ needs.set-vars.outputs.WINDOWS_SERVERS }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
+          title: '${{ needs.set-vars.outputs.SERVICE_NAME }} Deployment to ${{ env.ENVIRONMENT }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -420,7 +423,7 @@ jobs:
         if: always() && env.ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.1.4
         with:
-          title: '${{ needs.set-vars.outputs.SERVICE_NAME }} Deployment to ${{ needs.set-vars.outputs.WINDOWS_SERVERS }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
+          title: '${{ needs.set-vars.outputs.SERVICE_NAME }} Deployment to ${{ env.ENVIRONMENT }}' # TODO Update Project Name and verify that the title gives enough info since it will be posted to the teams channel
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }} # This is an org-level secret

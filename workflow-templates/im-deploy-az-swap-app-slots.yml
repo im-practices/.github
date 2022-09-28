@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v12    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v13    DO NOT REMOVE
 # Purpose:
 #    Swaps deployment slots in a specified environment for an Azure App Service
 #    or Function outside of a deployment when someone kicks it off manually.
@@ -13,7 +13,7 @@
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Swap Azure App Slots
-
+run-name: Swap ${{ inputs.environment }} AZ App Slots
 # This workflow can be kicked off manually and it can also be kicked off automatically from
 # another workflow by using the repository_dispatch event trigger.  This workflow is designed
 # to know about each of your environments, so the only thing you need to input is the
@@ -57,8 +57,15 @@ jobs:
       OPEN_WINDOW: ${{ github.event.inputs.open-pagerduty-window || github.event.client_payload.open-pagerduty-window }}
 
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}"
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                    |
+          | ---             |  ---                     |
+          | Environment     | `${{ env.ENVIRONMENT }}` |
+          | Target Slot     | `${{ env.TARGET_SLOT }}` |
+          | Source Slot     | `${{ env.SOURCE_SLOT }}` |
+          | Open PD Window  | `${{ env.OPEN_WINDOW }}` |' >> $GITHUB_STEP_SUMMARY
+      
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables

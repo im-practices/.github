@@ -1,4 +1,4 @@
-# Workflow Code: PanickyGnat_v4    DO NOT REMOVE
+# Workflow Code: PanickyGnat_v5    DO NOT REMOVE
 # Purpose:
 #    Cleans up GH Releases that are created for a branch. The same functionality
 #    is included in the .NET CI Build workflow when a PR is merged but is also
@@ -13,6 +13,7 @@
 #    - On-Prem Site                  (Optional Template)
 
 name: Cleanup Releases for Branches
+run-name: Cleanup Releases for ${{ inputs.branch-name }}
 on:
   workflow_dispatch:
     inputs:

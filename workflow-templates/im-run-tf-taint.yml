@@ -1,4 +1,4 @@
-# Workflow Code: GratefulTermite_v8    DO NOT REMOVE
+# Workflow Code: GratefulTermite_v9    DO NOT REMOVE
 # Purpose:
 #    Taints a specified terraform resource when someone kicks it off manually.
 #
@@ -12,6 +12,7 @@
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Taint Terraform Resource
+run-name: Taint ${{ inputs.environment }} resource${{ inputs.tf-resource-address }}
 on:
   workflow_dispatch:
     inputs:
@@ -65,12 +66,18 @@ jobs:
         working-directory: '${{ env.TF_WORKING_DIR }}'
 
     steps:
+      - run: |
+          echo $'
+          | Build Arguments     | Value                                            |
+          | ---                 |  ---                                             |
+          | Environment         | `${{ env.ENVIRONMENT }}`                         |
+          | Branch/Tag/Sha      | `${{ env.GITHUB_REF }}`                          |
+          | TF Resource Address | `${{ github.event.inputs.tf-resource-address }}` |' >> $GITHUB_STEP_SUMMARY
+          
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
           ref: ${{ env.GITHUB_REF }}
-
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # Allows pulling modules from the respective github repo instead of artifactory
       - name: Setup SSH Keys and known_hosts

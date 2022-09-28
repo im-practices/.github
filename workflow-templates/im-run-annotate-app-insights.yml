@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v10    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v11    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc app insights annotation for a specified
 #    environment when someone kicks it off manually.
@@ -16,7 +16,7 @@
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Runbook - Annotate App Insights
-
+run-name: Annotate ${{ inputs.eventName }} in ${{ inputs.environment }} App Insights
 on:
   workflow_dispatch:
     inputs:
@@ -52,8 +52,15 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ github.event.inputs.environment }}
     steps:
-      - run: echo "The current environment is ${{ github.event.inputs.environment }}.  The event is ${{ github.event.inputs.eventName }}"
-
+      - run: |
+          echo $'
+          | Build Arguments | Value                                      |
+          | ---             |  ---                                       |
+          | Environment     | `${{ env.ENVIRONMENT }}`                   |
+          | Category        | `${{ github.event.inputs.category }}`      |
+          | EventName       | `${{ github.event.inputs.eventName }}`     |
+          | Custom Metadata | `${{ github.event.inputs.customMetadata }}`|' >> $GITHUB_STEP_SUMMARY
+              
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables

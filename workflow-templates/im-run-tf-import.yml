@@ -1,4 +1,4 @@
-# Workflow Code: DrearyBuck_v11    DO NOT REMOVE
+# Workflow Code: DrearyBuck_v12    DO NOT REMOVE
 
 # Purpose:
 #    Imports a specified resource into the terraform state when someone kicks it off manually.
@@ -13,6 +13,7 @@
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Import Terraform State
+run-name: Import ${{ inputs.environment }} ${{ inputs.tf-resource-address }}
 on:
   workflow_dispatch:
     inputs:
@@ -69,12 +70,19 @@ jobs:
         working-directory: '${{ env.TF_WORKING_DIR }}'
 
     steps:
+      - run: |
+          echo $'
+          | Build Arguments  | Value                                            |
+          | ---              |  ---                                             |
+          | Environment      | `${{ env.ENVIRONMENT }}`                         |
+          | Branch/Tag/Sha   | `${{ env.GITHUB_REF }}`                          |
+          | Resource Address | `${{ github.event.inputs.tf-resource-address }}` |
+          | Resource ID      | `${{ github.event.inputs.tf-resource-id }}`      |' >> $GITHUB_STEP_SUMMARY
+          
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
           ref: ${{ env.GITHUB_REF }}
-
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
