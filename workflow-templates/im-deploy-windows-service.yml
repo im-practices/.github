@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v24    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v25    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -83,7 +83,7 @@ jobs:
       SERVICE_PATH: ${{ steps.set-variables.outputs.SERVICE_PATH }}
       RUN_TIME_ID: ${{ steps.set-variables.outputs.RUN_TIME_ID }}
       DEPLOYMENT_SA_ID: ${{ steps.set-variables.outputs.DEPLOYMENT_SA_ID }}
-      
+
     steps:
       - run: |
           echo $'
@@ -91,7 +91,7 @@ jobs:
           | ---             |  ---                     |
           | Environment     | `${{ env.ENVIRONMENT }}` |
           | Tag             | `${{ env.RELEASE_TAG }}` |' >> $GITHUB_STEP_SUMMARY
-          
+
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
@@ -111,13 +111,15 @@ jobs:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # This should be a FQDN name (target-server.extendhealth.com) for the DNS request
-          # Format for WINDOWS_SERVERS: [env-machine-name-1.extendhealth.com, env-machine-name-2.extendhealth.com]
+          # Each server should be a FQDN name (target-server.extendhealth.com) for the DNS request
+          # Format for WINDOWS_SERVERS: "['env-machine-name-1.extendhealth.com', 'env-machine-name-2.extendhealth.com']"
           # TODO:  Fill in the list of machines for each environment.  Remove environments that are not applicable.
-          WINDOWS_SERVERS@dev: []
-          WINDOWS_SERVERS@qa: []
-          WINDOWS_SERVERS@stage: []
-          WINDOWS_SERVERS@prod: []
+          WINDOWS_SERVERS@dev: "['', '']"
+          WINDOWS_SERVERS@qa: "['', '']"
+          WINDOWS_SERVERS@stage: "['', '']"
+          WINDOWS_SERVERS@demo: "['', '']"
+          WINDOWS_SERVERS@uat: "['', '']"
+          WINDOWS_SERVERS@prod: "['', '']"
           # TODO: Fill in the SERVICE_NAME and remove the environments that are not used.
           SERVICE_NAME@dev: ''
           SERVICE_NAME@qa: ''
@@ -140,13 +142,12 @@ jobs:
           RUN_TIME_ID@demo: ''
           RUN_TIME_ID@uat: ''
           RUN_TIME_ID@prod: ''
-          # TODO: Fill in the deployment service account id and remove the environments that are not used. 
+          # TODO: Fill in the deployment service account id and remove the environments that are not used.
           # These are the service accounts that have permission to remotely connect to the machine an execute commands.
           DEPLOYMENT_SA_ID@dev: ''
-          DEPLOYMENT_SA_ID@qa: '' 
-          DEPLOYMENT_SA_ID@stage:  '' 
-          DEPLOYMENT_SA_ID@prod: '' 
-          
+          DEPLOYMENT_SA_ID@qa: ''
+          DEPLOYMENT_SA_ID@stage: ''
+          DEPLOYMENT_SA_ID@prod: ''
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
@@ -185,7 +186,7 @@ jobs:
         if: env.ENVIRONMENT == 'prod'
         uses: actions/checkout@v2
         with:
-          ref: 'main' # TODO: verify the name of your default branch
+          ref: 'main'
           fetch-depth: 0
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.0.1
@@ -220,7 +221,7 @@ jobs:
       matrix:
         # This should be an array of windows machine names.
         # One job will spawn for each server listed in the array
-        windows-server: ${{ needs.set-vars.outputs.WINDOWS_SERVERS }}
+        windows-server: ${{ fromJSON(needs.set-vars.outputs.WINDOWS_SERVERS) }}
 
     defaults:
       run:
@@ -240,7 +241,7 @@ jobs:
       RUN_TIME_SECRET: ${{ secrets.RUN_TIME_SECRET }}
       SERVICE_NAME: ${{ needs.set-vars.outputs.SERVICE_NAME }}
       SERVICE_PATH: ${{ needs.set-vars.outputs.SERVICE_PATH }}
-      
+
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}.  The current machine is ${{ matrix.windows-server }}"
 
