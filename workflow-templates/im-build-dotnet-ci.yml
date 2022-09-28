@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v32    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v33    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -84,10 +84,132 @@ jobs:
             core.exportVariable('CONTINUE_WORKFLOW', continueWorkflow);
             core.exportVariable('CREATE_RELEASE', doTagRelease);
 
-  dotnet-build-and-test:
+  # TODO:  Remove this job and references to this job if the project does not use npm
+  npm-cache:
     runs-on: [self-hosted, ubuntu-20.04]
-
     needs: [examine-triggers]
+    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      NPM_CACHE_KEY: ${{ env.NPM_CACHE_KEY }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG }}
+
+      - name: Set Cache Keys
+        # As long as these files don't change the cache will remain in tact and the time
+        # to restore the different packages in the various jobs will be reduced.  If one
+        # of the files does change though, a new cache will be uploaded the next time
+        # it runs, then subsequent runs should be faster.
+        run: echo "NPM_CACHE_KEY=node_modules-${{ hashFiles('**/package-lock.json') }}" >> $GITHUB_ENV
+
+      - name: Check for an npm cache
+        id: has-cache
+        uses: im-open/check-for-cache@v1.0.1
+        with:
+          path: '**/node_modules'
+          key: ${{ env.NPM_CACHE_KEY }}
+
+      # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
+
+      # This action creates a post-job step that will upload the node_modules dir to the cache if the job
+      # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
+      # folder if the package-lock.json hasn't changed and it uses a ubuntu-20.04 runner to restore the cache from.
+      - name: Setup caching for node_modules directory
+        if: steps.has-cache.outputs.cache-hit == 'false'
+        uses: actions/cache@v2
+        with:
+          key: ${{ env.NPM_CACHE_KEY }}
+          path: '**/node_modules'
+
+      - uses: actions/setup-node@v1
+        if: steps.has-cache.outputs.cache-hit == 'false'
+        with:
+          node-version: '16'
+
+      # TODO:  If the project contains internal npm packages, uncomment and update the orgs with the needed organizations
+      # - name: Authenticate with GitHub Packages
+      #   if: steps.has-cache.outputs.cache-hit == 'false'
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
+      #   with:
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+      #     orgs: ''
+
+      - run: npm ci
+        if: steps.has-cache.outputs.cache-hit == 'false'
+
+  nuget-cache:
+    runs-on: [self-hosted, ubuntu-20.04]
+    needs: [examine-triggers]
+    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      NUGET_CACHE_KEY: ${{ env.NUGET_CACHE_KEY }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG }}
+
+      - name: Set Cache Keys
+        # As long as these files don't change the cache will remain in tact and the time
+        # to restore the different packages in the various jobs will be reduced.  If one
+        # of the files does change though, a new cache will be uploaded the next time
+        # it runs, then subsequent runs should be faster.
+        # TODO:  If your project makes use of the nuget package.lock.json it can be switched for the csproj files below
+        run: echo "NUGET_CACHE_KEY=nuget-${{ hashFiles('**/*.csproj') }}" >> $GITHUB_ENV
+
+      - name: Check for a nuget cache
+        id: has-cache
+        uses: im-open/check-for-cache@v1.0.1
+        with:
+          path: '~/.nuget/packages'
+          key: ${{ env.NUGET_CACHE_KEY }}
+
+      # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
+
+      # This action creates a post-job step that will upload the ./.nuget/packages dir to the cache if the job
+      # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the ./.nuget/packages
+      # folder if the csproj files haven't changed and it uses a ubuntu-20.04 runner to restore the cache from.
+      - name: Setup caching for nuget packages
+        if: steps.has-cache.outputs.cache-hit == 'false'
+        uses: actions/cache@v2
+        with:
+          key: ${{ env.NUGET_CACHE_KEY }}
+          path: ~/.nuget/packages
+
+      - name: Setup .NET Core
+        if: steps.has-cache.outputs.cache-hit == 'false'
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # TODO:  If the project contains internal nuget packages, uncomment and update the orgs with the needed organizations
+      # - name: Authenticate with GitHub Packages
+      #   if: steps.has-cache.outputs.cache-hit == 'false'
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.1
+      #   with:
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+      #     orgs: ''
+
+      - run: dotnet restore ${{ env.SOLUTION_FILE }}
+        if: steps.has-cache.outputs.cache-hit == 'false'
+
+  dotnet-test:
+    runs-on: [self-hosted, ubuntu-20.04]
+    needs: [examine-triggers, nuget-cache]
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
@@ -113,7 +235,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ env.REF_TO_BUILD_AND_TAG }}
 
@@ -123,12 +245,13 @@ jobs:
         with:
           version: ${{ env.FLYWAY_VERSION }}
 
-      # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # - name: Authenticate with GitHub Packages
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.5
-      #   with:
-      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
+      # This cache is only valid if the 'nuget-cache' job that creates the cache and this job that downloads the cache use
+      # the same runner OS.  If this job changed runner types, the 'nuget-cache' job should be updated to use the same type.
+      - name: Download nuget cache
+        uses: im-open/restore-cache@v1.0.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ needs.nuget-cache.outputs.NUGET_CACHE_KEY }}
 
       - name: Build Database
         uses: im-open/build-database-ci-action@v3.0.3
@@ -156,16 +279,18 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: dotnet build
+        id: build
         run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release
 
       # TODO: The TEST projects need a package reference to coverlet.msbuild for this to output the coverage reports correctly:
       #        <PackageReference Include="coverlet.msbuild" Version="3.1.0" />
       # TODO: Filters can be added to exclude certain tests: https://docs.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests?pivots=xunit
       - name: dotnet test with coverage
-        continue-on-error: true
+        id: test
         run: dotnet test ${{ env.SOLUTION_FILE }} --logger trx --no-build --configuration Release /property:CollectCoverage=True /property:CoverletOutputFormat=opencover
 
       - name: create status check/comment for test results
+        if: always()
         id: dotnet_test_check
         uses: im-open/process-dotnet-test-results@v2.1.3
         with:
@@ -177,6 +302,8 @@ jobs:
           # update-comment-if-one-exists: false # TODO: By default this action creates one comment and updates it for each subsequent workflow run.  Uncomment if you wish to have one new comment for every workflow run.
 
       - name: create code coverage report
+        id: coverage_report
+        if: always() && steps.test.outcome == 'success'
         uses: im-open/code-coverage-report-generator@4.8.14
         with:
           reports: '*/**/coverage.opencover.xml'
@@ -191,6 +318,7 @@ jobs:
           classfilters: ''
 
       - name: create status check/comment for code coverage results
+        if: always() && steps.coverage_report.outcome == 'success'
         id: dotnet_coverage_check
         uses: im-open/process-code-coverage-summary@v2.1.3
         with:
@@ -209,16 +337,34 @@ jobs:
           branch-threshold: 0
 
       - name: upload dotnet code coverage report
+        if: always() && steps.dotnet_coverage_check.outcome == 'success'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
           path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
 
+      # TODO: Delete if you have other triggers for checkmarx scans and don't want it kicked off from every CI build
+      #       The repository_dispatch event won't work until the checkmarx workflow has been merged to main for the first time.
+      # - name: Kick off Checkmarx if build and tests succeeded
+      #   if: always() && steps.build.outcome == 'success' && steps.test.outcome == 'success'
+      #   uses: actions/github-script@v6
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+      #     script: |
+      #       github.rest.repos.createDispatchEvent({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         event_type: 'run_checkmarx',
+      #         client_payload: {
+      #           ref: "${{ env.REF_TO_BUILD_AND_TAG }}"
+      #         }
+      #       });
+
   # TODO: Remove this job if you do not have jest tests
+
   jest:
     runs-on: [self-hosted, ubuntu-20.04]
-
-    needs: [examine-triggers]
+    needs: [examine-triggers, npm-cache]
     if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
@@ -239,34 +385,36 @@ jobs:
       JEST_TEST_REPORT_NAME: 'Jest Tests'
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: ${{ env.REF_TO_BUILD_AND_TAG }}
 
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
+      # This cache is only valid if the 'npm-cache' job that creates the cache and this job that downloads the cache use
+      # the same runner OS.  If this job changed runner types, the 'npm-cache' job should be updated to use the same type.
+      - name: Download npm cache
+        uses: im-open/restore-cache@v1.0.0
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          key: ${{ needs.npm-cache.outputs.NPM_CACHE_KEY }}
+          path: '**/node_modules'
 
-      # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # - name: Authenticate with GitHub Packages
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.5
-      #   with:
-      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '16'
 
-      - name: restore npm packages
+      - name: Rebuild Node Modules
         working-directory: ${{ env.JEST_TEST_DIR }}
-        run: npm ci
+        run: npm rebuild
 
       - name: jest test with coverage
-        continue-on-error: true
+        id: test
         working-directory: ${{ env.JEST_TEST_DIR }}
         # TODO: If your script in package.json for running jest is named something besides 'test' update it here
         # TODO: If your script in package.json does not include the --coverage or --json flags, add them to the script in package.json
         run: npm run test -- --outputFile=${{ env.JEST_TEST_RESULTS_FILE }}
 
       - name: create status check/comment for jest test results
+        if: always()
         id: jest_test_check
         uses: im-open/process-jest-test-results@v2.0.6
         with:
@@ -280,6 +428,8 @@ jobs:
           # update-comment-if-one-exists: false # TODO: By default this action creates one comment and updates it for each subsequent workflow run.  Uncomment if you wish to have one new comment for every workflow run.
 
       - name: create code coverage report
+        id: coverage_report
+        if: always() && steps.test.outcome == 'success'
         uses: im-open/code-coverage-report-generator@4.8.14
         with:
           reports: '*/**/lcov.info'
@@ -294,6 +444,7 @@ jobs:
           classfilters: ''
 
       - name: create status check/comment for code coverage results
+        if: always() && steps.coverage_report.outcome == 'success'
         id: jest_coverage_check
         uses: im-open/process-code-coverage-summary@v2.1.3
         with:
@@ -312,15 +463,16 @@ jobs:
           branch-threshold: 0
 
       - name: upload jest code coverage report
+        if: always() && steps.jest_coverage_check.outcome == 'success'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}
           path: ${{ env.CODE_COVERAGE_DIR_JEST }}
 
   build-deployment-artifacts:
-    runs-on: ubuntu-latest
-    needs: [examine-triggers, dotnet-build-and-test, jest] # TODO: Update if any jobs were added/removed/renamed (usually jest has been removed)
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true' && needs.examine-triggers.outputs.CREATE_RELEASE
+    runs-on: [self-hosted, ubuntu-20.04]
+    needs: [examine-triggers, npm-cache, nuget-cache]
+    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true' && needs.examine-triggers.outputs.CREATE_RELEASE == 'true'
 
     defaults:
       run:
@@ -352,44 +504,41 @@ jobs:
       # DEPLOY_ZIP_API: 'published_api.zip' # Value will be used in the deployment workflow
 
     steps:
-      # We don't want to create a release if there were test/build failures, so check the conclusion
-      - name: Check workflow status to this point
-        uses: im-open/workflow-conclusion@v2.0.3
-        id: conclusion
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          # TODO: Determine if there are any additional step outcomes/outputs you want considered or steps that need to be removed
-          additional-conclusions: |
-            [
-              { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.test }}" },
-              { "name": "dotnet coverage", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.coverage }}" },
-              { "name": "jest test", "conclusion" : "${{ needs.jest.outputs.test }}" },
-              { "name": "jest coverage", "conclusion" : "${{ needs.jest.outputs.coverage }}" }
-            ]
-
-      - name: Do not create a release if there have been failures
-        if: steps.conclusion.outputs.workflow_conclusion != 'success'
-        run: |
-          echo "The workflow was not successful up to this point.  A release will not be created.  Check the 'Check workflow status to this point' step above for more details on what failed."
-          exit 1
-
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
           ref: ${{ env.REF_TO_BUILD_AND_TAG }}
+
+      # These caches are only valid if the 'npm-cache' and 'nuget-cache' jobs that creates the cache and
+      # this job that downloads the caches use the same runner OS.  If this job changed runner types, the
+      # 'npm-cache' and 'nuget-cache' jobs should be updated to use the same type.
+      - name: Download nuget cache
+        uses: im-open/restore-cache@v1.0.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ needs.nuget-cache.outputs.NUGET_CACHE_KEY }}
+
+      - name: Download npm cache
+        uses: im-open/restore-cache@v1.0.0
+        with:
+          key: ${{ needs.npm-cache.outputs.NPM_CACHE_KEY }}
+          path: '**/node_modules'
+
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '16'
+
+      # TODO:  Remove if the project does not contain node modules that need to be rebuilt.
+      - name: Rebuild Node Modules
+        working-directory: '.' # TODO:  Update if package-lock.json is not at the root of the project
+        run: npm rebuild
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
-      # - name: Authenticate with GitHub Packages
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0.5
-      #   with:
-      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
 
       # TODO: If you have multiple deployables in the repo and each deployable has it's own tag:
       #       1 - Duplicate this step once per deployable
@@ -420,8 +569,7 @@ jobs:
         working-directory: ${{ env.PROJECT_ROOT }}
         shell: pwsh # On a Windows build runner, the 'zip' commandline tool isn't available. Use PowerShell instead.
         run: |
-          $VERSION_ONLY = ($env:NEXT_VERSION).substring(1)  # Removes the leading 'v'. TODO: Use a different expression to strip a tag-prefix if you've specified one.
-          dotnet build --configuration Release /p:Version=$VERSION_ONLY
+          dotnet build --configuration Release /p:Version=${{ steps.version.outputs.NEXT_VERSION_NO_PREFIX }}
           dotnet publish --configuration Release --no-build -o ./${{ env.PUBLISHED_APP }}
           Compress-Archive -Path ./${{ env.PUBLISHED_APP }}/* -DestinationPath ${{ env.DEPLOY_ZIP }}
 
@@ -472,8 +620,7 @@ jobs:
 
   finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
-    needs: # TODO: Update the needs [] list if any jobs were added/removed/renamed
-      [dotnet-build-and-test, jest, build-deployment-artifacts]
+    needs: [dotnet-test, jest, build-deployment-artifacts]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - uses: im-open/workflow-conclusion@v2.0.3
@@ -483,8 +630,8 @@ jobs:
           # TODO: Determine if there are any additional step outcomes/outputs you want considered or remove some items if they do not apply (like jest)
           additional-conclusions: |
             [
-              { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.test }}" },
-              { "name": "dotnet coverage", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.coverage }}" },
+              { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-test.outputs.test }}" },
+              { "name": "dotnet coverage", "conclusion" : "${{ needs.dotnet-test.outputs.coverage }}" },
               { "name": "jest test", "conclusion" : "${{ needs.jest.outputs.test }}" },
               { "name": "jest coverage", "conclusion" : "${{ needs.jest.outputs.coverage }}" }
             ]
@@ -523,20 +670,3 @@ jobs:
         run: |
           echo "There were errors in the workflow.  Check the workflow-conclusion step above for more details on what failed."
           exit 1
-
-      # TODO: Delete if you have other triggers for checkmarx scans and don't want it kicked off from the CI build
-      #       The repository_dispatch event won't work until the checkmarx workflow has been merged to main for the first time.
-      - name: Kick off Checkmarx if workflow succeeded
-        if: steps.conclusion.outputs.workflow_conclusion == 'success'
-        uses: actions/github-script@v5
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          script: |
-            github.rest.repos.createDispatchEvent({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              event_type: 'run_checkmarx',
-              client_payload: {
-                ref: "${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}"
-              }
-            });
