@@ -79,7 +79,7 @@ jobs:
           | Tag             | `${{ env.RELEASE_TAG }}` |' >> $GITHUB_STEP_SUMMARY
                 
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -120,7 +120,7 @@ jobs:
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
         if: env.ENVIRONMENT == 'prod'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
@@ -145,7 +145,7 @@ jobs:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ env.RELEASE_TAG }}
 

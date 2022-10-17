@@ -57,7 +57,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
@@ -67,7 +67,7 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v1.2.1
+        uses: hashicorp/setup-terraform@v2.0.2
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 

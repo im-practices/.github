@@ -124,12 +124,12 @@ jobs:
       # folder if the package-lock.json hasn't changed and it uses a ubuntu-20.04 runner to restore the cache from.
       - name: Setup caching for node_modules directory
         if: steps.has-cache.outputs.cache-hit == 'false'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: ${{ env.NPM_CACHE_KEY }}
           path: '**/node_modules'
 
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v3
         if: steps.has-cache.outputs.cache-hit == 'false'
         with:
           node-version: '16'
@@ -185,14 +185,14 @@ jobs:
       # folder if the csproj files haven't changed and it uses a ubuntu-20.04 runner to restore the cache from.
       - name: Setup caching for nuget packages
         if: steps.has-cache.outputs.cache-hit == 'false'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: ${{ env.NUGET_CACHE_KEY }}
           path: ~/.nuget/packages
 
       - name: Setup .NET Core
         if: steps.has-cache.outputs.cache-hit == 'false'
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -274,7 +274,7 @@ jobs:
           db-password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }} # This is an org level secret. It is the password for the sa account.
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -398,7 +398,7 @@ jobs:
           path: '**/node_modules'
 
       - name: Setup Node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: '16'
 
@@ -526,7 +526,7 @@ jobs:
           path: '**/node_modules'
 
       - name: Setup Node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: '16'
 
@@ -536,7 +536,7 @@ jobs:
         run: npm rebuild
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 

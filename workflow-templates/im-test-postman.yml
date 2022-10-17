@@ -46,7 +46,7 @@ jobs:
         working-directory: ${{ env.PACKAGE_JSON_DIR }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # - name: Authenticate with GitHub Packages

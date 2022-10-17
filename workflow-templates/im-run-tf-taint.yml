@@ -75,7 +75,7 @@ jobs:
           | TF Resource Address | `${{ github.event.inputs.tf-resource-address }}` |' >> $GITHUB_STEP_SUMMARY
           
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ env.GITHUB_REF }}
 
@@ -86,7 +86,7 @@ jobs:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v1.2.1
+        uses: hashicorp/setup-terraform@v2.0.2
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 

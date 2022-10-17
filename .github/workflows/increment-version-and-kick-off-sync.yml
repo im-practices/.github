@@ -29,7 +29,7 @@ jobs:
       # that may operate on PR controlled contents like in the case of npm install.
       # Here we are just checking it out to calculate the next version
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -42,7 +42,7 @@ jobs:
           default-release-type: major
 
       - name: Tell github-management to sync templates
-        uses: actions/github-script@v4
+        uses: actions/github-script@v6
         with:
           # You have to use something with write access to the repo. GITHUB_TOKEN
           # doesn't work because it doesn't have access to another repo.

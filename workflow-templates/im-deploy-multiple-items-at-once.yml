@@ -58,7 +58,7 @@ jobs:
           | Tag             | `${{ env.RELEASE_TAG }}` |' >> $GITHUB_STEP_SUMMARY
                 
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -101,7 +101,7 @@ jobs:
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
         if: env.ENVIRONMENT == 'prod'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
@@ -141,7 +141,7 @@ jobs:
 
       # TODO: Add a 'start deployment' block for each item that needs to be deployed.  This is a 'fire and forget' method
       - name: Start Deployment for <deployable-name> # TODO: Add the name of the deployable
-        uses: actions/github-script@v4
+        uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org-level secret #TODO:  make sure im-pipeline-bot has at least write access to your repo
           script: |

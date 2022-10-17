@@ -85,7 +85,7 @@ jobs:
       
       
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -159,7 +159,7 @@ jobs:
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
         if: env.ENVIRONMENT == 'prod'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
@@ -353,7 +353,7 @@ jobs:
       # TODO: Uncomment if you have a separate workflow for swapping slots and you want to trigger it now.  Delete if you don't.
       #        A dispatch event like this could also trigger other workflows that do things like smoke tests
       # - name: Trigger the Slot Swap
-      #   uses: actions/github-script@v4
+      #   uses: actions/github-script@v6
       #   with:
       #     github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org-level secret #TODO:  make sure im-pipeline-bot has at least write access to your repo
       #     script: |

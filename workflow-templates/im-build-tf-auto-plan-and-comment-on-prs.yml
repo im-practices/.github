@@ -57,11 +57,11 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v1.2.1
+        uses: hashicorp/setup-terraform@v2.0.2
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
@@ -94,7 +94,7 @@ jobs:
 
       - name: 'Terraform Comment'
         if: always()
-        uses: actions/github-script@v4
+        uses: actions/github-script@v6
         env:
           PLAN: "\n```\n${{ steps.plan.outputs.stdout }}\n```\n"
         with:

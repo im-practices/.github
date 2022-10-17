@@ -38,17 +38,17 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
     steps:
       - name: Checkout main for Schedule Trigger
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event_name == 'schedule'
 
       - name: Checkout Provided Ref for Repository Dispatch Trigger
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event_name == 'repository_dispatch'
         with:
           ref: ${{ github.event.client_payload.ref }}
 
       - name: Checkout provided branch/tag/sha for Workflow Dispatch Trigger
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event_name == 'workflow_dispatch'
         with:
           ref: ${{ github.event.inputs.branch-tag-sha }}
@@ -84,7 +84,7 @@ jobs:
 
       - name: Upload the PDF Report
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Checkmarx Report
           path: ${{ steps.scan.outputs.report-path }}

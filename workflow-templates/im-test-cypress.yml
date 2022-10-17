@@ -68,7 +68,7 @@ jobs:
     #   AZURE_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # - name: Authenticate with GitHub Packages
@@ -81,7 +81,7 @@ jobs:
         run: npm install
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -120,13 +120,13 @@ jobs:
 
       - name: Upload cypress screenshots if there are test failures
         if: steps.cypress.outcome == 'failure'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Failed Cypress Test Screenshots
           path: ${{ env.JS_TEST_DIR }}/cypress/screenshots/
 
       - name: Upload Cypress Results Report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Cypress Results ${{ github.run_number }}
           path: |

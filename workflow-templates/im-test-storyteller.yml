@@ -40,7 +40,7 @@ jobs:
   run-storyteller:
     runs-on: [self-hosted, windows-2019]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
       # - name: Authenticate with GitHub Packages
@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: StoryTeller Results
           path: ${{ env.STORYTELLER_RESULTS_PATH }}
