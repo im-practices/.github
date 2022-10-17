@@ -231,7 +231,7 @@ jobs:
           az storage blob upload --no-progress --auth-mode key --account-key $key --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $terraformPlanName --name $terraformBlobName
           echo "The plan was successfully uploaded"
 
-          echo "::set-output name=tf_plan_name::$terraformPlanName"
+          echo "tf_plan_name=$terraformPlanName" >> $GITHUB_OUTPUT
 
       - name: Azure logout
         run: |

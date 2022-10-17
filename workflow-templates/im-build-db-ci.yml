@@ -79,7 +79,7 @@ jobs:
             $ArtifactoryUrl = $ArtifactoryUrl + "/nuget-branches/Database"
           }
 
-          echo "::set-output name=url::$ArtifactoryUrl"
+          echo "url=$ArtifactoryUrl" >> $GITHUB_OUTPUT
 
       # TODO: Update or remove this if you aren't creating snapshots and/or are doing the same CI process for every branch.
       - name: Capture branch details
@@ -91,18 +91,18 @@ jobs:
           $CurrentBranchIsDefault = ($CurrentBranch -eq "${{ env.DEFAULT_BRANCH }}")
           $LastCommitIsSnapshot = ($LastCommitBy -eq "github-actions")
 
-          echo "::set-output name=isDefaultBranch::$CurrentBranchIsDefault"
-          echo "::set-output name=isSnapshot::$LastCommitIsSnapshot"
+          echo "isDefaltBranch=$CurrentBranchIsDefault" >> $GITHUB_OUTPUT
+          echo "isSnapshot=$LastCommitIsSnapshot" >> $GITHUB_OUTPUT
 
           if ($LastCommitIsSnapshot -and !$CurrentBranchIsDefault)
           {
             Write-Host "Snapshot was last commit, skipping the other jobs"
-            echo "::set-output name=skip::true"
+            echo "skip=true" >> $GITHUB_OUTPUT
           }
           else
           {
             Write-Host "Snapshot was not the last commit, continuing with the other jobs"
-            echo "::set-output name=skip::false"
+            echo "skip=false" >> $GITHUB_OUTPUT
           }
 
   # TODO: Remove this linting job if your project doesn't need/want it
@@ -119,7 +119,7 @@ jobs:
 
       - id: migration-folder
         shell: pwsh
-        run: echo "::set-output name=folder::$($(Get-Date).Year).$($(Get-Date).Month.ToString("00"))"
+        run: echo "folder=$($(Get-Date).Year).$($(Get-Date).Month.ToString("00"))" >> $GITHUB_OUTPUT
       - name: SQL Lint
         uses: im-open/tsql-lint-action@v1.0.5
         with:
@@ -205,7 +205,7 @@ jobs:
       #     $mappedObjects = $changedObjects | foreach-object { @{ schemaName=$_.schemaName; objectName=$_.objectName; objectType=$_.objectType; operationType=$_.operationType } }
       #     $objectsAsJson = $mappedObjects | ConvertTo-Json -Compress
 
-      #     echo "::set-output name=json::$objectsAsJson"
+      #     echo "json=$objectsAsJson"  >> $GITHUB_OUTPUT
 
       # - name: Increment snapshots
       #   uses: im-open/increment-database-object-snapshots@v1.0.3
