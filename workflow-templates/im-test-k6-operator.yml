@@ -218,7 +218,7 @@ jobs:
           k6_test_file_tag="--tag test=${{ github.event.inputs.test-file }}"
           # Removing slashes from k6_test_file_tag
           k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
-          echo "test-tag=$k6_test_file_tag" >> $GITHUB_OUTPUT
+          echo "::set-output name=test-tag::$k6_test_file_tag"
 
       - name: Run K6-Operator Test
         uses: im-practices/run-k6-operator-test@latest
