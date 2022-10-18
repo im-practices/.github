@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v8    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v9    DO NOT REMOVE
 # Purpose:
 #    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #    In addition to that, however, there are three other things this workflow template is set up to do.
@@ -58,7 +58,7 @@ jobs:
       should-skip-remaining-workflow-jobs: ${{ steps.capture-branch-state.outputs.skip }} # TODO: This is only needed if your workflow is committing a snapshot and needs to skip running the CI for that commit. Remove this and its usages if not needed.
       artifactory-publish-url: ${{ steps.set-artifactory-url.outputs.url }} # TODO: Remove this if you don't need to create mock objects for other repos to consume.
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # TODO: Remove this if you don't need to create mock objects for other repos to consume.
       # The outputted url will point to nuget-branch or nuget-master, depending on the current branch
@@ -111,9 +111,9 @@ jobs:
     needs: set-vars # TODO: Remove this if you deleted the set-vars job
     if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }} # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: '14' # TODO: The current LTS version. Can be updated to something else if needed.
 
@@ -121,7 +121,7 @@ jobs:
         shell: pwsh
         run: echo "::set-output name=folder::$($(Get-Date).Year).$($(Get-Date).Month.ToString("00"))"
       - name: SQL Lint
-        uses: im-open/tsql-lint-action@v1.0.4
+        uses: im-open/tsql-lint-action@v1.0.5
         with:
           tsqllint-version: 1.11.0
           path-to-sql-files: 'Database/src/SqlDatabase/Migrations/${{ steps.migration-folder.outputs.folder }}' # TODO: Update this path to wherever the files to lint live
@@ -133,10 +133,10 @@ jobs:
     needs: [set-vars, lint-migration-files] # TODO: Remove any jobs you deleted above
     if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }} # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Flyway
-        uses: im-open/setup-flyway@v1.0.4
+        uses: im-open/setup-flyway@v1.1.0
         with:
           version: 7.2.0 # This version works with the current version of build-database-ci-action. Newer versions might, but they should be tested.
 
@@ -208,7 +208,7 @@ jobs:
       #     echo "::set-output name=json::$objectsAsJson"
 
       # - name: Increment snapshots
-      #   uses: im-open/increment-database-object-snapshots@v1.0.2
+      #   uses: im-open/increment-database-object-snapshots@v1.0.3
       #   with:
       #     db-name: ${{ env.DB_NAME }}
       #     instance-name: ${{ env.DB_SERVER_NAME }}

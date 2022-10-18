@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v11    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v12    DO NOT REMOVE
 # Purpose:
 #    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
@@ -55,12 +55,12 @@ jobs:
           | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
           
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ env.GITHUB_REF }}
 
       - name: Install Flyway
-        uses: im-open/setup-flyway@v1.0.4
+        uses: im-open/setup-flyway@v1.1.0
         with:
           version: 7.9.2
 
@@ -112,7 +112,7 @@ jobs:
       # TODO: Uncomment this step if this workflow is run against an on-prem database
       # - name: Get Vault Token
       #   id: vault_token
-      #   uses: im-open/get-vault-token-for-azure-user@v1.0.0
+      #   uses: im-open/get-vault-token-for-azure-user@v1.0.1
       #   with:
       #     # TODO: Add the Azure Auth Method Role that was setup in Vault and has access to your secrets.
       #     # See this git-er-done article for more information:
@@ -135,7 +135,7 @@ jobs:
       #       database/static-creds/<role-name> password | SQL_PASSWORD
 
       - name: Flyway repair
-        uses: im-open/run-flyway-command@v1.2.1
+        uses: im-open/run-flyway-command@v1.4.0
         with:
           flyway-command: 'repair'
           db-server-name: ${{ steps.db-vars.outputs.DB_SERVER_NAME }}

@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v15    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v16    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -135,7 +135,7 @@ jobs:
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
         if: github.event.inputs.run-npm-build == 'true'
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -143,7 +143,7 @@ jobs:
       - name: NPM Cache
         id: npm-cache
         if: github.event.inputs.run-npm-build == 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: '${{env.WORKING_DIRECTORY }}/node_modules'
           key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{env.WORKING_DIRECTORY }}/package-lock.json') }}
@@ -210,7 +210,7 @@ jobs:
       - name: Send Status to Teams - Test Finished
         if: always()
         continue-on-error: true
-        uses: im-open/post-status-to-teams-action@v1.1.4
+        uses: im-open/post-status-to-teams-action@v1.2.0
         with:
           title: 'K6 Test for <your project> - ${{ github.event.inputs.run-name }}' # TODO: Update
           workflow-status: ${{ steps.k6-run.outcome }}

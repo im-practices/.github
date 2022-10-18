@@ -48,7 +48,7 @@ jobs:
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
         if: env.ENABLE_NPM_STEPS == 'true'
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
             node-version: ${{ env.NODE_VERSION }}
 
@@ -56,7 +56,7 @@ jobs:
       - name: NPM Cache
         id: npm-cache
         if: env.ENABLE_NPM_STEPS == 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: '${{ env.WORKING_DIRECTORY }}/node_modules'
           key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{ env.WORKING_DIRECTORY }}/package-lock.json') }}

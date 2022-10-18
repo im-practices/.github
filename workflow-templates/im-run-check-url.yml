@@ -1,4 +1,4 @@
-# Workflow Code: distressedstoat_v2    DO NOT REMOVE
+# Workflow Code: distressedstoat_v3    DO NOT REMOVE
 # Purpose: 
 #    Pings a url and fails by default if the status code is 400+
 #    
@@ -24,7 +24,7 @@ jobs:
   check-status-of-url:
     steps:
       - name: Check the status code returned by the url
-        uses: im-open/url-status-check@v1.0.0
+        uses: im-open/url-status-check@v1.0.1
         with:
           url: ${{ inputs.url-to-check }}
           fail-on-bad-status: true # TODO: Update this if you don't want the action to fail for 400+ response codes. Otherwise you can remove this line since the action's default is true.

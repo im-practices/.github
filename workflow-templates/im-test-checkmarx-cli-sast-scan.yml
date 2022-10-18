@@ -1,4 +1,4 @@
-# Workflow Code: EnthralledOyster_v6    DO NOT REMOVE
+# Workflow Code: EnthralledOyster_v7    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and initiates a checkmarx scan on a schedule,
 #    when someone kicks it off manually or when it is triggered by another
@@ -38,24 +38,24 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
     steps:
       - name: Checkout main for Schedule Trigger
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event_name == 'schedule'
 
       - name: Checkout Provided Ref for Repository Dispatch Trigger
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event_name == 'repository_dispatch'
         with:
           ref: ${{ github.event.client_payload.ref }}
 
       - name: Checkout provided branch/tag/sha for Workflow Dispatch Trigger
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event_name == 'workflow_dispatch'
         with:
           ref: ${{ github.event.inputs.branch-tag-sha }}
 
       - name: Run the Scan
         id: scan
-        uses: im-open/checkmarx-cli-sast-scan@v2.0.1
+        uses: im-open/checkmarx-cli-sast-scan@v2.0.2
         with:
           checkmarx-server-url: ${{ secrets.CHECKMARX_URL }} # This is an org-level secret
           checkmarx-username: ${{ secrets.CHECKMARX_USERNAME }} # This is an org-level secret
@@ -84,7 +84,7 @@ jobs:
 
       - name: Upload the PDF Report
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Checkmarx Report
           path: ${{ steps.scan.outputs.report-path }}

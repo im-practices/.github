@@ -1,4 +1,4 @@
-# Workflow Code: DrearyBuck_v12    DO NOT REMOVE
+# Workflow Code: DrearyBuck_v13    DO NOT REMOVE
 
 # Purpose:
 #    Imports a specified resource into the terraform state when someone kicks it off manually.
@@ -80,18 +80,18 @@ jobs:
           | Resource ID      | `${{ github.event.inputs.tf-resource-id }}`      |' >> $GITHUB_STEP_SUMMARY
           
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ env.GITHUB_REF }}
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.0.6
+        uses: im-open/setup-deploy-keys@v1.1.0
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v1.2.1
+        uses: hashicorp/setup-terraform@v2.0.2
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
