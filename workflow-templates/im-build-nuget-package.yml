@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v25    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v26    DO NOT REMOVE
 # Purpose:
 #    Automatically builds the project and runs tests with code coverage. If
 #    everything is green, a new semantic version is calculated and a new package
@@ -222,7 +222,7 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            await github.git.createRef({
+            await github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: `refs/tags/${{ steps.version.outputs.NEXT_VERSION }}`,
@@ -291,7 +291,7 @@ jobs:
             - [Workflow Run - ${{ steps.conclusion.outputs.workflow_conclusion }}](${{ github.repositoryUrl }}/actions/runs/${{ github.run_id }})
             ${tagText}
               `;
-            github.issues.createComment({
+            github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,

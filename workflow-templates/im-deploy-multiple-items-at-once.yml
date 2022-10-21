@@ -1,4 +1,4 @@
-# Workflow Code: MercifulLlama_v8    DO NOT REMOVE
+# Workflow Code: MercifulLlama_v9    DO NOT REMOVE
 # Purpose:
 #    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.)
 #    but they need each item to be deployed together.
@@ -145,7 +145,7 @@ jobs:
         with:
           github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org-level secret #TODO:  make sure im-pipeline-bot has at least write access to your repo
           script: |
-            github.repos.createDispatchEvent({
+            github.rest.repos.createDispatchEvent({
               owner: context.repo.owner,
               repo: context.repo.repo,
               event_type: "", // TODO:  Get the type from the streamlined workflow that will be kicked off.  This is listed in the types:[] under the repository_dispatch trigger.
