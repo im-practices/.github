@@ -1,3 +1,5 @@
+# This is the workflow the repository uses.  It does not have a version.
+
 name: Increment Version & Kick off template sync
 on:
   # https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
@@ -48,7 +50,7 @@ jobs:
           # doesn't work because it doesn't have access to another repo.
           github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org level secret
           script: |
-            github.repos.createDispatchEvent({
+            github.rest.repos.createDispatchEvent({
               owner: 'bc-swat',
               repo: 'github-management',
               event_type: 'sync_workflows'
