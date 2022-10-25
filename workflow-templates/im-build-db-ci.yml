@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v9    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v10    DO NOT REMOVE
 # Purpose:
 #    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #    In addition to that, however, there are three other things this workflow template is set up to do.
@@ -121,7 +121,7 @@ jobs:
         shell: pwsh
         run: echo "::set-output name=folder::$($(Get-Date).Year).$($(Get-Date).Month.ToString("00"))"
       - name: SQL Lint
-        uses: im-open/tsql-lint-action@v1.0.5
+        uses: im-open/tsql-lint-action@v1.1.0
         with:
           tsqllint-version: 1.11.0
           path-to-sql-files: 'Database/src/SqlDatabase/Migrations/${{ steps.migration-folder.outputs.folder }}' # TODO: Update this path to wherever the files to lint live

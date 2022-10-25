@@ -1,4 +1,4 @@
-# Workflow Code: SurprisedHedgehog_v11    DO NOT REMOVE
+# Workflow Code: SurprisedHedgehog_v12    DO NOT REMOVE
 # Purpose:
 #    Runs the Cypress script specified in the workflow when commits
 #    are pushed to the PR or when someone kicks it off manually.
@@ -84,6 +84,8 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+        env:
+          DOTNET_INSTALL_DIR: './.dotnet'
 
       - name: dotnet build
         working-directory: . # TODO: verify the root is the correct location of the solution file

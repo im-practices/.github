@@ -1,4 +1,4 @@
-# Workflow Code: EnthralledOyster_v7    DO NOT REMOVE
+# Workflow Code: EnthralledOyster_v8    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and initiates a checkmarx scan on a schedule,
 #    when someone kicks it off manually or when it is triggered by another
@@ -55,7 +55,7 @@ jobs:
 
       - name: Run the Scan
         id: scan
-        uses: im-open/checkmarx-cli-sast-scan@v2.0.2
+        uses: im-open/checkmarx-cli-sast-scan@v2.1.0
         with:
           checkmarx-server-url: ${{ secrets.CHECKMARX_URL }} # This is an org-level secret
           checkmarx-username: ${{ secrets.CHECKMARX_USERNAME }} # This is an org-level secret

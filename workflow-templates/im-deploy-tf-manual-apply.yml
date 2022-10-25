@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v30    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v31    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform at a specified tag to a specified
 #    environment when someone kicks off the build manually.
@@ -78,7 +78,7 @@ jobs:
           fetch-depth: 0
 
       - name: Verify Tag Exists
-        uses: im-open/verify-git-ref@v1.1.1
+        uses: im-open/verify-git-ref@v1.2.0
         with:
           branch-tag-sha: ${{ env.GITHUB_REF }}
 
@@ -134,7 +134,7 @@ jobs:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
-      - uses: im-open/is-tag-reachable-from-default-branch@v1.0.2
+      - uses: im-open/is-tag-reachable-from-default-branch@v1.1.0
         if: env.ENVIRONMENT == 'prod'
         with:
           tag: ${{ env.GITHUB_REF }}

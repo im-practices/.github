@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v12    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v13    DO NOT REMOVE
 # Purpose:
 #    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
@@ -112,7 +112,7 @@ jobs:
       # TODO: Uncomment this step if this workflow is run against an on-prem database
       # - name: Get Vault Token
       #   id: vault_token
-      #   uses: im-open/get-vault-token-for-azure-user@v1.0.1
+      #   uses: im-open/get-vault-token-for-azure-user@v1.1.0
       #   with:
       #     # TODO: Add the Azure Auth Method Role that was setup in Vault and has access to your secrets.
       #     # See this git-er-done article for more information:

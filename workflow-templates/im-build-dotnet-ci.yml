@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v34    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v35    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -195,6 +195,8 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+        env:
+          DOTNET_INSTALL_DIR: './.dotnet'
 
       # TODO:  If the project contains internal nuget packages, uncomment and update the orgs with the needed organizations
       # - name: Authenticate with GitHub Packages
@@ -277,6 +279,8 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+        env:
+          DOTNET_INSTALL_DIR: './.dotnet'
 
       - name: dotnet build
         id: build
@@ -539,6 +543,8 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+        env:
+          DOTNET_INSTALL_DIR: './.dotnet'
 
       # TODO: If you have multiple deployables in the repo and each deployable has it's own tag:
       #       1 - Duplicate this step once per deployable

@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v26    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v27    DO NOT REMOVE
 # Purpose:
 #    Automatically builds the project and runs tests with code coverage. If
 #    everything is green, a new semantic version is calculated and a new package
@@ -102,6 +102,8 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+        env:
+          DOTNET_INSTALL_DIR: './.dotnet'
 
       - name: Calculate next version
         id: version
@@ -231,7 +233,7 @@ jobs:
 
       - name: Cleanup pre-release package versions
         if: env.IS_MERGE_TO_MAIN == 'true'
-        uses: im-open/delete-branch-package-versions@v2.1.0
+        uses: im-open/delete-branch-package-versions@v2.2.0
         with:
           github-token: ${{ secrets.GH_PACKAGES_TOKEN }} # This is a special org-level secret that needs to be authorized for this repo
           organization: ${{ github.repository_owner }}
