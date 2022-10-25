@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v17    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v18    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and deploys a directory to the
 #    specified storage account when someone kicks it off manually.
@@ -64,7 +64,7 @@ jobs:
           fetch-depth: 0
 
       - name: Verify Tag Exists
-        uses: im-open/verify-git-ref@v1.1.1
+        uses: im-open/verify-git-ref@v1.2.0
         with:
           branch-tag-sha: ${{ env.GITHUB_REF }}
 
