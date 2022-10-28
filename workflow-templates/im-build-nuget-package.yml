@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v27    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v28    DO NOT REMOVE
 # Purpose:
 #    Automatically builds the project and runs tests with code coverage. If
 #    everything is green, a new semantic version is calculated and a new package
@@ -120,12 +120,12 @@ jobs:
         # TODO: There are other methods for setting the version besides specifying it here.  You can update the value in the .csproj before building
         #        and remove the -p:Version property below, or the version could be passed in from a workflow_dispatch input if desired.
         # Set "RepositoryUrl" so the resulting nupkg is ready to be uploaded to GitHub packages and so the repo name and location doesn't need to be hard-coded in the .csproj.
-        run: dotnet pack ${{ env.NUGET_PROJ_DIR }}/${{ env.NUGET_PROJ_NAME }} --configuration Release -p:PackageOutputPath=${{ env.NUGET_PROJ_DIR }} -p:Version=${NEXT_VERSION:1} -p:RepositoryUrl=${{ github.repositoryUrl }}
+        run: dotnet pack ${{ env.NUGET_PROJ_DIR }}/${{ env.NUGET_PROJ_NAME }} --configuration Release -p:PackageOutputPath=${{ env.NUGET_PROJ_DIR }} -p:Version=${{ steps.version.outputs.NEXT_VERSION_NO_PREFIX }} -p:RepositoryUrl=${{ github.repositoryUrl }}
 
       # TODO: If this is an older project you may need to use the nuget command directly and add options as applicable.
       # - name: Nuget Pack
       #   working-directory: ${{ env.NUGET_PROJ_DIR }}
-      #   run: nuget pack ${{ env.CSPROJ_NAME }} -Build -Properties Configuration=Release;version="${{ steps.version.outputs.NEXT_VERSION }}"
+      #   run: nuget pack ${{ env.CSPROJ_NAME }} -Build -Properties Configuration=Release;version="${{ steps.version.outputs.NEXT_VERSION_NO_PREFIX }}"
 
       - name: dotnet build test project
         run: dotnet build ${{ env.NUGET_TEST_PROJECT }} --configuration Release
