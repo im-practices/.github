@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v16    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v17    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -210,7 +210,7 @@ jobs:
       - name: Send Status to Teams - Test Finished
         if: always()
         continue-on-error: true
-        uses: im-open/post-status-to-teams-action@v1.2.0
+        uses: im-open/post-status-to-teams-action@v1.3.1
         with:
           title: 'K6 Test for <your project> - ${{ github.event.inputs.run-name }}' # TODO: Update
           workflow-status: ${{ steps.k6-run.outcome }}

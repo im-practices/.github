@@ -1,4 +1,4 @@
-# This is the workflow the repository uses.  It does not have a version.
+# This is the workflow the repository uses to increment itself.  It does not have a version.
 
 name: Increment Version & Kick off template sync
 on:
@@ -37,7 +37,7 @@ jobs:
 
       # See https://github.com/im-open/git-version for more details around how to increment major/minor/patch through commit messages
       - name: Increment the version
-        uses: im-open/git-version-lite@v2.1.1
+        uses: im-open/git-version-lite@v2.1.2
         with:
           create-ref: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
