@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v10    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v11    DO NOT REMOVE
 # Purpose:
 #    Destroys all the remote objects for a terraform configuration when someone kicks it off manually.
 #
@@ -78,7 +78,7 @@ jobs:
 
       # Allows pulling modules from the respective github repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.1.0
+        uses: im-open/setup-deploy-keys@v1.1.1
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
