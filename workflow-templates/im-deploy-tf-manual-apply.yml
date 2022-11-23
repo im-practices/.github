@@ -177,7 +177,7 @@ jobs:
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
-        uses: im-open/open-pagerduty-maintenance-window@v1.2.1
+        uses: im-open/open-pagerduty-maintenance-window@v1.2.2
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
