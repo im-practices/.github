@@ -256,7 +256,7 @@ jobs:
           key: ${{ needs.nuget-cache.outputs.NUGET_CACHE_KEY }}
 
       - name: Build Database
-        uses: im-open/build-database-ci-action@v3.0.3
+        uses: im-open/build-database-ci-action@v3.1.0
         with:
           # TODO: These parameters are the most commonly used. They tell the action to create the repo's database on the Action Runner,
           #       validate and run the repo's migration scripts, run tests, and seed data into the database for future needs (like integration tests).
