@@ -154,7 +154,7 @@ jobs:
 
       - name: Cleanup pre-release packages
         if: always()
-        uses: im-open/delete-branch-package-versions@v2.2.1
+        uses: im-open/delete-branch-package-versions@v2.2.2
         with:
           github-token: ${{ secrets.GH_PACKAGES_TOKEN }} # This is a special org-level secret that needs to be authorized for this repo
           organization: ${{ github.repository_owner }}
