@@ -12,7 +12,7 @@
 #    - App Service or Function (Optional Template)
 #    - On-Prem Service         (Optional Template)
 
-name: K6 Automated Load Tester
+name: 🧪 K6 Automated Load Tester
 
 on:
   push:
