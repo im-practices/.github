@@ -1,4 +1,4 @@
-# Workflow Code: DigitalWerewolf_v5    DO NOT REMOVE
+# Workflow Code: DigitalWerewolf_v6    DO NOT REMOVE
 # Purpose:
 #    Runs the SAM YAML Validation action and exports the
 #    output JSON into the Stewardship Mapping document repository
@@ -37,7 +37,7 @@ jobs:
 
       - name: Validate SAM.yaml file
         id: parse-yaml
-        uses: im-open/yaml-file-validation@v1.2.1
+        uses: im-open/yaml-file-validation@v1.2.2
         with:
           yaml-file-path: './sam.yaml' # TODO - verify sam.yaml file name, extension and path, this might be slightly different than the trigger filter because it requires a relative path.
           schema-file-path: 'SAM'
@@ -46,7 +46,7 @@ jobs:
 
       - name: Export SAM JSON to Stewardship Mapping
         id: push-sam-json
-        uses: 'im-open/import-stewardship-sam-json@v1.1.0'
+        uses: 'im-open/import-stewardship-sam-json@v1.1.1'
         with:
           sam-json: ${{ steps.parse-yaml.outputs.json-output }}
           account-key: ${{ secrets.STEWARDSHIP_SAM_IMPORT_TOKEN }} # This is an org-level secret
