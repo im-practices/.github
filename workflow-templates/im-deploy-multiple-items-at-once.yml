@@ -1,4 +1,4 @@
-# Workflow Code: MercifulLlama_v11    DO NOT REMOVE
+# Workflow Code: MercifulLlama_v12    DO NOT REMOVE
 # Purpose:
 #    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.)
 #    but they need each item to be deployed together.
@@ -111,7 +111,7 @@ jobs:
         with:
           tag: ${{ env.RELEASE_TAG }}
 
-      - uses: im-open/is-release-production-ready@v1.1.1
+      - uses: im-open/is-release-production-ready@v1.1.2
         if: env.ENVIRONMENT == 'prod'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
