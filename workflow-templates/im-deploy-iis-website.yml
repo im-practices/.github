@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v34    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v35    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -286,16 +286,6 @@ jobs:
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}.  The current machine is ${{ matrix.iis-server }}"
 
-      # For more information and best practices on the usage and options available
-      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
-      - name: Set Variables
-        id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.1.2
-        with:
-          scope: ${{ env.ENVIRONMENT }}
-          create-output-variables: true
-        env:
-
       - name: Open a PagerDuty Maintenance Window
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.2.2
@@ -316,6 +306,8 @@ jobs:
       - name: Unzip release asset
         run: Expand-Archive -LiteralPath ${{ env.ASSET_ZIP }} -DestinationPath ./${{ env.UNZIPPED_ASSET }}
 
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Website Configuration and Substitution Values
         uses: im-open/set-environment-variables-by-scope@v1.1.2
         with:
