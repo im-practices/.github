@@ -109,7 +109,7 @@ jobs:
           fi
 
           cat > $GITHUB_STEP_SUMMARY << EOL
-          ## Plan Results Summary [${{ github.event.inputs.environment }}]
+          ## Plan Results Summary [${{ matrix.environment }}]
 
           \`\`\`js
           $plan_results
