@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v35    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v36    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -44,6 +44,8 @@ on:
           - demo
           - uat
           - prod
+          - stage-secondary
+          - prod-secondary
 
   # TODO: If a repository has multiple deployable artifacts that are deployed together through the 'Deploy Multiple Items' workflow:
   #       1. Uncomment the repository_dispatch trigger
@@ -72,8 +74,13 @@ jobs:
     outputs:
       # To use these values: ${{ needs.set-vars.outputs.<OUTPUT_NAME> }}
       RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }}
+      PRIMARY_RESOURCE_GROUP: ${{ steps.set-variables.outputs.PRIMARY_RESOURCE_GROUP }}
       AZ_APP_NAME: ${{ steps.set-variables.outputs.AZ_APP_NAME }}
+      # AZ_APP_MSI: ${{ steps.set-variables.outputs.AZ_APP_NAME }} # TODO: Uncomment if you don't use an MSI with your app service
       APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }}
+      PRIMARY_ENVIRONMENT: ${{ steps.set-variables.outputs.PRIMARY_ENVIRONMENT }}
+      # VNET: ${{ steps.set-variables.outputs.VNET }} # TODO: Uncomment if you require networking assignment
+      # SUBNET: ${{ steps.set-variables.outputs.SUBNET }} # TODO: Uncomment if you require networking assignment
 
     steps:
       - run: |
@@ -103,27 +110,71 @@ jobs:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # This variable is used to swap slots and annotate app insights
+          # This variable is used to swap slots
           RESOURCE_GROUP@dev: ''
           RESOURCE_GROUP@qa: ''
           RESOURCE_GROUP@stage: ''
+          RESOURCE_GROUP@stage-secondary: ''
           RESOURCE_GROUP@demo: ''
           RESOURCE_GROUP@uat: ''
           RESOURCE_GROUP@prod: ''
+          RESOURCE_GROUP@prod-secondary: ''
+
+          # Primary resource group used to pull azure credentials and secrets from
+          PRIMARY_RESOURCE_GROUP@dev: ''
+          PRIMARY_RESOURCE_GROUP@qa: ''
+          PRIMARY_RESOURCE_GROUP@stage stage-secondary: ''
+          PRIMARY_RESOURCE_GROUP@demo: ''
+          PRIMARY_RESOURCE_GROUP@prod prod-secondary: ''
+
           # This variable is used to deploy the app, swap slots, annotate app insights and send a teams notification
           AZ_APP_NAME@dev: ''
           AZ_APP_NAME@qa: ''
           AZ_APP_NAME@stage: ''
+          AZ_APP_NAME@stage-secondary: ''
           AZ_APP_NAME@demo: ''
           AZ_APP_NAME@uat: ''
           AZ_APP_NAME@prod: ''
+          AZ_APP_NAME@prod-secondary: ''
+          # TODO: Uncomment if you don't use an MSI with your app service
+          # This variable is used to assign a managed identity on slot creation
+          # AZ_APP_MSI@dev: ''
+          # AZ_APP_MSI@qa: ''
+          # AZ_APP_MSI@stage stage-secondary: ''
+          # AZ_APP_MSI@demo: ''
+          # AZ_APP_MSI@uat: ''
+          # AZ_APP_MSI@prod prod-secondary: ''
           # This variable is used to annotate app insights
           APP_INSIGHTS_NAME@dev: ''
           APP_INSIGHTS_NAME@qa: ''
-          APP_INSIGHTS_NAME@stage: ''
+          APP_INSIGHTS_NAME@stage stage-secondary: '' # Currnetly appinsights isn't available in West Central US and you have to use West US 2 AppInsights
           APP_INSIGHTS_NAME@demo: ''
           APP_INSIGHTS_NAME@uat: ''
-          APP_INSIGHTS_NAME@prod: ''
+          APP_INSIGHTS_NAME@prod prod-secondary: '' # Currnetly appinsights isn't available in West Central US and you have to use West US 2 AppInsights
+          # Variables used for referencing secrets
+          PRIMARY_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment }}'
+          PRIMARY_ENVIRONMENT@stage-secondary: 'stage'
+          PRIMARY_ENVIRONMENT@prod-secondary: 'prod'
+
+          # TODO: Uncomment if you require networking assignment
+          # Used for assigning SUBNET to SLOT Creation
+          # VNET@dev: ''
+          # VNET@qa: '' 
+          # VNET@stage: ''
+          # VNET@stage-secondary: ''
+          # VNET@demo: ''
+          # VNET@uat: '' 
+          # VNET@prod: '' 
+          # VNET@prod-secondary: '' 
+
+          # SUBNET@dev: ''
+          # SUBNET@qa: '' 
+          # SUBNET@stage: ''
+          # SUBNET@stage-secondary: ''
+          # SUBNET@demo: ''
+          # SUBNET@uat: '' 
+          # SUBNET@prod: '' 
+          # SUBNET@prod-secondary: '' 
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
@@ -184,7 +235,7 @@ jobs:
   deploy-code:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
+    environment: ${{ needs.set-vars.outputs.PRIMARY_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
 
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30
@@ -227,8 +278,8 @@ jobs:
           #  - The value for the environment should be included in '' after the colon. (ex: 'fedauth.dev.viabenefits.com')
           # FedAuth_Domain@dev: 'fedauth.dev.viabenefits.com'
           # FedAuth_Domain@qa: 'fedauth.qa.viabenefits.com'
-          # FedAuth_Domain@stage demo: 'fedauth.stage.viabenefits.com'
-          # FedAuth_Domain@prod: 'fedauth.viabenefits.com'
+          # FedAuth_Domain@stage stage-secondary demo: 'fedauth.stage.viabenefits.com'
+          # FedAuth_Domain@prod prod-secondary: 'fedauth.viabenefits.com'
 
       # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action can be utilized by this one.
@@ -271,6 +322,14 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
+      # TODO: Uncomment if you have azure locks in stage and prod
+      # - name: Delete RGRP Azure Locks
+      #   id: remove-locks
+      #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
+      #   run: |
+      #     az group lock delete --name "${{ needs.set-vars.outputs.RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.RESOURCE_GROUP }}"
+      #     sleep 5s
+      
       # TODO: Uncomment if you want to create a slot to deploy to.  Delete if you have a permanent slot or do not wish to use slots.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - name: Create a deployment slot
@@ -281,6 +340,27 @@ jobs:
       #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --configuration-source ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+      
+      # TODO: Uncomment if you use User Managed Identity in your app service.
+      # - name: Assign MSI to slot
+      #   if: steps.create-slot.outcome == 'success'
+      #   run: |
+      #     az webapp identity assign \
+      #       --name ${{ needs.set-vars.outputs.AZ_APP_NAME }} \
+      #       --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
+      #       --slot ${{ env.AZ_SLOT_NAME }} \
+      #       --identities /subscriptions/${{ secrets.ARM_SUBSCRIPTION_ID }}/resourcegroups/${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${{ needs.set-vars.outputs.AZ_APP_MSI }}
+      
+      # TODO Uncomment if you require networking on bootstrap of application.  IE Eventhub, Hashicorp Vault
+      # - name: Assign VNet to slot
+      #   if: steps.create-slot.outcome == 'success'
+      #   run: |
+      #     az webapp vnet-integration add \
+      #       --name ${{ needs.set-vars.outputs.AZ_APP_NAME }} \
+      #       --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
+      #       --vnet ${{ needs.set-vars.outputs.VNET }} \
+      #       --subnet ${{ needs.set-vars.outputs.SUBNET }} \
+      #       --slot ${{ env.AZ_SLOT_NAME }}
 
       # TODO: remove this step if this workflow is for an azure function
       - name: Deploy to Azure Web App
@@ -317,6 +397,13 @@ jobs:
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+       
+      # TODO: Uncomment if you have azure locks in stage and prod
+      # - name: Add Back RGRP Azure Locks
+      #   id: add-locks
+      #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
+      #   run: |
+      #     az group lock create --name "${{ needs.set-vars.outputs.RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.RESOURCE_GROUP }}" --lock-type CanNotDelete
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'
@@ -344,6 +431,7 @@ jobs:
           az account clear
 
       - name: Delete items with potentially sensitive data
+        if: always()
         continue-on-error: true
         run: |
           rm -f ${{ env.ASSET_ZIP }}
