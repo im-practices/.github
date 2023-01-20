@@ -12,8 +12,9 @@
 # # TODO: Prerequisites:
 #    - Ensure each of the repo-level MS_TEAMS_URI and env-level secrets used in this workflow have been populated by an admin in your repository.
 
-name: Run K6 Operator Test
-run-name: Run ${{ inputs.test-file }} in ${{ inputs.env }}
+name: 🧪️ Run K6 Operator Test
+run-name: Run K6 Operator Test to ${{ inputs.env }} with test ${{ inputs.test-file }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -51,7 +52,7 @@ on:
         required: false
         default: '' # TODO: Update to default upload file or folder
       k6-parameters:
-        description: 'K6 parameters.  This includes any tags or config files.'
+        description: 'K6 parameters:  This includes any tags or config files.'
         required: false
         default: '--tag product=TEST,family=TEST' # TODO: Update default tags for grafana dashboard filtering.
       parallelism:
@@ -69,20 +70,11 @@ on:
         type: boolean
         default: false # TODO: Set true if you require npm build to run for your k6 bundle to be created
       loop-count:
-        description: 'Number of loops to wait for test to complete.'
+        description: 'Loop Count: Number of loops to wait for test to complete.'
         required: false
         default: '50'
 
-jobs:
-  run_k6_operator:
-    runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ github.event.inputs.env }}
-
-    defaults:
-      run:
-        shell: bash
-
-    env:
+env:
       TIMEZONE: 'america/denver' # TODO: Verify timezone
       WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
       GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1' # TODO: Verify link to your dashboard
@@ -102,12 +94,11 @@ jobs:
       CLUSTER_DNS_ZONE_NAME: 'perftest.privatelink.westus2.azmk8s.io'
       ###### DO NOT EDIT ######
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.ref_name }}
+jobs:
+  annotations:
+    runs-on: ubuntu-latest
 
+    steps:
       - name: Show Input Variables
         run: |
           echo "Workflow Inputs:"
@@ -121,25 +112,42 @@ jobs:
             k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }}'
             parallelism: '${{ github.event.inputs.parallelism }}'
             separate-nodes: '${{ github.event.inputs.separate-nodes }}'
+            loop-count: '${{ github.event.inputs.loop-count }}'
+            loop-duration: '${{ env.LOOP_DURATION }}'
+            run-npm-build: '${{ github.event.inputs.run-npm-build }}'
           "
+      - name: Annotate Inputs
+        run: |
+          echo $'
+          | Input Name            | Value                    |
+          | ---                   |  ---                     |
+          | Environment           | `${{ github.event.inputs.env }}` |
+          | Working Directory     | `${{ env.WORKING_DIRECTORY }}` |
+          | Test File             | `${{ github.event.inputs.test-file }}` |
+          | Parallelism           | `${{ github.event.inputs.parallelism }}` |
+          | Separate-nodes        | `${{ github.event.inputs.separate-nodes }}` |
+          | Upload Type           | `${{ github.event.inputs.upload-type }}` |
+          | Upload File/Folders   | `${{ github.event.inputs.upload-files-folder}}` |
+          | K6 Parameters         | `${{ github.event.inputs.k6-parameters }}` |
+          | K6 Default Parameters | `${{ env.K6_DEFAULT_PARAMETERS }}`  |
+          | Loop Count            | `${{ github.event.inputs.loop-count }}` |
+          | Loop Duration         | `${{ env.LOOP_DURATION }}` |
+          | Run NPM Build         | `${{ github.event.inputs.run-npm-build }}` |' >> $GITHUB_STEP_SUMMARY
 
-      - name: Annotate Test Parameters
-        uses: actions/github-script@v6
+  run_k6_operator:
+    runs-on: [self-hosted, ubuntu-20.04]
+    needs: [annotations]
+    environment: ${{ github.event.inputs.env }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
         with:
-          script: |
-            var output = `
-              Workflow Inputs =>
-                Environment: ${{ github.event.inputs.env }};
-                Working Directory: ${{ env.WORKING_DIRECTORY }};;
-                Test File: ${{ github.event.inputs.test-file }};
-                Parallelism: ${{ github.event.inputs.parallelism }};
-                Separate Nodes: ${{ github.event.inputs.separate-nodes }};
-                Upload Type: ${{ github.event.inputs.upload-type }};
-                Upload File/Folders: ${{ github.event.inputs.upload-files-folder}};
-                K6 Parameters: ${{ github.event.inputs.k6-parameters }};
-                K6 Default Parameters: ${{ env.K6_DEFAULT_PARAMETERS }};
-            `;
-            core.notice(`${output}`);
+          ref: ${{ github.ref_name }}
 
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
@@ -178,15 +186,15 @@ jobs:
           config-secret: ${{ secrets.K6_OPERATOR_KUBE_CONFIG }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           aks-resource-group: ${{ env.CLUSTER_RESOURCE_GROUP }}
           aks-cluster-name: ${{ env.CLUSTER_NAME }}
-          dns-zone-name: ${{ env.CLUSTER_DNS_ZONE_NAME }}
           enable-azure-login: 'true'
+          dns-zone-name: ${{ env.CLUSTER_DNS_ZONE_NAME }}
           azure-credentials: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Stop test if Cluster is off
         if: steps.kube-config.outputs.cluster-powerstate != 'Running'
         run:
           exit 1
-      
+
       - name: Send Status to Teams - Starting Test
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.3.2
@@ -218,7 +226,7 @@ jobs:
           k6_test_file_tag="--tag test=${{ github.event.inputs.test-file }}"
           # Removing slashes from k6_test_file_tag
           k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
-          echo "::set-output name=test-tag::$k6_test_file_tag"
+          echo "test-tag=$k6_test_file_tag" >> $GITHUB_OUTPUT
 
       - name: Run K6-Operator Test
         uses: im-practices/run-k6-operator-test@latest
