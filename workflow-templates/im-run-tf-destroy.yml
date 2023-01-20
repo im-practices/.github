@@ -11,7 +11,7 @@
 # TODO Prerequisites
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
-name: 💥 Terraform Destroy
+name: Terraform Destroy 💥
 run-name: Terraform Destroy ${{ inputs.environment }}
 on:
   workflow_dispatch:
