@@ -136,7 +136,7 @@ jobs:
           AZ_APP_NAME@uat: ''
           AZ_APP_NAME@prod: ''
           AZ_APP_NAME@prod-secondary: ''
-          # TODO: Uncomment if you use an (User Managed Identity) MSI with your app service
+          # TODO: Uncomment if you use a (User Assigned) MSI with your app service
           # This variable is used to assign a managed identity on slot creation
           # AZ_APP_MSI@dev: ''
           # AZ_APP_MSI@qa: ''
