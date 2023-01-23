@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v15    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v16    DO NOT REMOVE
 # Purpose:
 #    Swaps deployment slots in a specified environment for an Azure App Service
 #    or Function outside of a deployment when someone kicks it off manually.
@@ -69,7 +69,7 @@ jobs:
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
-        uses: im-open/set-environment-variables-by-scope@v1.1.1
+        uses: im-open/set-environment-variables-by-scope@v1.1.2
         with:
           scope: ${{ env.ENVIRONMENT }}
         env:
@@ -92,7 +92,7 @@ jobs:
       - name: Open a PagerDuty Maintenance Window
         if: env.OPEN_WINDOW == 'true'
         id: open-window
-        uses: im-open/open-pagerduty-maintenance-window@v1.2.1
+        uses: im-open/open-pagerduty-maintenance-window@v1.2.2
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
@@ -134,7 +134,7 @@ jobs:
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && env.OPEN_WINDOW == 'true' && steps.open-window.outcome == 'success'
-        uses: im-open/close-pagerduty-maintenance-window@v1.1.1
+        uses: im-open/close-pagerduty-maintenance-window@v1.1.2
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
