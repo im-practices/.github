@@ -31,6 +31,8 @@ on:
           - demo
           - uat
           - prod
+          - stage-secondary
+          - prod-secondary
       tf-targets:
         description: 'Targeted Destroys: format -target module.your-module.resource'
         required: false
@@ -64,10 +66,10 @@ jobs:
 
     outputs:
       # To use these values: ${{ needs.set-vars.outputs.<OUTPUT_NAME> }}
-      RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }}
+      TARGET_RESOURCE_GROUP: ${{ steps.set-variables.outputs.TARGET_RESOURCE_GROUP }}
       PRIMARY_RESOURCE_GROUP: ${{ steps.set-variables.outputs.PRIMARY_RESOURCE_GROUP }}
       STORAGE_ACCOUNT: ${{ steps.set-variables.outputs.STORAGE_ACCOUNT }}
-      PRIMARY_ENVIRONMENT: ${{ steps.set-variables.outputs.PRIMARY_ENVIRONMENT }}
+      GITHUB_SECRETS_ENVIRONMENT: ${{ steps.set-variables.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     steps:
       - run: |
@@ -98,16 +100,16 @@ jobs:
           scope: ${{ github.event.inputs.environment }}
           create-output-variables: true
         env:
-          # This variable is used to upload and download blobs from blob storage
-          RESOURCE_GROUP@dev: ''
-          RESOURCE_GROUP@qa: ''
-          RESOURCE_GROUP@stage: ''
-          RESOURCE_GROUP@stage-secondary: ''
-          RESOURCE_GROUP@demo: ''
-          RESOURCE_GROUP@uat: ''
-          RESOURCE_GROUP@prod: ''
-          RESOURCE_GROUP@prod-secondary: ''
-          # Primary resource group
+          # This variable is used to delete and re-create azure locks.
+          TARGET_RESOURCE_GROUP@dev: ''
+          TARGET_RESOURCE_GROUP@qa: ''
+          TARGET_RESOURCE_GROUP@stage: ''
+          TARGET_RESOURCE_GROUP@stage-secondary: ''
+          TARGET_RESOURCE_GROUP@demo: ''
+          TARGET_RESOURCE_GROUP@uat: ''
+          TARGET_RESOURCE_GROUP@prod: ''
+          TARGET_RESOURCE_GROUP@prod-secondary: ''
+          # Resource group holding the state storage account and managed service identities
           PRIMARY_RESOURCE_GROUP@dev: ''
           PRIMARY_RESOURCE_GROUP@qa: ''
           PRIMARY_RESOURCE_GROUP@stage stage-secondary: ''
@@ -121,9 +123,9 @@ jobs:
           STORAGE_ACCOUNT@uat: ''
           STORAGE_ACCOUNT@prod prod-secondary: ''
           # Used for getting Azure Credentials Secrets
-          PRIMARY_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment }}'
-          PRIMARY_ENVIRONMENT@stage-secondary: 'stage'
-          PRIMARY_ENVIRONMENT@prod-secondary: 'prod'
+          GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment }}'
+          GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
+          GITHUB_SECRETS_ENVIRONMENT@prod-secondary: 'prod'
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
@@ -166,7 +168,7 @@ jobs:
   tf-plan:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.PRIMARY_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
+    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
 
     defaults:
       run:
@@ -284,7 +286,7 @@ jobs:
     needs: [set-vars, tf-plan, tf-plan-manual-approval]
     runs-on: [self-hosted, ubuntu-20.04]
     # runs-on: [self-hosted, coldstone, ubuntu-coldstone]
-    environment: ${{ needs.set-vars.outputs.PRIMARY_ENVIRONMENT }}
+    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     defaults:
       run:
@@ -342,7 +344,7 @@ jobs:
       #   id: remove-locks
       #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
       #   run: |
-      #     az group lock delete --name "${{ needs.set-vars.outputs.RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.RESOURCE_GROUP }}"
+      #     az group lock delete --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}"
       #     sleep 5s
 
       - name: Terraform Init
@@ -357,7 +359,7 @@ jobs:
       #   id: add-locks
       #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
       #   run: |
-      #     az group lock create --name "${{ needs.set-vars.outputs.RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.RESOURCE_GROUP }}" --lock-type CanNotDelete
+      #     az group lock create --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}" --lock-type CanNotDelete
 
       - name: Azure logout
         run: |

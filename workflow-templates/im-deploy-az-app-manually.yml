@@ -73,12 +73,12 @@ jobs:
 
     outputs:
       # To use these values: ${{ needs.set-vars.outputs.<OUTPUT_NAME> }}
-      RESOURCE_GROUP: ${{ steps.set-variables.outputs.RESOURCE_GROUP }}
+      TARGET_RESOURCE_GROUP: ${{ steps.set-variables.outputs.TARGET_RESOURCE_GROUP }}
       PRIMARY_RESOURCE_GROUP: ${{ steps.set-variables.outputs.PRIMARY_RESOURCE_GROUP }}
       AZ_APP_NAME: ${{ steps.set-variables.outputs.AZ_APP_NAME }}
       # AZ_APP_MSI: ${{ steps.set-variables.outputs.AZ_APP_NAME }} # TODO: Uncomment if you don't use an MSI with your app service
       APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }}
-      PRIMARY_ENVIRONMENT: ${{ steps.set-variables.outputs.PRIMARY_ENVIRONMENT }}
+      GITHUB_SECRETS_ENVIRONMENT: ${{ steps.set-variables.outputs.GITHUB_SECRETS_ENVIRONMENT }}
       # VNET: ${{ steps.set-variables.outputs.VNET }} # TODO: Uncomment if you require networking assignment
       # SUBNET: ${{ steps.set-variables.outputs.SUBNET }} # TODO: Uncomment if you require networking assignment
 
@@ -110,17 +110,17 @@ jobs:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # This variable is used to swap slots
-          RESOURCE_GROUP@dev: ''
-          RESOURCE_GROUP@qa: ''
-          RESOURCE_GROUP@stage: ''
-          RESOURCE_GROUP@stage-secondary: ''
-          RESOURCE_GROUP@demo: ''
-          RESOURCE_GROUP@uat: ''
-          RESOURCE_GROUP@prod: ''
-          RESOURCE_GROUP@prod-secondary: ''
+          # Resource group holding the resources to be deployed to
+          TARGET_RESOURCE_GROUP@dev: ''
+          TARGET_RESOURCE_GROUP@qa: ''
+          TARGET_RESOURCE_GROUP@stage: ''
+          TARGET_RESOURCE_GROUP@stage-secondary: ''
+          TARGET_RESOURCE_GROUP@demo: ''
+          TARGET_RESOURCE_GROUP@uat: ''
+          TARGET_RESOURCE_GROUP@prod: ''
+          TARGET_RESOURCE_GROUP@prod-secondary: ''
 
-          # Primary resource group used to pull azure credentials and secrets from
+          # Resource group holding the state storage account and managed service identities
           PRIMARY_RESOURCE_GROUP@dev: ''
           PRIMARY_RESOURCE_GROUP@qa: ''
           PRIMARY_RESOURCE_GROUP@stage stage-secondary: ''
@@ -136,7 +136,7 @@ jobs:
           AZ_APP_NAME@uat: ''
           AZ_APP_NAME@prod: ''
           AZ_APP_NAME@prod-secondary: ''
-          # TODO: Uncomment if you don't use an MSI with your app service
+          # TODO: Uncomment if you use an (User Managed Identity) MSI with your app service
           # This variable is used to assign a managed identity on slot creation
           # AZ_APP_MSI@dev: ''
           # AZ_APP_MSI@qa: ''
@@ -152,9 +152,9 @@ jobs:
           APP_INSIGHTS_NAME@uat: ''
           APP_INSIGHTS_NAME@prod prod-secondary: '' # Currnetly appinsights isn't available in West Central US and you have to use West US 2 AppInsights
           # Variables used for referencing secrets
-          PRIMARY_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment }}'
-          PRIMARY_ENVIRONMENT@stage-secondary: 'stage'
-          PRIMARY_ENVIRONMENT@prod-secondary: 'prod'
+          GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment }}'
+          GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
+          GITHUB_SECRETS_ENVIRONMENT@prod-secondary: 'prod'
 
           # TODO: Uncomment if you require networking assignment
           # Used for assigning SUBNET to SLOT Creation
@@ -235,7 +235,7 @@ jobs:
   deploy-code:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.PRIMARY_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
+    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
 
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30
@@ -327,7 +327,7 @@ jobs:
       #   id: remove-locks
       #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
       #   run: |
-      #     az group lock delete --name "${{ needs.set-vars.outputs.RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.RESOURCE_GROUP }}"
+      #     az group lock delete --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}"
       #     sleep 5s
       
       # TODO: Uncomment if you want to create a slot to deploy to.  Delete if you have a permanent slot or do not wish to use slots.
@@ -337,7 +337,7 @@ jobs:
       #     az ${{ env.AZ_APP_TYPE }} deployment slot create \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
-      #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
+      #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --configuration-source ${{ needs.set-vars.outputs.AZ_APP_NAME }}
       
@@ -347,7 +347,7 @@ jobs:
       #   run: |
       #     az webapp identity assign \
       #       --name ${{ needs.set-vars.outputs.AZ_APP_NAME }} \
-      #       --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
+      #       --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #       --slot ${{ env.AZ_SLOT_NAME }} \
       #       --identities /subscriptions/${{ secrets.ARM_SUBSCRIPTION_ID }}/resourcegroups/${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${{ needs.set-vars.outputs.AZ_APP_MSI }}
       
@@ -357,7 +357,7 @@ jobs:
       #   run: |
       #     az webapp vnet-integration add \
       #       --name ${{ needs.set-vars.outputs.AZ_APP_NAME }} \
-      #       --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
+      #       --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #       --vnet ${{ needs.set-vars.outputs.VNET }} \
       #       --subnet ${{ needs.set-vars.outputs.SUBNET }} \
       #       --slot ${{ env.AZ_SLOT_NAME }}
@@ -384,7 +384,7 @@ jobs:
       #   run: |
       #     az ${{ env.AZ_APP_TYPE }} deployment slot swap \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
-      #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }} \
+      #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --target-slot ${{ env.TARGET_SLOT }}
@@ -396,14 +396,14 @@ jobs:
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
-      #     --resource-group ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+      #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}
        
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Add Back RGRP Azure Locks
       #   id: add-locks
       #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
       #   run: |
-      #     az group lock create --name "${{ needs.set-vars.outputs.RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.RESOURCE_GROUP }}" --lock-type CanNotDelete
+      #     az group lock create --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}" --lock-type CanNotDelete
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'
@@ -417,7 +417,7 @@ jobs:
         uses: im-open/create-app-insights-annotation@v1.0.1
         with:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
-          resourceGroupName: ${{ needs.set-vars.outputs.RESOURCE_GROUP }}
+          resourceGroupName: ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
           releaseName: '${{ needs.set-vars.outputs.AZ_APP_NAME }}-${{ env.RELEASE_TAG }}'
           category: 'Deployment'
