@@ -147,7 +147,7 @@ jobs:
           # This variable is used to annotate app insights
           APP_INSIGHTS_NAME@dev: ''
           APP_INSIGHTS_NAME@qa: ''
-          APP_INSIGHTS_NAME@stage stage-secondary: '' # Currnetly appinsights isn't available in West Central US and you have to use West US 2 AppInsights
+          APP_INSIGHTS_NAME@stage stage-secondary: '' # Currently appinsights isn't available in West Central US and you have to use West US 2 AppInsights
           APP_INSIGHTS_NAME@demo: ''
           APP_INSIGHTS_NAME@uat: ''
           APP_INSIGHTS_NAME@prod prod-secondary: '' # Currnetly appinsights isn't available in West Central US and you have to use West US 2 AppInsights
