@@ -150,7 +150,7 @@ jobs:
           APP_INSIGHTS_NAME@stage stage-secondary: '' # Currently appinsights isn't available in West Central US and you have to use West US 2 AppInsights
           APP_INSIGHTS_NAME@demo: ''
           APP_INSIGHTS_NAME@uat: ''
-          APP_INSIGHTS_NAME@prod prod-secondary: '' # Currnetly appinsights isn't available in West Central US and you have to use West US 2 AppInsights
+          APP_INSIGHTS_NAME@prod prod-secondary: '' # Currently appinsights isn't available in West Central US and you have to use West US 2 AppInsights
           # Variables used for referencing secrets
           GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment }}'
           GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
