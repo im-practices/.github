@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v12    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v13    DO NOT REMOVE
 # Purpose:
 #    Destroys all the remote objects for a terraform configuration when someone kicks it off manually.
 #
@@ -127,21 +127,10 @@ jobs:
           GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
           GITHUB_SECRETS_ENVIRONMENT@prod-secondary: 'prod'
 
-  # Each env has their own stakeholder approval environment.  If no required reviewers are set for
-  # that environment, the workflow will continue without requiring anyone to approve the deployment.
-  stakeholder-approval:
-    needs: [set-vars]
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ github.event.inputs.environment-or-target }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
-    steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
-      - name: Approval Received
-        run: echo "Stakeholder approval was received"
-
   # This job needs to run for all environments because tf-plan relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
-    needs: [set-vars, stakeholder-approval]
+    needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
