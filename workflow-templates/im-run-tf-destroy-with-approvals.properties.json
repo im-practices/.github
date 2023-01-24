@@ -1,0 +1,5 @@
+{
+    "name": "Run - Terraform Destroy with Approvals",
+    "description": "Destroys all remote objects managed by a terraform configuration with required approvals",
+    "iconName": "im_tf"
+}
