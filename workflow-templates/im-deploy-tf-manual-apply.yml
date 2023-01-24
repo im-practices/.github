@@ -162,7 +162,7 @@ jobs:
   tf-plan:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
+    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
     env:
       PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ github.event.inputs.environment-or-target }} environment from GitHub Actions' # TODO: Verify this description
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
@@ -361,7 +361,7 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color -lock-timeout=90s -input=false ./plans/tfplan
 
-      # TODO: Uncommnet to Annotate in AppInsights
+      # TODO: Uncomment to Annotate in AppInsights
       # - name: Annotate App Insights
       #   uses: im-open/create-app-insights-annotation@v1.0.2
       #   continue-on-error: true

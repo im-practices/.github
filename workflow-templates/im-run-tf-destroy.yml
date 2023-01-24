@@ -11,7 +11,7 @@
 # TODO Prerequisites
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
-name: Terraform Destroy 💥
+name: Terraform Destroy
 run-name: Terraform Destroy ${{ inputs.environment-or-target }}
 on:
   workflow_dispatch:
@@ -39,7 +39,7 @@ on:
 
 env:
   ENVIRONMENT: ${{ github.event.inputs.environment-or-target }}
-  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
+  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha where terraform resources will be destroyed
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PLAN_STORAGE_CONTAINER: 'tfstate'
   # The following ARM_* secrets are org-level secrets

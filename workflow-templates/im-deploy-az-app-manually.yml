@@ -76,7 +76,7 @@ jobs:
       TARGET_RESOURCE_GROUP: ${{ steps.set-variables.outputs.TARGET_RESOURCE_GROUP }}
       PRIMARY_RESOURCE_GROUP: ${{ steps.set-variables.outputs.PRIMARY_RESOURCE_GROUP }}
       AZ_APP_NAME: ${{ steps.set-variables.outputs.AZ_APP_NAME }}
-      # AZ_APP_MSI: ${{ steps.set-variables.outputs.AZ_APP_NAME }} # TODO: Uncomment if you don't use an MSI with your app service
+      # AZ_APP_MSI: ${{ steps.set-variables.outputs.AZ_APP_MSI }} # TODO: Uncomment if you don't use an MSI with your app service
       APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }}
       GITHUB_SECRETS_ENVIRONMENT: ${{ steps.set-variables.outputs.GITHUB_SECRETS_ENVIRONMENT }}
       # VNET: ${{ steps.set-variables.outputs.VNET }} # TODO: Uncomment if you require networking assignment
@@ -235,7 +235,7 @@ jobs:
   deploy-code:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
+    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} 
 
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30
