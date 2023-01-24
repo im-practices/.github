@@ -39,7 +39,7 @@ on:
 
 env:
   ENVIRONMENT: ${{ github.event.inputs.environment-or-target }}
-  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
+  GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha where terraform resources will be destroyed
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PLAN_STORAGE_CONTAINER: 'tfstate'
   # The following ARM_* secrets are org-level secrets
