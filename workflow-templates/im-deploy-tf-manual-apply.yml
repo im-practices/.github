@@ -371,7 +371,7 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color -lock-timeout=90s -input=false ./plans/tfplan
 
-      # TODO: Uncommnet to Annotate in AppInsights
+      # TODO: Uncomment to Annotate in AppInsights
       # - name: Annotate App Insights
       #   uses: im-open/create-app-insights-annotation@v1.0.2
       #   continue-on-error: true
