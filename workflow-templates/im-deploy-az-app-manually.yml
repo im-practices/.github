@@ -235,7 +235,7 @@ jobs:
   deploy-code:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
+    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} 
 
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30
