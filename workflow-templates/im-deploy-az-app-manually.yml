@@ -110,7 +110,7 @@ jobs:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
         env:
-          # Resource group holding the resources to be deployed to
+          # Resource group you are targeting for deploy.  Also this variable is used to delete and re-create azure locks.
           TARGET_RESOURCE_GROUP@dev: ''
           TARGET_RESOURCE_GROUP@qa: ''
           TARGET_RESOURCE_GROUP@stage: ''
