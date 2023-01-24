@@ -14,15 +14,15 @@
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
 name: Apply Terraform
-run-name: Apply ${{ inputs.branch-tag-sha }} terraform to ${{ inputs.environment }}
+run-name: Apply ${{ inputs.branch-tag-sha }} terraform to ${{ inputs.environment-or-target }}
 on:
   workflow_dispatch:
     inputs:
       branch-tag-sha:
         description: The branch, tag or sha of the terraform that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
-      environment:
-        description: The environment to deploy to
+      environment-or-target:
+        description: The environment or target to deploy to
         required: true
         type: choice
         options: # TODO: Update for the environments that are available
@@ -36,7 +36,7 @@ on:
           - prod-secondary
 
 env:
-  ENVIRONMENT: ${{ github.event.inputs.environment }}
+  ENVIRONMENT: ${{ github.event.inputs.environment-or-target }}
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PLAN_STORAGE_CONTAINER: 'tfstate'
@@ -48,7 +48,7 @@ env:
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
-  TF_WORKING_DIR: './infrastructure/${{ github.event.inputs.environment }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
+  TF_WORKING_DIR: './infrastructure/${{ github.event.inputs.environment-or-target }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
   # The following SSH_* secrets are org-level secrets
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
@@ -127,7 +127,7 @@ jobs:
           # APP_INSIGHTS_NAME@demo: ''
           # APP_INSIGHTS_NAME@prod prod-secondary: ''
           # Used for getting Azure Credentials Secrets
-          GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment }}'
+          GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment-or-target }}'
           GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
           GITHUB_SECRETS_ENVIRONMENT@prod-secondary: 'prod'
 
@@ -136,7 +136,7 @@ jobs:
   stakeholder-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
+    environment: '${{ github.event.inputs.environment-or-target }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
       - name: Approval Received
@@ -174,7 +174,7 @@ jobs:
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
     env:
-      PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ github.event.inputs.environment }} environment from GitHub Actions' # TODO: Verify this description
+      PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ github.event.inputs.environment-or-target }} environment from GitHub Actions' # TODO: Verify this description
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
 
     defaults:
@@ -254,7 +254,7 @@ jobs:
           fi
 
           cat > $GITHUB_STEP_SUMMARY << EOL
-          ## Plan Results Summary [${{ github.event.inputs.environment }}]
+          ## Plan Results Summary [${{ github.event.inputs.environment-or-target }}]
 
           \`\`\`js
           $plan_results
@@ -303,7 +303,7 @@ jobs:
   tf-apply:
     needs: [set-vars, tf-plan, tf-plan-manual-approval]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
+    environment: ${{ github.event.inputs.environment-or-target }} # Use inputs context because env context is not available to environment:
 
     defaults:
       run:
@@ -359,7 +359,7 @@ jobs:
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Delete RGRP Azure Locks
       #   id: remove-locks
-      #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
+      #   if: github.event.inputs.environment-or-target == 'prod' || github.event.inputs.environment-or-target == 'stage'
       #   run: |
       #     az group lock delete --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}"
       #     sleep 5s
@@ -386,7 +386,7 @@ jobs:
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Add RGRP Azure Locks
       #   id: add-locks
-      #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
+      #   if: github.event.inputs.environment-or-target == 'prod' || github.event.inputs.environment-or-target == 'stage'
       #   run: |
       #     az group lock create --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}" --lock-type CanNotDelete
 

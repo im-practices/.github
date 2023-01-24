@@ -12,7 +12,7 @@
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Terraform Destroy 💥
-run-name: Terraform Destroy ${{ inputs.environment }}
+run-name: Terraform Destroy ${{ inputs.environment-or-target }}
 on:
   workflow_dispatch:
     inputs:
@@ -20,8 +20,8 @@ on:
       branch-tag-sha:
         description: The branch, tag or sha of the terraform that has the configuration of the resources that will be destroyed.
         required: true
-      environment:
-        description: The environment the destroy should be run against.
+      environment-or-target:
+        description: The environment or target the destroy should be run against.
         required: true
         type: choice
         options: # TODO: Update for the environments that are available
@@ -38,7 +38,7 @@ on:
         required: false
 
 env:
-  ENVIRONMENT: ${{ github.event.inputs.environment }}
+  ENVIRONMENT: ${{ github.event.inputs.environment-or-target }}
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PLAN_STORAGE_CONTAINER: 'tfstate'
@@ -50,7 +50,7 @@ env:
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
-  TF_WORKING_DIR: './infrastructure/${{ github.event.inputs.environment }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
+  TF_WORKING_DIR: './infrastructure/${{ github.event.inputs.environment-or-target }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
   # The following SSH_* secrets are org-level secrets
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
@@ -89,7 +89,7 @@ jobs:
         with:
           branch-tag-sha: ${{ env.GITHUB_REF }}
 
-      - run: echo "The current environment is ${{ github.event.inputs.environment }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
+      - run: echo "The current environment is ${{ github.event.inputs.environment-or-target }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
@@ -97,7 +97,7 @@ jobs:
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.1.2
         with:
-          scope: ${{ github.event.inputs.environment }}
+          scope: ${{ github.event.inputs.environment-or-target }}
           create-output-variables: true
         env:
           # This variable is used to delete and re-create azure locks.
@@ -123,7 +123,7 @@ jobs:
           STORAGE_ACCOUNT@uat: ''
           STORAGE_ACCOUNT@prod prod-secondary: ''
           # Used for getting Azure Credentials Secrets
-          GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment }}'
+          GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment-or-target }}'
           GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
           GITHUB_SECRETS_ENVIRONMENT@prod-secondary: 'prod'
 
@@ -132,7 +132,7 @@ jobs:
   stakeholder-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
+    environment: '${{ github.event.inputs.environment-or-target }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
       - name: Approval Received
@@ -236,7 +236,7 @@ jobs:
           fi
 
           cat > $GITHUB_STEP_SUMMARY << EOL
-          ## Plan Results Summary [${{ github.event.inputs.environment }}]
+          ## Plan Results Summary [${{ github.event.inputs.environment-or-target }}]
 
           \`\`\`js
           $plan_results
@@ -342,7 +342,7 @@ jobs:
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Delete RGRP Azure Locks
       #   id: remove-locks
-      #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
+      #   if: github.event.inputs.environment-or-target == 'prod' || github.event.inputs.environment-or-target == 'stage'
       #   run: |
       #     az group lock delete --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}"
       #     sleep 5s
@@ -357,7 +357,7 @@ jobs:
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Add RGRP Azure Locks
       #   id: add-locks
-      #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
+      #   if: github.event.inputs.environment-or-target == 'prod' || github.event.inputs.environment-or-target == 'stage'
       #   run: |
       #     az group lock create --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}" --lock-type CanNotDelete
 

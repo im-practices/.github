@@ -23,7 +23,7 @@
 #      Generally one board should be set up per app service/function in the repository.
 
 name: Manually deploy AZ App # TODO: If there are multiple app service/functions in the repo, append the project name (svc/bff/mfe/etc) to this and the actual file name
-run-name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }} AZ App
+run-name: Deploy ${{ inputs.tag }} to ${{ inputs.environment-or-target }} AZ App
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
   #       1. Use the workflow_dispatch trigger
@@ -33,8 +33,8 @@ on:
       tag:
         description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
-      environment:
-        description: The environment to deploy to
+      environment-or-target:
+        description: The environment or target to deploy to
         required: true
         type: choice
         options: # TODO: Update for the environments that are available
@@ -50,7 +50,7 @@ on:
   # TODO: If a repository has multiple deployable artifacts that are deployed together through the 'Deploy Multiple Items' workflow:
   #       1. Uncomment the repository_dispatch trigger
   #       2. Delete the workflow_dispatch trigger
-  #       3. Change the env.ENVIRONMENT value from "${{ github.event.inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
+  #       3. Change the env.ENVIRONMENT value from "${{ github.event.inputs.environment-or-target }}" to: "${{ github.event.client_payload.environment }}"
   #       4. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
   #       5. Under the 'set-vars' job:
   #          a. Delete the 'Checkout Repository' step
@@ -63,7 +63,7 @@ on:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
 env:
-  ENVIRONMENT: ${{ github.event.inputs.environment }}
+  ENVIRONMENT: ${{ github.event.inputs.environment-or-target }}
   RELEASE_TAG: ${{ github.event.inputs.tag }} # This is the tag that we'll be deploying
   TIMEZONE: 'america/denver' # TODO: Verify timezone
 
@@ -152,7 +152,7 @@ jobs:
           APP_INSIGHTS_NAME@uat: ''
           APP_INSIGHTS_NAME@prod prod-secondary: '' # Currently appinsights isn't available in West Central US and you have to use West US 2 AppInsights
           # Variables used for referencing secrets
-          GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment }}'
+          GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment-or-target }}'
           GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
           GITHUB_SECRETS_ENVIRONMENT@prod-secondary: 'prod'
 
@@ -181,7 +181,7 @@ jobs:
   stakeholder-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ github.event.inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
+    environment: '${{ github.event.inputs.environment-or-target }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: |
           echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -192,7 +192,7 @@ jobs:
   attestor-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ github.event.inputs.environment }} Attestor Approval' # Use inputs context because env context is not available to environment:
+    environment: '${{ github.event.inputs.environment-or-target }} Attestor Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: |
           echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
@@ -239,7 +239,7 @@ jobs:
 
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30
-      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment }} from GitHub Actions'
+      PAGERDUTY_WINDOW_DESC: 'Deploying Code to ${{ github.event.inputs.environment-or-target }} from GitHub Actions'
       TARGET_SLOT: 'Production'
       AZ_SLOT_NAME: '' # TODO: If using slots, set this to the name of the azure deployment slot.  If this differs per environment, add a new section in the set-vars job above where the value can be set per environment
       ASSET_ZIP: 'published_app.zip' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
@@ -325,7 +325,7 @@ jobs:
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Delete RGRP Azure Locks
       #   id: remove-locks
-      #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
+      #   if: github.event.inputs.environment-or-target == 'prod' || github.event.inputs.environment-or-target == 'stage'
       #   run: |
       #     az group lock delete --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}"
       #     sleep 5s
@@ -401,7 +401,7 @@ jobs:
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Add Back RGRP Azure Locks
       #   id: add-locks
-      #   if: github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'stage'
+      #   if: github.event.inputs.environment-or-target == 'prod' || github.event.inputs.environment-or-target == 'stage'
       #   run: |
       #     az group lock create --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}" --lock-type CanNotDelete
 
