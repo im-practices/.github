@@ -34,7 +34,7 @@ on:
         description: The tag for the release that will be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
       environment-or-target:
-        description: The environment or target to deploy to
+        description: The environment or secondary region target to deploy to
         required: true
         type: choice
         options: # TODO: Update for the environments that are available

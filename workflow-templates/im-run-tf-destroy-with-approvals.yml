@@ -21,7 +21,7 @@ on:
         description: The branch, tag or sha of the terraform that has the configuration of the resources that will be destroyed.
         required: true
       environment-or-target:
-        description: The environment or target the destroy should be run against.
+        description: The environment or secondary region target to terraform destroy
         required: true
         type: choice
         options: # TODO: Update for the environments that are available
