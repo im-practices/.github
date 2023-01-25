@@ -192,7 +192,7 @@ jobs:
   attestor-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ github.event.inputs.environment-or-target }} Attestor Approval' # Use inputs context because env context is not available to environment:
+    environment: '${{ needs.set-vars.GITHUB_SECRETS_ENVIRONMENT }} Attestor Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: |
           echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
