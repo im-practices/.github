@@ -111,6 +111,8 @@ jobs:
           create-output-variables: true
         env:
           # Resource group you are targeting for deploy.  Also this variable is used to delete and re-create azure locks.
+          # TODO: Add the NA27 (West Central US) Resource Group to the stage-secondary/prod-secondary to the variables.
+          # TODO: Add the NA26 (West US2) Resource Groups to dev/qa/stage/demo/uat/prod to the variables
           TARGET_RESOURCE_GROUP@dev: ''
           TARGET_RESOURCE_GROUP@qa: ''
           TARGET_RESOURCE_GROUP@stage: ''
@@ -121,6 +123,7 @@ jobs:
           TARGET_RESOURCE_GROUP@prod-secondary: ''
 
           # Resource group holding the state storage account and managed service identities
+          # TODO: Add the Stage/Prod NA26 (West US2) Resource Groups below.
           PRIMARY_RESOURCE_GROUP@dev: ''
           PRIMARY_RESOURCE_GROUP@qa: ''
           PRIMARY_RESOURCE_GROUP@stage stage-secondary: ''
@@ -136,6 +139,7 @@ jobs:
           AZ_APP_NAME@uat: ''
           AZ_APP_NAME@prod: ''
           AZ_APP_NAME@prod-secondary: ''
+          
           # TODO: Uncomment if you use a (User Assigned) MSI with your app service
           # This variable is used to assign a managed identity on slot creation
           # AZ_APP_MSI@dev: ''
@@ -144,6 +148,8 @@ jobs:
           # AZ_APP_MSI@demo: ''
           # AZ_APP_MSI@uat: ''
           # AZ_APP_MSI@prod prod-secondary: ''
+          
+          # TODO: Add the NA26 (West Us2) AppInsights Instances to the variables
           # This variable is used to annotate app insights
           APP_INSIGHTS_NAME@dev: ''
           APP_INSIGHTS_NAME@qa: ''
@@ -151,6 +157,7 @@ jobs:
           APP_INSIGHTS_NAME@demo: ''
           APP_INSIGHTS_NAME@uat: ''
           APP_INSIGHTS_NAME@prod prod-secondary: '' # Currently appinsights isn't available in West Central US and you have to use West US 2 AppInsights
+          
           # Variables used for referencing secrets
           GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ github.event.inputs.environment-or-target }}'
           GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'

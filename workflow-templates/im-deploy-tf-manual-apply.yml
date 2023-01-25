@@ -98,6 +98,8 @@ jobs:
           create-output-variables: true
         env:
           # Resource group you are targeting for deploy.  Also this variable is used to delete and re-create azure locks.
+          # TODO: Add the NA27 (West Central US) Resource Group to the stage-secondary/prod-secondary to the variables.
+          # TODO: Add the NA26 (West US2) Resource Groups to dev/qa/stage/demo/uat/prod to the variables
           TARGET_RESOURCE_GROUP@dev: ''
           TARGET_RESOURCE_GROUP@qa: ''
           TARGET_RESOURCE_GROUP@stage: ''
@@ -106,20 +108,26 @@ jobs:
           TARGET_RESOURCE_GROUP@uat: ''
           TARGET_RESOURCE_GROUP@prod: ''
           TARGET_RESOURCE_GROUP@prod-secondary: ''
+
           # Resource group holding the state storage account and managed service identities
+          # TODO: Add the Stage/Prod NA26 (West US2) Resource Groups below.
           PRIMARY_RESOURCE_GROUP@dev: ''
           PRIMARY_RESOURCE_GROUP@qa: ''
           PRIMARY_RESOURCE_GROUP@stage stage-secondary: ''
           PRIMARY_RESOURCE_GROUP@demo: ''
           PRIMARY_RESOURCE_GROUP@prod prod-secondary: ''
+          
           # This variable is used to upload and download blobs from blob storage
+          # TODO: Add the NA26 (West US2) Resource Groups to the variables
           STORAGE_ACCOUNT@dev: ''
           STORAGE_ACCOUNT@qa: ''
           STORAGE_ACCOUNT@stage stage-secondary: ''
           STORAGE_ACCOUNT@demo: ''
           STORAGE_ACCOUNT@uat: ''
           STORAGE_ACCOUNT@prod prod-secondary: ''
+
           # TODO: Uncommnet to Annotate in AppInsights
+          # TODO: Add the NA26 (West Us2) AppInsights Instances to the variables
           # Used in appinsights annotations
           # APP_INSIGHTS_NAME@dev: ''
           # APP_INSIGHTS_NAME@qa: ''
