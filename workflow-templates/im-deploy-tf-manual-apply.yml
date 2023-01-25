@@ -67,7 +67,7 @@ jobs:
       TARGET_RESOURCE_GROUP: ${{ steps.set-variables.outputs.TARGET_RESOURCE_GROUP }}
       PRIMARY_RESOURCE_GROUP: ${{ steps.set-variables.outputs.PRIMARY_RESOURCE_GROUP }}
       STORAGE_ACCOUNT: ${{ steps.set-variables.outputs.STORAGE_ACCOUNT }}
-      # APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }} # TODO: Uncommnet to Annotate in AppInsights
+      # APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }} # TODO: Uncomment to Annotate in AppInsights
       GITHUB_SECRETS_ENVIRONMENT: ${{ steps.set-variables.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     steps:
