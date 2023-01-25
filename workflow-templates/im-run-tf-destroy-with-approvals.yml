@@ -121,7 +121,7 @@ jobs:
           PRIMARY_RESOURCE_GROUP@prod prod-secondary: ''
 
           # This variable is used to upload and download blobs from blob storage
-          # TODO: Add the NA26 (West US2) Resource Groups to the variables
+          # TODO: Add the NA26 (West US2) Storage Accounts to the variables
           STORAGE_ACCOUNT@dev: ''
           STORAGE_ACCOUNT@qa: ''
           STORAGE_ACCOUNT@stage stage-secondary: ''
