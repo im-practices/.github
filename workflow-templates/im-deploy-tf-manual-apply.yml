@@ -254,7 +254,7 @@ jobs:
           EOF
           )
 
-          plan_results=$(echo "$plan" | grep -e "Plan:" -e "No changes." -e "# module.")
+          plan_results=$(echo "$plan" | grep -e "Plan:" -e "No changes." -e "# module.") # TODO: Add any unique filters required in your pipeline.  IE terraform-f5 output doesn't have module. prefix.
           echo "Plan Results Returned:"
           echo "$plan_results "       
           if [[ -z "$plan_results" ]]; then
