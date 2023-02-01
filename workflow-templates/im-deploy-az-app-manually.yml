@@ -423,7 +423,7 @@ jobs:
         uses: im-open/create-app-insights-annotation@v1.0.2
         with:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
-          resourceGroupName: ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}
+          resourceGroupName: ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
           releaseName: '${{ needs.set-vars.outputs.AZ_APP_NAME }}-${{ env.RELEASE_TAG }}'
           category: 'Deployment'
