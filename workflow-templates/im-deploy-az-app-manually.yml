@@ -405,7 +405,7 @@ jobs:
       #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}
        
       # TODO: Uncomment if you have azure locks in stage and prod
-      # - name: Add Back RGRP Azure Locks
+      # - name: Add RGRP Azure Locks
       #   id: add-locks
       #   if: inputs.environment-or-target == 'prod' || inputs.environment-or-target == 'stage'
       #   run: |
