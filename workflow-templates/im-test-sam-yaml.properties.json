@@ -1,5 +1,0 @@
-{
-  "name": "Test - Validate and Export SAM YAML",
-  "description": "Workflow template for validating the sam.yaml file and exporting the metadata to Stewarship Mapping.",
-  "iconName": "im_test"
-}
