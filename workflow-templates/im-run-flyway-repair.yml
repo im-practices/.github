@@ -64,6 +64,8 @@ jobs:
         with:
           version: 7.9.2
 
+      # TODO: Remove this step if this workflow is run against an on-prem database
+      #       or if your database uses Azure Active Directory Authentication
       - name: AZ Login
         id: login
         uses: azure/login@v1
@@ -97,6 +99,7 @@ jobs:
           AZURE_KEY_VAULT@prod: ''
 
       # TODO: Remove this step if this workflow is run against an on-prem database
+      #       or if your database uses Azure Active Directory Authentication
       # Get the Azure SQL Creds from Key Vault
       - name: Get Azure SQL Credentials
         run: |
@@ -134,6 +137,9 @@ jobs:
       #       database/static-creds/<role-name> username | SQL_USERNAME ;
       #       database/static-creds/<role-name> password | SQL_PASSWORD
 
+      # TODO: If your database uses Azure Active Directory Authentication then you can login with a Service Principal
+      #       instead of using the username and password of an account stored in Key Vault.
+      #       See https://github.com/im-open/run-flyway-command for details.
       - name: Flyway repair
         uses: im-open/run-flyway-command@v1.4.0
         with:

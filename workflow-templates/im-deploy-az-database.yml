@@ -146,6 +146,7 @@ jobs:
         with:
           ref: ${{ env.RELEASE_TAG }}
 
+      # TODO: If your database uses Azure Active Directory Authentication then this step can be removed
       - name: AZ Login
         uses: azure/login@v1
         with:
@@ -181,6 +182,7 @@ jobs:
           AZURE_KEY_VAULT@prod: ''
 
       # Get the Azure SQL Creds from Key Vault
+      # TODO: If your database uses Azure Active Directory Authentication then this step can be removed
       - name: Get Azure SQL Credentials
         run: |
           sqlUser=$(az keyvault secret show --vault-name "${{ env.AZURE_KEY_VAULT }}" --name "sqluser" --query value)
@@ -192,6 +194,9 @@ jobs:
           echo "SQL_USER=$sqlUser" >> $GITHUB_ENV
           echo "SQL_PASSWORD=$sqlPassword" >> $GITHUB_ENV
 
+      # TODO: If your database uses Azure Active Directory Authentication then you can login with a Service Principal
+      #       instead of using the username and password of an account stored in Key Vault.
+      #       See https://github.com/im-open/run-flyway-command for details.
       - name: Deploy migrations
         uses: im-open/run-flyway-command@v1.4.0
         with:

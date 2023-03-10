@@ -1,4 +1,4 @@
-# Workflow Code: TroubledJaguar_v2    DO NOT REMOVE
+# Workflow Code: TroubledJaguar_v3    DO NOT REMOVE
 # Purpose: 
 #    Uses a container to run K6 with the file specified in 
 #    the workflow when commits are pushed to the main branch.
@@ -12,7 +12,7 @@
 #    - App Service or Function (Optional Template)
 #    - On-Prem Service         (Optional Template)
 
-name: K6 Automated Load Tester
+name: 🧪 K6 Automated Load Tester
 
 on:
   push:

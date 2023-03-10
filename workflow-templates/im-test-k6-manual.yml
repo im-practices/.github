@@ -13,7 +13,7 @@
 #    - App Service or Function (Optional Template)
 #    - On-Prem Service         (Optional Template)
 
-name: Run K6 test
+name: 🧪 Run K6 test
 run-name: Run ${{ inputs.test-file }} in ${{ inputs.env }}
 on:
   workflow_dispatch:
@@ -76,7 +76,7 @@ jobs:
     steps:
       - name: Set Runner Matrix
         id: set-matrix
-        uses: actions/github-script@v6
+        uses: actions/github-script@v6.3.3
         with:
           script: |
             let matrix = [];
@@ -94,7 +94,7 @@ jobs:
             core.setOutput('matrix',JSON.stringify(matrixObject));
 
       - name: Annotate Test Paramaters
-        uses: actions/github-script@v6
+        uses: actions/github-script@v6.3.3
         with:
           script: |
             var output = `
@@ -135,7 +135,7 @@ jobs:
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
         if: github.event.inputs.run-npm-build == 'true'
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v3.5.1
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -143,7 +143,7 @@ jobs:
       - name: NPM Cache
         id: npm-cache
         if: github.event.inputs.run-npm-build == 'true'
-        uses: actions/cache@v3
+        uses: actions/cache@v3.0.11
         with:
           path: '${{env.WORKING_DIRECTORY }}/node_modules'
           key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{env.WORKING_DIRECTORY }}/package-lock.json') }}
