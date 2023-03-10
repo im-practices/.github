@@ -1,0 +1,5 @@
+{
+    "name": "Deploy - TechDocs Site",
+    "description": "Template that can be used to deploy TechDocs sites to TechHub's storage account for ingestion.",
+    "iconName": "im_deploy"
+  }
