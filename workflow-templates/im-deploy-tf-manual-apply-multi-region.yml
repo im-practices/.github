@@ -13,7 +13,7 @@
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
-name: Apply Terraform
+name: Apply Terraform to Multi-Regions
 run-name: Apply ${{ inputs.branch-tag-sha }} terraform to ${{ inputs.environment-or-target }}
 on:
   workflow_dispatch:

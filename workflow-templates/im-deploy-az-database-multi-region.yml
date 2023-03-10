@@ -19,7 +19,7 @@
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 #      Generally one board should be set up per database in the repository.
 
-name: Deploy Database to Azure Multi-Region # TODO: If there are multiple az databases in the repo, append the db name to this workflow's file name and update the workflow name below
+name: Deploy Database to Azure Multi-Regions # TODO: If there are multiple az databases in the repo, append the db name to this workflow's file name and update the workflow name below
 run-name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }} AZ DB
 on:
   # TODO: If the repository has a single deployable artifact or multiple deployables that are deployed independently:
