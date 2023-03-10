@@ -11,8 +11,8 @@
 # TODO Prerequisites
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
-name: Destroy Terraform with Approvals
-run-name: Destroy ${{ inputs.branch-tag-sha }} Terraform to ${{ inputs.environment-or-target }} with Approvals
+name: Destroy Terraform to Multi-Regions
+run-name: Destroy ${{ inputs.branch-tag-sha }} Terraform to ${{ inputs.environment-or-target }} to Multi-Regions
 on:
   workflow_dispatch:
     inputs:
