@@ -1,0 +1,5 @@
+{
+  "name": "Deploy - TF Apply Multiple Regions",
+  "description": "Workflow template for kicking off a terraform apply to multiple regions.",
+  "iconName": "im_tf"
+}

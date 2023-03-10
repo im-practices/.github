@@ -1,0 +1,6 @@
+{
+    "name": "Deploy - AZ Database to Multiple Regions",
+    "description": "Template that can be used to deploy database updates to multiple regions. It runs flyway migrations.",
+    "iconName": "im_azure"
+  }
+  
