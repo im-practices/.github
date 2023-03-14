@@ -12,7 +12,7 @@
 
 name: Publish TechDocs Site
 
-# TODO:  Update the triggers where TechDocs will be published
+# TODO:  Select the appropriate triggers for when TechDocs should be published
 on:
   # push:
   # workflow_dispatch:
@@ -22,6 +22,7 @@ on:
 jobs:
   publish-techdocs-site:
     runs-on: [self-hosted, im-techdocs]
+
     # TODO:  Uncomment if you need this, otherwise remove it
     # services:
     #   kroki:
@@ -51,6 +52,12 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO:  Verify this secret is set
+
+      # The im-techdocs runner used in this workflow contains the TechDocs CLI & several plugins, see the installed items here:
+      #     https://github.com/im-practices/coldstone-configs/blob/main/configs/im-techdocs.cold.json
+      # If additional plugins are needed, follow the same format as below or submit to modify the im-techdocs runner.
+      # - name: Install additional mkdocs plugins
+      #   run: python -m pip install mkdocs-newsletter==1.*
 
       - name: Generate & Publish TechDocs Site
         working-directory: '' # TODO:  specify the working directory where the mkdocs.yaml file is located
