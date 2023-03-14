@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v14   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v15   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -197,7 +197,7 @@ jobs:
 
       - name: Send Status to Teams - Starting Test
         continue-on-error: true
-        uses: im-open/post-status-to-teams-action@v1.3.2
+        uses: im-open/post-status-to-teams-action@v1.3
         with:
           title: 'K6 Test Starting Shortly in AKS - ${{ github.event.inputs.run-name }}'
           workflow-status: started
@@ -295,7 +295,7 @@ jobs:
       - name: Send Status to Teams - Test Finished
         if: always()
         continue-on-error: true
-        uses: im-open/post-status-to-teams-action@v1.3.2
+        uses: im-open/post-status-to-teams-action@v1.3
         with:
           title: 'K6 Test in AKS Complete - ${{ github.event.inputs.run-name }}'
           workflow-status: ${{ steps.run-k6-operator-test.outcome }}

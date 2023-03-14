@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v15    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v16    DO NOT REMOVE
 # Purpose:
 #    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
@@ -60,7 +60,7 @@ jobs:
           ref: ${{ env.GITHUB_REF }}
 
       - name: Install Flyway
-        uses: im-open/setup-flyway@v1.1.1
+        uses: im-open/setup-flyway@v1.1
         with:
           version: 7.9.2
 
@@ -78,7 +78,7 @@ jobs:
       # TODO: Use this for any variables that change per environment
       - name: Set Database Vars
         id: db-vars
-        uses: im-open/set-environment-variables-by-scope@v1.1.2
+        uses: im-open/set-environment-variables-by-scope@v1.1
         with:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
@@ -115,7 +115,7 @@ jobs:
       # TODO: Uncomment this step if this workflow is run against an on-prem database
       # - name: Get Vault Token
       #   id: vault_token
-      #   uses: im-open/get-vault-token-for-azure-user@v1.1.0
+      #   uses: im-open/get-vault-token-for-azure-user@v1.1
       #   with:
       #     # TODO: Add the Azure Auth Method Role that was setup in Vault and has access to your secrets.
       #     # See this git-er-done article for more information:
@@ -141,7 +141,7 @@ jobs:
       #       instead of using the username and password of an account stored in Key Vault.
       #       See https://github.com/im-open/run-flyway-command for details.
       - name: Flyway repair
-        uses: im-open/run-flyway-command@v1.4.0
+        uses: im-open/run-flyway-command@v1.4
         with:
           flyway-command: 'repair'
           db-server-name: ${{ steps.db-vars.outputs.DB_SERVER_NAME }}

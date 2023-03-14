@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v13    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v14    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc app insights annotation for a specified
 #    environment when someone kicks it off manually.
@@ -65,7 +65,7 @@ jobs:
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
         id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.1.2
+        uses: im-open/set-environment-variables-by-scope@v1.1
         with:
           scope: ${{ github.event.inputs.environment }}
         env:
@@ -91,7 +91,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
       - name: annotate
-        uses: im-open/create-app-insights-annotation@v1.0.2
+        uses: im-open/create-app-insights-annotation@v1.0
         with:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
           resourceGroupName: ${{ env.RESOURCE_GROUP }}
