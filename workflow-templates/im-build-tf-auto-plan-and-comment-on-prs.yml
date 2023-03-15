@@ -49,6 +49,7 @@ jobs:
           { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
           { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
         ]
+
     defaults:
       run:
         shell: bash
@@ -90,6 +91,7 @@ jobs:
         run: |
           terraform plan -no-color -lock=false \
             -var="pagerduty_token=${{ secrets.PAGERDUTY_API_KEY }}"
+
       - name: 'Terraform Comment'
         if: always()
         uses: actions/github-script@v6
