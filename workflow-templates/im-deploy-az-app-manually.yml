@@ -292,7 +292,7 @@ jobs:
 
       # TODO: remove this step if this workflow is for an azure app service
       - name: Deploy to Azure Function
-        uses: azure/functions-action@v1.4.4
+        uses: azure/functions-action@v1.4.8
         with:
           app-name: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
           package: ./${{ env.UNZIPPED_ASSET }}
