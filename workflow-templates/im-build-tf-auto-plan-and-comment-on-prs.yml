@@ -61,13 +61,13 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.2
+        uses: hashicorp/setup-terraform@v2.0.3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.1.2
+        uses: im-open/setup-deploy-keys@v1.1
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 

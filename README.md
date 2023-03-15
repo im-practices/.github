@@ -33,7 +33,7 @@ The templates in this repository fall into one of the following categories:
     - im_azure
     - im_build
     - im_checkmarx
-    - im_deploy    
+    - im_deploy
     - im_run
     - im_test
     - im_tf

@@ -1,4 +1,4 @@
-# Workflow Code: NeedyPig_v12    DO NOT REMOVE
+# Workflow Code: NeedyPig_v13    DO NOT REMOVE
 # Purpose:
 #    Performs a start, stop or restart on an app service in the
 #    specified environment when someone kicks it off manually.
@@ -65,7 +65,7 @@ jobs:
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
         id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.1.2
+        uses: im-open/set-environment-variables-by-scope@v1.1
         with:
           scope: ${{ env.ENVIRONMENT }}
         env:

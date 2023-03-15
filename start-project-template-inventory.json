@@ -1,6 +1,5 @@
 {
     "AllRepositories": [
-        "im-test-checkmarx-cli-sast-scan.yml",
         "im-deploy-cleanup-automated-board.yml"
     ],
     "bff-with-react": {

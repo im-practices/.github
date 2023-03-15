@@ -1,6 +1,6 @@
 # Contributing
 The following is a set of general guidelines for contributing to `im-practices` projects.
-First consult the project's README.md to see if there are any contributing guidelines or links.  You can always reach out to the team listed in the `SAM.yaml` file fore more information as well.
+First consult the project's README.md to see if there are any contributing guidelines or links.  You can always reach out to the team listed in the `CODEOWNERS` file fore more information as well.
 
 ## Code of Conduct
 This project is governed by the `im-practices` Organization's [Code of Conduct](./CODE_OF_CONDUCT.md).  By participating you are expected to uphold this code.    

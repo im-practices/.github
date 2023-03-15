@@ -1,4 +1,4 @@
-# Workflow Code: FrazzledFerret_v18    DO NOT REMOVE
+# Workflow Code: FrazzledFerret_v19    DO NOT REMOVE
 # Purpose:
 #    Removes a lock from the terraform state when someone kicks it off manually.
 #
@@ -81,12 +81,12 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.1.2
+        uses: im-open/setup-deploy-keys@v1.1
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2.0.2
+        uses: hashicorp/setup-terraform@v2.0.3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
