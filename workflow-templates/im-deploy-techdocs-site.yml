@@ -1,0 +1,73 @@
+# Workflow Code: SparklyToad_v1    DO NOT REMOVE
+# Purpose:
+#    Publishes a techdocs site to the storage account where TechHub
+#    looks for TechDocs.
+#
+# Frequency:
+#    - This workflow can be used once per TechDocs site or can be combined
+#      to publish multiple docs at once
+#
+# Projects to use this Template with:
+#    - Any project with TechDocs 
+
+name: Publish TechDocs Site
+
+# TODO:  Select the appropriate triggers for when TechDocs should be published
+on:
+  # push:
+  # workflow_dispatch:
+  # pull_request:
+  #   types: [closed]
+
+jobs:
+  publish-techdocs-site:
+    runs-on: [self-hosted, im-techdocs]
+
+    # TODO:  Uncomment if you need this, otherwise remove it
+    # services:
+    #   kroki:
+    #     image: yuzutech/kroki
+    #     ports:
+    #       - 8000:8000
+
+    environment: dev
+
+    env:
+      # These items will remain the same for all workflows
+      ACCOUNT_NAME: bdaimpna26techhubsa
+      CONTAINER_NAME: techdocs
+
+      # This is project dependent.  
+      # TODO:  Replace kind and entity name based on the entity this techdocs site will belong to.
+      #        The name can be found in catalog-info.yaml.
+      ENTITY_NAME: 'default/<add-kind>/<add-entity-name>'
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # All SPs that are owners of their rgrp's have access to publish to bdaimpna26techhubsa.
+      # Use the credentials for your SP to login and publish to the storage account.
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO:  Verify this secret is set
+
+      # The im-techdocs runner used in this workflow contains the TechDocs CLI & several plugins, see the installed items here:
+      #     https://github.com/im-practices/coldstone-configs/blob/main/configs/im-techdocs.cold.json
+      # If additional plugins are needed, follow the same format as below or submit to modify the im-techdocs runner.
+      # - name: Install additional mkdocs plugins
+      #   run: python -m pip install mkdocs-newsletter==1.*
+
+      - name: Generate & Publish TechDocs Site
+        working-directory: '' # TODO:  specify the working directory where the mkdocs.yaml file is located
+        run: |
+          techdocs-cli generate --no-docker --verbose
+          techdocs-cli publish --publisher-type azureBlobStorage --azureAccountName ${{ env.ACCOUNT_NAME }} --storage-name ${{ env.CONTAINER_NAME }} --entity ${{ env.ENTITY_NAME }}
+
+      # TODO: To publish additional sites:
+      #       1 - Duplicate the 'Generate & Publish TechDocs Site' step
+      #       2 - Give each step a more specific name
+      #       3 - Update the working directory to the location of the additional site
+      #       4 - Update the --entity argument with the name of the additional site
+      
