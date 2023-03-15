@@ -192,7 +192,7 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.2
+        uses: hashicorp/setup-terraform@v2.0.3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
@@ -282,7 +282,7 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.2
+        uses: hashicorp/setup-terraform@v2.0.3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
