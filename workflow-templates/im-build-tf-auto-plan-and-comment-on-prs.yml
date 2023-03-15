@@ -49,7 +49,6 @@ jobs:
           { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
           { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
         ]
-
     defaults:
       run:
         shell: bash
@@ -91,31 +90,6 @@ jobs:
         run: |
           terraform plan -no-color -lock=false \
             -var="pagerduty_token=${{ secrets.PAGERDUTY_API_KEY }}"
-
-      - name: Output Plan Results Summary
-        id: plan-results-output
-        continue-on-error: true
-        run: |
-          plan=$(cat <<'EOF'
-          ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
-          EOF
-          )
-
-          plan_results=$(echo "$plan" | grep -e "Plan:" -e "No changes." -e "# module.") # TODO: Add any unique filters required in your pipeline.  IE terraform-f5 output doesn't have module. prefix.
-          echo "Plan Results Returned:"
-          echo "$plan_results "       
-          if [[ -z "$plan_results" ]]; then
-            plan_results="Errors were found in terraform plan"
-          fi
-
-          cat > $GITHUB_STEP_SUMMARY << EOL
-          ## Plan Results Summary [${{ matrix.environment }}]
-
-          \`\`\`js
-          $plan_results
-          \`\`\`
-          EOL
-
       - name: 'Terraform Comment'
         if: always()
         uses: actions/github-script@v6
