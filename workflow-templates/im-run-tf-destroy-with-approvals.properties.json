@@ -1,5 +1,5 @@
 {
-    "name": "Run - Terraform Destroy to Multi-Regions",
+    "name": "Run - Terraform Destroy with Approvals",
     "description": "Destroys all remote objects managed by a terraform configuration with required approvals to multiple regions",
     "iconName": "im_tf"
 }

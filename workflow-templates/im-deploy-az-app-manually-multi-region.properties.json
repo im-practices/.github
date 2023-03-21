@@ -1,5 +1,0 @@
-{
-  "name": "Deploy - AZ App Deploy Multi-Region",
-  "description": "Template that can be used to deploy code to an Azure App Service or Function including their slots to multiple regions",
-  "iconName": "im_azure"
-}

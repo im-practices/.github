@@ -1,28 +1,27 @@
-# Workflow Code: InsaneCamster_v34    DO NOT REMOVE
+# Workflow Code: HangryToucan_v1    DO NOT REMOVE
 # Purpose:
-#    Deploys the terraform at a specified tag to a specified
-#    environment when someone kicks off the build manually.
+#    Destroys all the remote objects for a terraform configuration when someone kicks it off manually.
 #
 # Frequency:
 #    - This workflow should only be used once per repository
 #
 # Projects to use this Template with:
-#    - Terraform (Core Template)
+#    -  Terraform (Optional Template)
 #
-# TODO: Prerequisites:
+# TODO Prerequisites
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
-name: Apply Terraform to Multi-Regions
-run-name: Apply ${{ inputs.branch-tag-sha }} terraform to ${{ inputs.environment-or-target }}
+name: Destroy Terraform with Approvals
+run-name: Destroy ${{ inputs.branch-tag-sha }} Terraform to ${{ inputs.environment-or-target }} with Approvals
 on:
   workflow_dispatch:
     inputs:
+      # This is required because a tf init has to be performed before the terraform destroy command
       branch-tag-sha:
-        description: The branch, tag or sha of the terraform that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
+        description: The branch, tag or sha of the terraform that has the configuration of the resources that will be destroyed.
         required: true
       environment-or-target:
-        description: The environment or secondary region target to deploy to
+        description: The environment or secondary region target to terraform destroy
         required: true
         type: choice
         options: # TODO: Update for the environments that are available
@@ -34,10 +33,13 @@ on:
           - prod
           - stage-secondary
           - prod-secondary
+      tf-targets:
+        description: 'Targeted Destroys: format -target module.your-module.resource'
+        required: false
 
 env:
   ENVIRONMENT: ${{ inputs.environment-or-target }}
-  GITHUB_REF: ${{ inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
+  GITHUB_REF: ${{ inputs.branch-tag-sha  }} # This is the branch/tag/sha where terraform resources will be destroyed
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PLAN_STORAGE_CONTAINER: 'tfstate'
   # The following ARM_* secrets are org-level secrets
@@ -67,7 +69,6 @@ jobs:
       TARGET_RESOURCE_GROUP: ${{ steps.set-variables.outputs.TARGET_RESOURCE_GROUP }}
       PRIMARY_RESOURCE_GROUP: ${{ steps.set-variables.outputs.PRIMARY_RESOURCE_GROUP }}
       STORAGE_ACCOUNT: ${{ steps.set-variables.outputs.STORAGE_ACCOUNT }}
-      # APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }} # TODO: Uncomment to Annotate in AppInsights
       GITHUB_SECRETS_ENVIRONMENT: ${{ steps.set-variables.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     steps:
@@ -87,6 +88,8 @@ jobs:
         uses: im-open/verify-git-ref@v1.2.0
         with:
           branch-tag-sha: ${{ env.GITHUB_REF }}
+
+      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
@@ -110,13 +113,13 @@ jobs:
           TARGET_RESOURCE_GROUP@prod-secondary: ''
 
           # Resource group holding the state storage account and managed service identities
-          # TODO: Add the Stage/Prod NA26 (West US2) Resource Groups below.
+          # TODO: Add the Stage/Prod NA26 (West US2) Resource Groups to the variables.
           PRIMARY_RESOURCE_GROUP@dev: ''
           PRIMARY_RESOURCE_GROUP@qa: ''
           PRIMARY_RESOURCE_GROUP@stage stage-secondary: ''
           PRIMARY_RESOURCE_GROUP@demo: ''
           PRIMARY_RESOURCE_GROUP@prod prod-secondary: ''
-          
+
           # This variable is used to upload and download blobs from blob storage
           # TODO: Add the NA26 (West US2) Storage Accounts to the variables
           STORAGE_ACCOUNT@dev: ''
@@ -126,34 +129,15 @@ jobs:
           STORAGE_ACCOUNT@uat: ''
           STORAGE_ACCOUNT@prod prod-secondary: ''
 
-          # TODO: Uncommnet to Annotate in AppInsights
-          # TODO: Add the NA26 (West Us2) AppInsights Instances to the variables
-          # Used in appinsights annotations
-          # APP_INSIGHTS_NAME@dev: ''
-          # APP_INSIGHTS_NAME@qa: ''
-          # APP_INSIGHTS_NAME@stage stage-secondary: ''
-          # APP_INSIGHTS_NAME@demo: ''
-          # APP_INSIGHTS_NAME@prod prod-secondary: ''
           # Used for getting Azure Credentials Secrets
           GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ inputs.environment-or-target }}'
           GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
           GITHUB_SECRETS_ENVIRONMENT@prod-secondary: 'prod'
 
-  # Each env has their own stakeholder approval environment.  If no required reviewers are set for
-  # that environment, the workflow will continue without requiring anyone to approve the deployment.
-  stakeholder-approval:
-    needs: [set-vars]
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
-    steps:
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
-      - name: Approval Received
-        run: echo "Stakeholder approval was received"
-
   # This job needs to run for all environments because tf-plan relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
-    needs: [set-vars, stakeholder-approval]
+    needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
       - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
@@ -181,9 +165,6 @@ jobs:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
-    env:
-      PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ inputs.environment-or-target }} environment from GitHub Actions' # TODO: Verify this description
-      PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
 
     defaults:
       run:
@@ -192,7 +173,6 @@ jobs:
 
     outputs:
       tf_plan_name: ${{ steps.upload.outputs.tf_plan_name }}
-      maintenance_window_id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
     steps:
       - name: Checkout Repository
@@ -208,16 +188,6 @@ jobs:
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
-      - name: Open a PagerDuty Maintenance Window
-        id: open-window
-        uses: im-open/open-pagerduty-maintenance-window@v1.2.2
-        with:
-          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
-          description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
-          minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
-          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
-          #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
-
       - name: AZ Login
         uses: azure/login@v1
         with:
@@ -225,7 +195,7 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.2
+        uses: hashicorp/setup-terraform@v2.0.3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
@@ -241,9 +211,9 @@ jobs:
         id: plan
         run: |
           mkdir plans
-          terraform plan -no-color -lock-timeout=90s \
+          terraform plan -destroy -no-color -lock-timeout=90s \
             -var="pagerduty_token=${{ secrets.PAGERDUTY_API_KEY }}" \
-            -out=./plans/tfplan
+            -out=./plans/tfplan ${{ inputs.tf-targets }}
 
       - name: Output Plan Results Summary
         id: plan-results-output
@@ -311,7 +281,8 @@ jobs:
   tf-apply:
     needs: [set-vars, tf-plan, tf-plan-manual-approval]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ inputs.environment-or-target }} # Use inputs context because env context is not available to environment:
+    # runs-on: [self-hosted, coldstone, ubuntu-coldstone]
+    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     defaults:
       run:
@@ -328,7 +299,7 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.1.2
+        uses: im-open/setup-deploy-keys@v1.1.1
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
@@ -339,7 +310,7 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.2
+        uses: hashicorp/setup-terraform@v2.0.3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
@@ -376,20 +347,8 @@ jobs:
         id: init
         run: terraform init
 
-      - name: Terraform Apply
+      - name: Terraform Destroy
         run: terraform apply -auto-approve -no-color -lock-timeout=90s -input=false ./plans/tfplan
-
-      # TODO: Uncommnet to Annotate in AppInsights
-      # - name: Annotate App Insights
-      #   uses: im-open/create-app-insights-annotation@v1.0.2
-      #   continue-on-error: true
-      #   with:
-      #     subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
-      #     resourceGroupName: ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}
-      #     appInsightsResourceName: ${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}
-      #     releaseName: 'Infra.${{ env.GITHUB_REF }}'
-      #     category: 'Deployment'
-      #     customMetadata: 'ProjectName=<project name>,DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}' # TODO: Update project name
 
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Add RGRP Azure Locks
@@ -404,12 +363,6 @@ jobs:
           az cache purge
           az account clear
 
-      - name: Close the PagerDuty Maintenance Window
-        uses: im-open/close-pagerduty-maintenance-window@v1.1.2
-        with:
-          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
-          maintenance-window-id: ${{ needs.tf-plan.outputs.maintenance_window_id }}
-
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     needs: [set-vars, tf-apply]
@@ -422,7 +375,7 @@ jobs:
       # Details on how to set up that action can be found in the action's README.
       # There are secrets for the username and password already set up as org level secrets called JIRA_USERNAME and JIRA_PASSWORD.
 
-      - uses: im-open/workflow-conclusion@v2.1.2
+      - uses: im-open/workflow-conclusion@v2.1.1
         id: conclusion
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
@@ -438,14 +391,14 @@ jobs:
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.GITHUB_REF }}
           #deployable-type: '' # TODO:  If there are multiple deployables in the repository, add a string type like MFE/DB/API
-          deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion == 'success' && '💥 destroyed' || steps.conclusion.outputs.workflow_conclusion}}
           timezone: ${{ env.TIMEZONE }}
 
       - name: Send Status to Teams
         if: always()
-        uses: im-open/post-status-to-teams-action@v1.3.2
+        uses: im-open/post-status-to-teams-action@v1.3.1
         with:
-          title: Deploying <project-name> Terraform to Azure to ${{ inputs.environment-or-target }} # TODO: Replace <project-name> with your project
+          title: Destroyed <project-name> Terraform to Azure to ${{ inputs.environment-or-target }} # TODO: Replace <project-name> with your project
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
