@@ -381,7 +381,7 @@ jobs:
 
       # TODO: Uncommnet to Annotate in AppInsights
       # - name: Annotate App Insights
-      #   uses: im-open/create-app-insights-annotation@v1.0.2
+      #   uses: im-open/create-app-insights-annotation@v1.0
       #   continue-on-error: true
       #   with:
       #     subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
