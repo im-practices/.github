@@ -208,7 +208,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Setup Flyway
-        uses: im-open/setup-flyway@v1.1.1
+        uses: im-open/setup-flyway@v1.1
         with:
           version: 7.9.2
 
@@ -217,7 +217,7 @@ jobs:
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Database Vars
         id: db-vars
-        uses: im-open/set-environment-variables-by-scope@v1.1.2
+        uses: im-open/set-environment-variables-by-scope@v1.1
         with:
           scope: ${{ inputs.environment-or-target }}
           create-output-variables: true

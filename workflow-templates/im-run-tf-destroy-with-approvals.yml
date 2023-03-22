@@ -281,7 +281,6 @@ jobs:
   tf-apply:
     needs: [set-vars, tf-plan, tf-plan-manual-approval]
     runs-on: [self-hosted, ubuntu-20.04]
-    # runs-on: [self-hosted, coldstone, ubuntu-coldstone]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     defaults:
