@@ -52,7 +52,7 @@ env:
   # The following SSH_* secrets are org-level secrets
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
-  SSH_KEY_AAD_GROUP_MEMBERS: ${{ secrets.SSH_AAD_GROUP_MEMBERS }} # This is an org level secret
+  SSH_KEY_AAD_GROUP_MEMBERS: ${{ secrets.SSH_AAD_GROUP_MEMBERS }}
   SSH_DEPLOY_KEY_INFO: |
     [
       { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
