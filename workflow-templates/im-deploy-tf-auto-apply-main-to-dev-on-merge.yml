@@ -24,7 +24,7 @@ env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PAGERDUTY_WINDOW_IN_MIN: 10 # TODO: Verify the length of your PD Maintenance Window
   PAGERDUTY_WINDOW_DESC: 'Auto apply main branch to Dev environment from GitHub Actions' # TODO: Verify this description
-  # The following ARM_* secrets are org-level secrets
+  # The following ARM_* secrets are env-level secrets
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
