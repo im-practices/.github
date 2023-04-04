@@ -1,7 +1,7 @@
 # Workflow Code: InsaneHamster_v35    DO NOT REMOVE
 # Purpose:
-#    Deploys the terraform at a specified tag to a specified
-#    environment when someone kicks off the build manually.
+#    Deploys the terraform from a specified root module at a 
+#    specified when someone kicks off the workflow manually.
 #
 # Frequency:
 #    - This workflow should only be used once per repository
@@ -14,18 +14,18 @@
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
 name: Apply Terraform
-run-name: Apply ${{ inputs.branch-tag-sha }} terraform to ${{ inputs.environment-or-target }}
+run-name: Apply ${{ inputs.root-module }} terraform from ${{ inputs.branch-tag-sha }}
 on:
   workflow_dispatch:
     inputs:
       branch-tag-sha:
         description: The branch, tag or sha of the terraform that should be deployed.  For Production, only tags reachable by the default branch will be accepted.
         required: true
-      environment-or-target:
-        description: The environment or secondary region target to deploy to
+      root-module:
+        description: The directory containing the Terraform root module to apply
         required: true
         type: choice
-        options: # TODO: Update for the environments that are available
+        options: # TODO: Update for the root modules that are available
           - dev
           - qa
           - stage
@@ -36,23 +36,23 @@ on:
           - prod-secondary
 
 env:
-  ENVIRONMENT: ${{ inputs.environment-or-target }}
+  DEPLOYMENT_DESC: 'Applying <project-name> ${{ inputs.root-module }} terraform at ${{ inputs.branch-tag-sha }} from GitHub Actions.' # TODO: Replace <project-name> with your project
   GITHUB_REF: ${{ inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PLAN_STORAGE_CONTAINER: 'tfstate'
-  # The following ARM_* secrets are org-level secrets
+  # The following ARM_* secrets are env-level secrets
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
   ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
-  TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
-  TF_WORKING_DIR: './infrastructure/${{ inputs.environment-or-target }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
+  TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
+  TF_WORKING_DIR: './infrastructure/${{ inputs.root-module }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
   # The following SSH_* secrets are org-level secrets
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
-  SSH_KEY_AAD_GROUP_MEMBERS: ${{ secrets.SSH_AAD_GROUP_MEMBERS }} # This is an org level secret
+  SSH_KEY_AAD_GROUP_MEMBERS: ${{ secrets.SSH_AAD_GROUP_MEMBERS }}
   SSH_DEPLOY_KEY_INFO: |
     [
       { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
@@ -77,7 +77,7 @@ jobs:
           echo $'
           | Build Arguments | Value                    |
           | ---             |  ---                     |
-          | Environment     | `${{ inputs.environment-or-target }}` |
+          | Root module     | `${{ inputs.root-module }}` |
           | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
       
       - name: Checkout Repository
@@ -85,7 +85,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify Tag Exists
+      - name: Verify Ref Exists
         uses: im-open/verify-git-ref@v1.2
         with:
           branch-tag-sha: ${{ env.GITHUB_REF }}
@@ -96,7 +96,7 @@ jobs:
         id: set-variables
         uses: im-open/set-environment-variables-by-scope@v1.1
         with:
-          scope: ${{ inputs.environment-or-target }}
+          scope: ${{ inputs.root-module }}
           create-output-variables: true
         env:
           # Resource group you are targeting for deploy.  Also this variable is used to delete and re-create azure locks.
@@ -118,7 +118,7 @@ jobs:
           PRIMARY_RESOURCE_GROUP@stage stage-secondary: ''
           PRIMARY_RESOURCE_GROUP@demo: ''
           PRIMARY_RESOURCE_GROUP@prod prod-secondary: ''
-          
+
           # This variable is used to upload and download blobs from blob storage
           # TODO: Add the NA26 (West US2) Storage Accounts to the variables
           STORAGE_ACCOUNT@dev: ''
@@ -136,8 +136,9 @@ jobs:
           # APP_INSIGHTS_NAME@stage stage-secondary: ''
           # APP_INSIGHTS_NAME@demo: ''
           # APP_INSIGHTS_NAME@prod prod-secondary: ''
+
           # Used for getting Azure Credentials Secrets
-          GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ inputs.environment-or-target }}'
+          GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ inputs.root-module }}'
           GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
           GITHUB_SECRETS_ENVIRONMENT@prod-secondary: 'prod'
 
@@ -148,29 +149,27 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
       - name: Approval Received
         run: echo "Stakeholder approval was received"
 
   # This job needs to run for all environments because tf-plan relies
   # on it but the steps inside this job will only run for the Prod env.
   validate-tag-is-in-main-for-prod-deploys:
-    needs: [set-vars, stakeholder-approval]
+    needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
-        if: inputs.environment-or-target == 'prod'
+        if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod'
         uses: actions/checkout@v3
         with:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.1
-        if: inputs.environment-or-target == 'prod'
+        if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod'
         with:
           tag: ${{ env.GITHUB_REF }}
 
@@ -182,9 +181,8 @@ jobs:
   tf-plan:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} # Use inputs context because env context is not available to environment:
+    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
     env:
-      PAGERDUTY_WINDOW_DESC: 'Deploying Infrastructure to the ${{ inputs.environment-or-target }} environment from GitHub Actions' # TODO: Verify this description
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
 
     defaults:
@@ -202,8 +200,6 @@ jobs:
         with:
           ref: ${{ env.GITHUB_REF }}
 
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
-
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
         uses: im-open/setup-deploy-keys@v1.1
@@ -215,7 +211,7 @@ jobs:
         uses: im-open/open-pagerduty-maintenance-window@v1.2
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
-          description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
+          description: '${{ env.DEPLOYMENT_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
           service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
@@ -263,8 +259,8 @@ jobs:
             plan_results="Errors were found in terraform plan"
           fi
 
-          cat > $GITHUB_STEP_SUMMARY << EOL
-          ## Plan Results Summary [${{ inputs.environment-or-target }}]
+          cat >> $GITHUB_STEP_SUMMARY << EOL
+          ## Plan Results Summary [${{ inputs.root-module }}]
 
           \`\`\`js
           $plan_results
@@ -305,15 +301,13 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: 'Terraform Approval' # TODO: Add required reviewers to this environment in GitHub.  This should be anyone who can review a terraform plan and proceed with the deployment
     steps:
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
-
       - name: Approval Received
         run: echo "Approval on the tf plan was received"
 
   tf-apply:
-    needs: [set-vars, tf-plan, tf-plan-manual-approval]
+    needs: [set-vars, tf-plan, tf-plan-manual-approval, stakeholder-approval]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ inputs.environment-or-target }} # Use inputs context because env context is not available to environment:
+    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     defaults:
       run:
@@ -325,8 +319,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ env.GITHUB_REF }}
-
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
@@ -369,7 +361,7 @@ jobs:
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Delete RGRP Azure Locks
       #   id: remove-locks
-      #   if: inputs.environment-or-target == 'prod' || inputs.environment-or-target == 'stage'
+      #   if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod' || needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'stage'
       #   run: |
       #     az group lock delete --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}"
       #     sleep 5s
@@ -381,12 +373,15 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color -lock-timeout=90s -input=false ./plans/tfplan
 
-      # TODO: Uncommnet to Annotate in AppInsights
+      # TODO: Uncomment to Annotate in AppInsights
       # - name: Annotate App Insights
       #   uses: im-open/create-app-insights-annotation@v1.0
       #   continue-on-error: true
       #   with:
       #     subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
+      #
+      #     # The following line assumes the App insights resource is always in the primary region's resource group.
+      #     # You might change this when App insights becomes available in our secondary region.
       #     resourceGroupName: ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}
       #     appInsightsResourceName: ${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}
       #     releaseName: 'Infra.${{ env.GITHUB_REF }}'
@@ -396,7 +391,7 @@ jobs:
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Add RGRP Azure Locks
       #   id: add-locks
-      #   if: inputs.environment-or-target == 'prod' || inputs.environment-or-target == 'stage'
+      #   if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod' || needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'stage'
       #   run: |
       #     az group lock create --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}" --lock-type CanNotDelete
 
@@ -417,7 +412,6 @@ jobs:
     needs: [set-vars, tf-apply]
     if: always()
     steps:
-      - run: echo "The current environment is ${{  inputs.environment-or-target  }}.  The branch/tag/sha is ${{ env.GITHUB_REF }}."
 
       # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
       # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
@@ -436,7 +430,7 @@ jobs:
         uses: im-open/update-deployment-board@v1.5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
-          environment: ${{ inputs.environment-or-target }}
+          environment: ${{ inputs.root-module }}
           board-number: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
           ref: ${{ env.GITHUB_REF }}
           #deployable-type: '' # TODO:  If there are multiple deployables in the repository, add a string type like MFE/DB/API
@@ -447,7 +441,7 @@ jobs:
         if: always()
         uses: im-open/post-status-to-teams-action@v1.3
         with:
-          title: Deploying <project-name> Terraform to Azure to ${{ inputs.environment-or-target }} # TODO: Replace <project-name> with your project
+          title: ${{ env.DEPLOYMENT_DESC }}
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
