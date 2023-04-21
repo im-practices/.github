@@ -466,7 +466,6 @@ jobs:
     needs: [set-vars, deploy-code]
     if: always()
     steps:
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
       # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
