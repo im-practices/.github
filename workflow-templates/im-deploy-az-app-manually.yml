@@ -332,7 +332,7 @@ jobs:
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Delete RGRP Azure Locks
       #   id: remove-locks
-      #   if: inputs.environment-or-target == 'prod' || inputs.environment-or-target == 'stage'
+      #   if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod' || needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'stage'
       #   run: |
       #     az group lock delete --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}"
       #     sleep 5s
