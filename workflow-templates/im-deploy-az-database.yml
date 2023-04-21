@@ -37,15 +37,17 @@ on:
         options:
           - dev
           - qa
+          - stage
           - demo
           - uat
-          - stage
           - prod
+          - stage-secondary
+          - prod-secondary
 
   # TODO: If a repository has multiple deployable artifacts that are deployed together through the 'Deploy Multiple Items' workflow:
   #       1. Uncomment the repository_dispatch trigger
   #       2. Delete the workflow_dispatch trigger
-  #       3. Change the env.ENVIRONMENT value from "${{ github.event.inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
+  #       3. Change the inputs.environment-or-target value from "${{ github.event.inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
   #       4. Change the env.RELEASE_TAG value from "${{ github.event.inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
   #       5. Delete the 'stakeholder-approval' job
   #       6. Delete the 'attestor-approval' job
@@ -56,7 +58,6 @@ on:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
 env:
-  ENVIRONMENT: ${{ inputs.environment-or-target }}
   RELEASE_TAG: ${{ inputs.tag == 0 && github.ref_name || inputs.tag }} # This is the tag that we'll be deploying
   DB_SERVER_PORT: '1433' # TODO: Verify that this is the correct port
   MIGRATIONS_FOLDER: '' # TODO: Add the path to the migrations folder
@@ -82,9 +83,9 @@ jobs:
           echo $'
           | Deploy Arguments          | Value                    |
           | ---                       |  ---                     |
-          | Environment               | `${{ env.ENVIRONMENT }}` |
-          | Release                   | `${{ env.RELEASE_TAG  }}`  |
-          | Workflow Branch/Tag       | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |' >> $GITHUB_STEP_SUMMARY
+          | Environment               | `${{ inputs.environment-or-target }}` |
+          | Tag                       | `${{ env.RELEASE_TAG  }}`  |
+          | Workflow Source           | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |' >> $GITHUB_STEP_SUMMARY
 
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -123,7 +124,7 @@ jobs:
           PRIMARY_RESOURCE_GROUP@demo: ''
           PRIMARY_RESOURCE_GROUP@prod prod-secondary: ''
 
-         # TODO: Add the NA26 (West Us2) AppInsights Instances to the variables
+          # TODO: Add the NA26 (West Us2) AppInsights Instances to the variables
           # This variable is used to annotate app insights
           APP_INSIGHTS_NAME@dev: ''
           APP_INSIGHTS_NAME@qa: ''
@@ -147,7 +148,6 @@ jobs:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The Tag is ${{ env.RELEASE_TAG }}."
       - name: Approval Received
         run: echo "Stakeholder approval was received"
 
@@ -159,7 +159,6 @@ jobs:
     environment: '${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} Attestor Approval' # Use inputs context because env context is not available to environment:
     steps:
       - run: |
-          echo "The current environment is ${{ inputs.environment-or-target }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
   # This job needs to run for all environments because deploy-az-db relies
@@ -171,16 +170,14 @@ jobs:
       # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
-        if: inputs.environment-or-target == 'prod'
+        if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod'
         uses: actions/checkout@v3
         with:
-          ref: 'main'  # TODO: verify the name of your default branch
+          ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
       - uses: im-open/is-tag-reachable-from-default-branch@v1.1
-        if: inputs.environment-or-target == 'prod'
+        if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod'
         with:
           tag: ${{ env.RELEASE_TAG }}
 
@@ -190,12 +187,10 @@ jobs:
   # Details on how to use the action can be found in the action's README.
 
   deploy-az-db:
-    needs: [set-vars,validate-tag-for-prod-deploys]
+    needs: [set-vars, validate-tag-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
     steps:
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
@@ -275,7 +270,7 @@ jobs:
           subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
           resourceGroupName: ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
-          releaseName: "${{ needs.set-vars.outputs.APP_INSIGHTS_ANNOTATION }}"
+          releaseName: '${{ needs.set-vars.outputs.APP_INSIGHTS_ANNOTATION }}'
           category: 'Deployment'
           customMetadata: 'ProjectName=${{ needs.set-vars.outputs.APP_INSIGHTS_ANNOTATION }},DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
 
@@ -288,11 +283,9 @@ jobs:
 
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: [set-vars,deploy-az-db]
+    needs: [set-vars, deploy-az-db]
     if: always()
     steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
       # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
       # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
       # Details on how to set up that action can be found in the action's README.
@@ -334,7 +327,7 @@ jobs:
             ]
 
       - name: Send Status to Deployment Notifications Channel for Prod Deploys
-        if: always() && inputs.environment-or-target == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
+        if: always() && needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.3
         with:
           title: ${{ env.DB_NAME }} Deployment to Azure # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel

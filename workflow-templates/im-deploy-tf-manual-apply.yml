@@ -1,6 +1,6 @@
 # Workflow Code: InsaneHamster_v35    DO NOT REMOVE
 # Purpose:
-#    Deploys the terraform from a specified root module at a 
+#    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
 #
 # Frequency:
@@ -79,7 +79,7 @@ jobs:
           | ---             |  ---                     |
           | Root module     | `${{ inputs.root-module }}` |
           | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
-      
+
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
@@ -158,7 +158,6 @@ jobs:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
-
       # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
@@ -357,14 +356,22 @@ jobs:
           }
 
           Write-Host "Zip extracted"
-      
+
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Delete RGRP Azure Locks
       #   id: remove-locks
       #   if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod' || needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'stage'
+      #   shell: pwsh
+      #   env:
+      #     LOCK_NAME: ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks
+      #     RGRP: ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}
       #   run: |
-      #     az group lock delete --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}"
-      #     sleep 5s
+      #     az group lock delete --name $Env:LOCK_NAME --resource-group $Env:RGRP
+      #     While(
+      #       $(az group lock list --resource-group $Env:RGRP --output tsv --query "[?name=='${$Env:LOCK_NAME}'].id")
+      #     ){
+      #       Start-Sleep -s 0.5
+      #     }
 
       - name: Terraform Init
         id: init
@@ -412,7 +419,6 @@ jobs:
     needs: [set-vars, tf-apply]
     if: always()
     steps:
-
       # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
       # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
       # Details on how to set up that action can be found in the action's README.

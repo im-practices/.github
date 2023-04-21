@@ -63,7 +63,6 @@ on:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
 env:
-  ENVIRONMENT: ${{ inputs.environment-or-target }}
   RELEASE_TAG: ${{ inputs.tag }} # This is the tag that we'll be deploying
   TIMEZONE: 'america/denver' # TODO: Verify timezone
 
@@ -88,8 +87,9 @@ jobs:
           | Build Arguments | Value                    |
           | ---             |  ---                     |
           | Environment     | `${{ inputs.environment-or-target }}` |
-          | Tag             | `${{ env.RELEASE_TAG }}` |' >> $GITHUB_STEP_SUMMARY
-      
+          | Tag             | `${{ env.RELEASE_TAG }}` |
+          | Workflow Source | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |' >> $GITHUB_STEP_SUMMARY'
+
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
@@ -138,7 +138,7 @@ jobs:
           AZ_APP_NAME@uat: ''
           AZ_APP_NAME@prod: ''
           AZ_APP_NAME@prod-secondary: ''
-          
+
           # TODO: Uncomment if you use a (User Assigned) MSI with your app service
           # This variable is used to assign a managed identity on slot creation
           # AZ_APP_MSI@dev: ''
@@ -147,7 +147,7 @@ jobs:
           # AZ_APP_MSI@demo: ''
           # AZ_APP_MSI@uat: ''
           # AZ_APP_MSI@prod prod-secondary: ''
-          
+
           # TODO: Add the NA26 (West Us2) AppInsights Instances to the variables
           # This variable is used to annotate app insights
           APP_INSIGHTS_NAME@dev: ''
@@ -156,7 +156,7 @@ jobs:
           APP_INSIGHTS_NAME@demo: ''
           APP_INSIGHTS_NAME@uat: ''
           APP_INSIGHTS_NAME@prod prod-secondary: '' # Currently appinsights isn't available in West Central US and you have to use West US 2 AppInsights
-          
+
           # Variables used for referencing secrets
           GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ inputs.environment-or-target }}'
           GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
@@ -165,32 +165,31 @@ jobs:
           # TODO: Uncomment if you require networking assignment
           # Used for assigning SUBNET on AZ App Slot creation
           # VNET@dev: ''
-          # VNET@qa: '' 
+          # VNET@qa: ''
           # VNET@stage: ''
           # VNET@stage-secondary: ''
           # VNET@demo: ''
-          # VNET@uat: '' 
-          # VNET@prod: '' 
-          # VNET@prod-secondary: '' 
+          # VNET@uat: ''
+          # VNET@prod: ''
+          # VNET@prod-secondary: ''
 
           # SUBNET@dev: ''
-          # SUBNET@qa: '' 
+          # SUBNET@qa: ''
           # SUBNET@stage: ''
           # SUBNET@stage-secondary: ''
           # SUBNET@demo: ''
-          # SUBNET@uat: '' 
-          # SUBNET@prod: '' 
-          # SUBNET@prod-secondary: '' 
+          # SUBNET@uat: ''
+          # SUBNET@prod: ''
+          # SUBNET@prod-secondary: ''
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
+    environment: '${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} Stakeholder Approval'
     steps:
       - run: |
-          echo "The current environment is ${{ inputs.environment-or-target }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Stakeholder approval was received or no required reviewers were set for this environment."
 
   # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
@@ -198,10 +197,9 @@ jobs:
   attestor-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: '${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} Attestor Approval' # Use inputs context because env context is not available to environment:
+    environment: '${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} Attestor Approval'
     steps:
       - run: |
-          echo "The current environment is ${{ inputs.environment-or-target }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
   # This job needs to run for all environments because deploy-code relies
@@ -210,24 +208,22 @@ jobs:
     needs: [set-vars, stakeholder-approval, attestor-approval]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     steps:
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
       # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
       # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
       - name: Checkout Repository
-        if: inputs.environment-or-target == 'prod'
+        if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod'
         uses: actions/checkout@v3
         with:
           ref: 'main' # TODO: verify the name of your default branch
           fetch-depth: 0
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1.1
-        if: inputs.environment-or-target == 'prod'
+        if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod'
         with:
           tag: ${{ env.RELEASE_TAG }}
 
       - uses: im-open/is-release-production-ready@v1.1
-        if: inputs.environment-or-target == 'prod'
+        if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-tag: ${{ env.RELEASE_TAG }}
@@ -241,7 +237,7 @@ jobs:
   deploy-code:
     needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
     runs-on: [self-hosted, ubuntu-20.04]
-    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} 
+    environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30
@@ -254,8 +250,6 @@ jobs:
       AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function, change this value to functionapp
 
     steps:
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
       - name: Download artifacts from release
         uses: im-open/download-release-asset@v1.2
         with:
@@ -280,7 +274,7 @@ jobs:
         env:
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: FedAuth_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
-          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of inputs.environment-or-target to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
+          #  - The scope (right side of [@)](https://github.com/)) should be dev/qa/stage/uat/demo/prod/stage-secondary/prod-secondary. This action uses the value of inputs.environment-or-target to match one of the scopes below.  Multiple items can be added as well (ex: [@stage](https://github.com/stage) demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'fedauth.dev.viabenefits.com')
           # FedAuth_Domain@dev: 'fedauth.dev.viabenefits.com'
           # FedAuth_Domain@qa: 'fedauth.qa.viabenefits.com'
@@ -331,11 +325,19 @@ jobs:
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Delete RGRP Azure Locks
       #   id: remove-locks
-      #   if: inputs.environment-or-target == 'prod' || inputs.environment-or-target == 'stage'
+      #   if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod' || needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'stage'
+      #   shell: pwsh
+      #   env:
+      #     LOCK_NAME: ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks
+      #     RGRP: ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}
       #   run: |
-      #     az group lock delete --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}"
-      #     sleep 5s
-      
+      #     az group lock delete --name $Env:LOCK_NAME --resource-group $Env:RGRP
+      #     While(
+      #       $(az group lock list --resource-group $Env:RGRP --output tsv --query "[?name=='${$Env:LOCK_NAME}'].id")
+      #     ){
+      #       Start-Sleep -s 0.5
+      #     }
+
       # TODO: Uncomment if you want to create a slot to deploy to.  Delete if you have a permanent slot or do not wish to use slots.
       # ARM_SUBSCRIPTION_ID is an env-level secret
       # - name: Create a deployment slot
@@ -346,7 +348,7 @@ jobs:
       #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --configuration-source ${{ needs.set-vars.outputs.AZ_APP_NAME }}
-      
+
       # TODO: Uncomment if you use User Managed Identity in your app service.
       # - name: Assign MSI to slot
       #   if: steps.create-slot.outcome == 'success'
@@ -356,7 +358,7 @@ jobs:
       #       --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #       --slot ${{ env.AZ_SLOT_NAME }} \
       #       --identities /subscriptions/${{ secrets.ARM_SUBSCRIPTION_ID }}/resourcegroups/${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${{ needs.set-vars.outputs.AZ_APP_MSI }}
-      
+
       # TODO Uncomment if you require networking on bootstrap of application.  IE Eventhub, Hashicorp Vault
       # - name: Assign VNet to slot
       #   if: steps.create-slot.outcome == 'success'
@@ -403,7 +405,7 @@ jobs:
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}
-       
+
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Add RGRP Azure Locks
       #   id: add-locks
@@ -509,7 +511,7 @@ jobs:
             ]
 
       - name: Send Status to Deployment Notifications Channel for Prod Deploys
-        if: always() && inputs.environment-or-target == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
+        if: always() && needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod' && steps.conclusion.outputs.workflow_conclusion == 'success'
         uses: im-open/post-status-to-teams-action@v1.3
         with:
           title: ${{ needs.set-vars.outputs.AZ_APP_NAME }} Deployment to Azure # TODO Verify this title gives enough info since it will be posted to the Prod Notifications channel
