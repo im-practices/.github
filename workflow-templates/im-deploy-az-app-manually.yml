@@ -280,7 +280,7 @@ jobs:
         env:
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: FedAuth_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
-          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod. This action uses the value of inputs.environment-or-target to match one of the scopes (envs) below.  Multiple items can be added as well (ex: @stage demo)
+          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod/stage-secondary/prod-secondary. This action uses the value of inputs.environment-or-target to match one of the scopes below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'fedauth.dev.viabenefits.com')
           # FedAuth_Domain@dev: 'fedauth.dev.viabenefits.com'
           # FedAuth_Domain@qa: 'fedauth.qa.viabenefits.com'
