@@ -284,7 +284,8 @@ jobs:
           #  - The value for the environment should be included in '' after the colon. (ex: 'fedauth.dev.viabenefits.com')
           # FedAuth_Domain@dev: 'fedauth.dev.viabenefits.com'
           # FedAuth_Domain@qa: 'fedauth.qa.viabenefits.com'
-          # FedAuth_Domain@stage stage-secondary demo: 'fedauth.stage.viabenefits.com'
+          # FedAuth_Domain@stage stage-secondary: 'fedauth.stage.viabenefits.com'
+          # FedAuth_Domain@demo: 'fedauth.demo.viabenefits.com'
           # FedAuth_Domain@prod prod-secondary: 'fedauth.viabenefits.com'
 
       # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
