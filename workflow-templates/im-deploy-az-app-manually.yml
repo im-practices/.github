@@ -274,11 +274,12 @@ jobs:
         env:
           # TODO: Add the values your app/function needs to be configured with (appsettings.json/local.settings.json/octo var substitution/config changes).  Delete envs that are not used.
           #  - The name of the env (left side of @) (ex: FedAuth_Domain) should be added.  The env name can be used in the later variable-substitution and octostache actions for replacement.
-          #  - The scope (right side of [@)](https://github.com/)) should be dev/qa/stage/uat/demo/prod/stage-secondary/prod-secondary. This action uses the value of inputs.environment-or-target to match one of the scopes below.  Multiple items can be added as well (ex: [@stage](https://github.com/stage) demo)
+          #  - The scope (right side of @) should be dev/qa/stage/uat/demo/prod/stage-secondary/prod-secondary. This action uses the value of inputs.environment-or-target to match one of the scopes below.  Multiple items can be added as well (ex: @stage demo)
           #  - The value for the environment should be included in '' after the colon. (ex: 'fedauth.dev.viabenefits.com')
           # FedAuth_Domain@dev: 'fedauth.dev.viabenefits.com'
           # FedAuth_Domain@qa: 'fedauth.qa.viabenefits.com'
-          # FedAuth_Domain@stage stage-secondary demo: 'fedauth.stage.viabenefits.com'
+          # FedAuth_Domain@stage stage-secondary: 'fedauth.stage.viabenefits.com'
+          # FedAuth_Domain@demo: 'fedauth.demo.viabenefits.com'
           # FedAuth_Domain@prod prod-secondary: 'fedauth.viabenefits.com'
 
       # TODO: If you need to do any Octopus variable substitution (i.e. replacing #{OCTO_PLACEHOLDER} in files) use the following action.  Delete if not using.
@@ -467,8 +468,6 @@ jobs:
     needs: [set-vars, deploy-code]
     if: always()
     steps:
-      - run: echo "The current environment is ${{ inputs.environment-or-target }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
       # If you want to automatically transition a deployment task in Jira based on the success or failure of this workflow, this job would be a good place for that.
       # There is an action that can do just that: https://github.com/im-open/transition-jira-tasks-by-query
       # Details on how to set up that action can be found in the action's README.
