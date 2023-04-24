@@ -1,4 +1,4 @@
-# Workflow Code: DeterminedPorcupine_v17    DO NOT REMOVE
+# Workflow Code: DeterminedPorcupine_v18    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform plan against the specified environments and
 #    comments on the PR with the expected changes when commits are pushed to a PR.
@@ -44,10 +44,12 @@ jobs:
       # The following SSH_* secrets are org-level secrets
       SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
       SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
+      SSH_KEY_AAD_GROUP_MEMBERS: ${{ secrets.SSH_AAD_GROUP_MEMBERS }} # This is an org level secret
       SSH_DEPLOY_KEY_INFO: |
         [
           { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-          { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
+          { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
+          { "orgAndRepo": "im-platform/aad-group-members", "envName" : "SSH_KEY_AAD_GROUP_MEMBERS" }
         ]
 
     defaults:

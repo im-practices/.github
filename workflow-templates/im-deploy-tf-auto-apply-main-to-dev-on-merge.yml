@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v25    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v27    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform apply -auto-approve with the changes
 #    in the PR against the dev environment when a PR is merged to main.
@@ -14,6 +14,7 @@
 #    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
 
 name: Auto Apply main branch to Dev on PR Merge
+run-name: Apply dev terraform from main
 on:
   pull_request:
     types: [closed]
@@ -24,22 +25,24 @@ env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PAGERDUTY_WINDOW_IN_MIN: 10 # TODO: Verify the length of your PD Maintenance Window
   PAGERDUTY_WINDOW_DESC: 'Auto apply main branch to Dev environment from GitHub Actions' # TODO: Verify this description
-  # The following ARM_* secrets are org-level secrets
+  # The following ARM_* secrets are env-level secrets
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
   ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
-  TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
+  TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
   TF_WORKING_DIR: './infrastructure/dev' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
   # The following SSH_* secrets are org-level secrets
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
+  SSH_KEY_AAD_GROUP_MEMBERS: ${{ secrets.SSH_AAD_GROUP_MEMBERS }}
   SSH_DEPLOY_KEY_INFO: |
     [
       { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
-      { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" }
+      { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
+      { "orgAndRepo": "im-platform/aad-group-members", "envName" : "SSH_KEY_AAD_GROUP_MEMBERS" }
     ]
 
 jobs:
