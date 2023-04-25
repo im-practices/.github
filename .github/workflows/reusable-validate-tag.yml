@@ -1,50 +1,59 @@
+# Implements https://github.com/im-enrollment/.github/blob/1b9ed2b04a06d0b25b390e447d1554271d4c5ee5/workflow-templates/im-deploy-az-app-manually.yml#L207
+
 # Example Usage in a repo's workflow:
 # jobs:
 #  validate-tag-is-in-main-for-prod-deploys:
 #    needs: [set-vars, stakeholder-approval, attestor-approval]
-#    uses: im-open/is-release-produciton-ready/.github/workflows/reusable-validate-tag.yml@v1
+#    uses: im-enrollment/resolve-tag-action/.github/workflows/reusable-validate-production-tag.yml@vlatest
 #    secrets: inherit
 #    with:
 #      tag: v1.2.3
-    
+#      environment: prod
+
 name: Reusable - Validate Tag is ready for Production Deploys
 on:
   workflow_call:
     inputs:
       environment:
         description: Environment running against
-        type: string
         required: true
+        type: string
 
       tag:
         description: The tag that should be checked
         required: true
         type: string
-        
-      production-environmment:
+      
+      production-environment:
         description: Name of the production environment to check against
-        required: true
+        required: false
         type: string
         default: prod
       
       base-branch:
         description: Default branch of which contains the tag
-        required: true
+        required: false
         type: string
         default: main
-        
-      verify-release:
+      
+      verify-release-production-ready:
         description: Verify associated release is not draft or prerelease
-        required: true
+        required: false
         type: boolean
         default: true
-  
+        
+      runs-on:
+        description: Verify associated release is not draft or prerelease
+        required: false
+        type: string
+        default: ubuntu-latest 
+
 jobs:
   validate-tag-is-in-base-branch:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }} 
 
     env:
-      IS_PROD: ${{ inputs.environment } == ${{ inputs.production-environment }}
+      IS_PROD: ${{ inputs.environment == inputs.production-environment }}
 
     steps:
       - run: echo "The current environment is ${{ inputs.environment }}.  The Tag is ${{ inputs.tag }}."
@@ -55,17 +64,17 @@ jobs:
         if: env.IS_PROD == 'true'
         uses: actions/checkout@v3
         with:
-          ref: ${{ input.base-branch }}
+          ref: ${{ inputs.base-branch }}
           fetch-depth: 0
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1
         if: env.IS_PROD == 'true'
         with:
-          tag: ${{ inputs.-tag }}
+          tag: ${{ inputs.tag }}
 
       - uses: im-open/is-release-production-ready@v1
-        if: env.IS_PROD == 'true' && input.verify-release == true
+        if: env.IS_PROD == 'true' && inputs.verify-release-production-ready == true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          release-tag: ${{ inputs.release-tag }}
+          release-tag: ${{ inputs.tag }}
           fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
