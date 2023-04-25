@@ -2,15 +2,11 @@
 
 # Example Usage in a repo's workflow:
 # jobs:
-#  validate-tag-is-in-main-for-prod-deploys:
+#  examine-triggers:
 #    needs: [set-vars, stakeholder-approval, attestor-approval]
-#    uses: im-enrollment/resolve-tag-action/.github/workflows/reusable-validate-production-tag.yml@vlatest
-#    secrets: inherit
-#    with:
-#      tag: v1.2.3
-#      environment: prod
+#    uses: im-enrollment/.github/.github/workflows/reusable-examine-triggers.yml@v1
 
-name: Reusable - Validate Tag is ready for Production Deploys
+name: Reusable - Examine workflow triggers
 on:
   workflow_call:
     inputs:
