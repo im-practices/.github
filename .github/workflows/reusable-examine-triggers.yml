@@ -10,7 +10,7 @@ name: Reusable - Examine workflow triggers
 on:
   workflow_call:
     inputs:
-      base-branch:
+      default-branch:
         description: Default branch of which contains the tag
         required: false
         type: string
@@ -61,7 +61,7 @@ jobs:
             const prIsDraft = '${{ github.event.pull_request.draft }}' === 'true';
             const prClosed = '${{ github.event.action }}' === 'closed';
             const prMerged = prClosed && '${{ github.event.pull_request.merged }}' === 'true';
-            const prMergedToMain = prMerged && targetRef === '${{ inputs.base-branch }}';
+            const prMergedToMain = prMerged && targetRef === '${{ inputs.default-branch }}';
             const isPreRelease = !prMergedToMain;
 
             // For a detailed explanation of why we use different refs for different scenarios 
