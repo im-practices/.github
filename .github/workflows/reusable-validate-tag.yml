@@ -30,7 +30,7 @@ on:
         type: string
         default: prod
       
-      base-branch:
+      default-branch:
         description: Default branch of which contains the tag
         required: false
         type: string
@@ -49,7 +49,7 @@ on:
         default: ubuntu-latest 
 
 jobs:
-  validate-tag-is-in-base-branch:
+  validate-tag:
     runs-on: ${{ inputs.runs-on }} 
 
     env:
@@ -64,7 +64,7 @@ jobs:
         if: env.IS_PROD == 'true'
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.base-branch }}
+          ref: ${{ inputs.default-branch }}
           fetch-depth: 0
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1
