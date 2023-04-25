@@ -1,0 +1,86 @@
+# Implements https://github.com/im-enrollment/.github/blob/1b9ed2b04a06d0b25b390e447d1554271d4c5ee5/workflow-templates/im-build-dotnet-ci.yml#L52
+
+# Example Usage in a repo's workflow:
+# jobs:
+#  validate-tag-is-in-main-for-prod-deploys:
+#    needs: [set-vars, stakeholder-approval, attestor-approval]
+#    uses: im-enrollment/resolve-tag-action/.github/workflows/reusable-validate-production-tag.yml@vlatest
+#    secrets: inherit
+#    with:
+#      tag: v1.2.3
+#      environment: prod
+
+name: Reusable - Validate Tag is ready for Production Deploys
+on:
+  workflow_call:
+    inputs:
+      base-branch:
+        description: Default branch of which contains the tag
+        required: false
+        type: string
+        default: main
+        
+      runs-on:
+        description: Verify associated release is not draft or prerelease
+        required: false
+        type: string
+        default: ubuntu-latest
+        
+    outputs:
+      CONTINUE_WORKFLOW:
+        description: Indicate if the workflow may continue
+        value: ${{ jobs.examine.outputs.CONTINUE_WORKFLOW }}
+        
+      CREATE_RELEASE:
+        description: Indicate if a release may be created
+        value: ${{ jobs.examine.outputs.CREATE_RELEASE }}
+        
+      IS_PRERELEASE:
+        description: Indicate if a prerelease should be created
+        value: ${{ jobs.examine.outputs.IS_PRERELEASE }}
+        
+      REF_TO_BUILD_AND_TAG:
+        description: The reference to build and tag
+        value: ${{ jobs.examine.outputs.REF_TO_BUILD_AND_TAG }}
+      
+jobs:
+  examine:
+    runs-on: ${{ inputs.runs-on }} 
+    
+    outputs:
+      CONTINUE_WORKFLOW: ${{ env.CONTINUE_WORKFLOW }}
+      CREATE_RELEASE: ${{ env.CREATE_RELEASE }}
+      IS_PRERELEASE: ${{ env.IS_PRERELEASE }}
+      REF_TO_BUILD_AND_TAG: ${{ env.REF_TO_BUILD_AND_TAG }}
+
+    steps:
+      - name: Set default env variables
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const targetRef = '${{ github.base_ref }}';
+            const sourceRef = '${{ github.head_ref }}';
+            const mergeRef = '${{ github.ref }}';
+
+            const prIsDraft = '${{ github.event.pull_request.draft }}' === 'true';
+            const prClosed = '${{ github.event.action }}' === 'closed';
+            const prMerged = prClosed && '${{ github.event.pull_request.merged }}' === 'true';
+            const prMergedToMain = prMerged && targetRef === '${{ inputs.base-branch }}';
+            const isPreRelease = !prMergedToMain;
+
+            // For a detailed explanation of why we use different refs for different scenarios 
+            // see https://docs.github.com/en/rest/reference/pulls#get-a-pull-request
+            const refToBuildAndTag = prMergedToMain ? mergeRef : sourceRef;
+
+            const continueWorkflow = prClosed && !prMerged ? false : true;
+            const doTagRelease = continueWorkflow && !prIsDraft ? true :  false;
+            
+            object.entries({
+              CONTINUE_WORKFLOW: continueWorkflow,
+              CREATE_RELEASE: doTagRelease,
+              IS_PRERELEASE: isPreRelease,
+              REF_TO_BUILD_AND_TAG: refToBuildAndTag
+            }).forEach(pair => {
+              core.exportVariable(...pair);
+              console.info(...pair);
+            });
