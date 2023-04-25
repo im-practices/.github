@@ -4,7 +4,7 @@
 # jobs:
 #  validate-tag-is-in-main-for-prod-deploys:
 #    needs: [set-vars, stakeholder-approval, attestor-approval]
-#    uses: im-enrollment/resolve-tag-action/.github/workflows/reusable-validate-production-tag.yml@vlatest
+#    uses: im-practices/.github/.github/workflows/reusable-validate-production-tag.yml@v1
 #    secrets: inherit
 #    with:
 #      tag: v1.2.3
