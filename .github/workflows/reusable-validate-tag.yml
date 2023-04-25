@@ -1,0 +1,71 @@
+# Example Usage in a repo's workflow:
+# jobs:
+#  validate-tag-is-in-main-for-prod-deploys:
+#    needs: [set-vars, stakeholder-approval, attestor-approval]
+#    uses: im-open/is-release-produciton-ready/.github/workflows/reusable-validate-tag.yml@v1
+#    secrets: inherit
+#    with:
+#      tag: v1.2.3
+    
+name: Reusable - Validate Tag is ready for Production Deploys
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Environment running against
+        type: string
+        required: true
+
+      tag:
+        description: The tag that should be checked
+        required: true
+        type: string
+        
+      production-environmment:
+        description: Name of the production environment to check against
+        required: true
+        type: string
+        default: prod
+      
+      base-branch:
+        description: Default branch of which contains the tag
+        required: true
+        type: string
+        default: main
+        
+      verify-release:
+        description: Verify associated release is not draft or prerelease
+        required: true
+        type: boolean
+        default: true
+  
+jobs:
+  validate-tag-is-in-base-branch:
+    runs-on: ubuntu-latest
+
+    env:
+      IS_PROD: ${{ inputs.environment } == ${{ inputs.production-environment }}
+
+    steps:
+      - run: echo "The current environment is ${{ inputs.environment }}.  The Tag is ${{ inputs.tag }}."
+
+      # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
+      # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
+      - name: Checkout Repository
+        if: env.IS_PROD == 'true'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ input.base-branch }}
+          fetch-depth: 0
+
+      - uses: im-open/is-tag-reachable-from-default-branch@v1
+        if: env.IS_PROD == 'true'
+        with:
+          tag: ${{ inputs.-tag }}
+
+      - uses: im-open/is-release-production-ready@v1
+        if: env.IS_PROD == 'true' && input.verify-release == true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-tag: ${{ inputs.release-tag }}
+          fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
