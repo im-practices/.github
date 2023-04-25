@@ -41,7 +41,7 @@ on:
       
 jobs:
   examine:
-    runs-on: ${{ inputs.runs-on }} 
+    runs-on: ${{ inputs.runs-on }}
     
     outputs:
       CONTINUE_WORKFLOW: ${{ env.CONTINUE_WORKFLOW }}
@@ -71,7 +71,7 @@ jobs:
             const continueWorkflow = prClosed && !prMerged ? false : true;
             const doTagRelease = continueWorkflow && !prIsDraft ? true :  false;
             
-            object.entries({
+            Object.entries({
               CONTINUE_WORKFLOW: continueWorkflow,
               CREATE_RELEASE: doTagRelease,
               IS_PRERELEASE: isPreRelease,
@@ -80,3 +80,4 @@ jobs:
               core.exportVariable(...pair);
               console.info(...pair);
             });
+
