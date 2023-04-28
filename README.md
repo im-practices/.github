@@ -32,7 +32,6 @@ The templates in this repository fall into one of the following categories:
   - [ ] The `iconName` field contains one of the [SVGs](#svgs) listed below
     - im_azure
     - im_build
-    - im_checkmarx
     - im_deploy
     - im_run
     - im_test
