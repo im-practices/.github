@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v38    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v39    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -184,6 +184,7 @@ jobs:
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  
   stakeholder-approval:
     needs: [set-vars]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
@@ -294,7 +295,7 @@ jobs:
       # TODO: If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
       # This action works well with the im-open/set-environment-variables-by-scope action. Environment variables set in that action can be utilized by this one.
-      - uses: microsoft/variable-substitution@v1
+      - uses: im-open/variable-substitution@v2
         with:
           files: '' # TODO: add a comma separated list of files/patterns, like './MyProj/We*.config, ./MyProj/Nlog.config' (this matches the downloaded asset structure, not the original file structure)
         env:

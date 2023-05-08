@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v36    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v37    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -335,7 +335,7 @@ jobs:
 
       # TODO: If you need any json, yml or xml file (web.config/app.config/nlog.config) substitutions use the following
       #        action, otherwise delete it. This action won't add or remove items, it will just update the values.
-      - uses: microsoft/variable-substitution@v1
+      - uses: im-open/variable-substitution@v2
         with:
           files: '' # TODO: add a comma separated list of files and the patterns, like '${{ env.UNZIPPED_ASSET }}/*.config', ./src/MyProj/We*.config, ./src/MyProj/Nlog.config'
         env:
