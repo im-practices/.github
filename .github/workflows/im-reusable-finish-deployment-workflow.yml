@@ -1,0 +1,185 @@
+# The purpose of this reusable job is to run the final steps of a deployment workflow
+# which includes updating the deployment board and posting a status to Teams.
+
+on:
+  workflow_call:
+    inputs:
+      # Required Inputs
+      deployment-environment:
+        description: 'The environment that was deployed to: dev, qa, stage, stage-secondary, uat, demo, prod, prod-secondary.'
+        required: true
+        type: string
+      gh-secrets-environment:
+        description: 'The GitHub environment secrets should be accessed from: dev, qa, stage, uat, demo, prod.'
+        required: true
+        type: string
+      release-tag:
+        description: 'The tag of the release being deployed.'
+        required: true
+        type: string
+      title-of-teams-post:
+        description: 'Title of the Teams post that will be used in the team channel and the Deployment Notifications channel.'
+        required: true
+        type: string
+      # Optional Inputs
+      post-status-in-deployment-notifications-channel:
+        description: 'Flag indicating whether a post should be made to the Deployment Notifications channel.'
+        required: false
+        type: boolean
+        default: true
+      timezone:
+        description: 'Timezone for the project.  Defaults to america/denver.'
+        required: false
+        type: string
+        default: 'america/denver'
+      deployment-board-number:
+        description: 'The number of the deployment board that should be updated.  Defaults to 1.'
+        required: false
+        type: number
+        default: 1
+      deployable-type:
+        description: 'Identifier if there are multiple deployables in the repo, like MFE, DB, API.  Defaults to an empty string for single deployables.'
+        required: false
+        type: string
+        default: ''
+      custom-facts-for-team-channel:
+        description: The custom facts that will be included in the post in the team's channel.  By default Workflow, Run, Actor and Version are included.
+        required: false
+        type: string
+      custom-facts-for-deployment-notifications-channel:
+        description: 'The custom facts that will be included in the Deployment Notifications channel.  By default Actor and Version are included.'
+        required: false
+        type: string
+    secrets:
+      MS_TEAMS_URI:
+        description: 'The URI for the teams channel where a status will be posted.'
+        required: true
+      DEPLOY_NOTIFICATIONS_CHANNEL:
+        description: 'The URI for the teams channel where a status will be posted.'
+        required: true
+
+jobs:
+  finish-deployment-workflow:
+    runs-on: im-linux
+    environment: ${{ inputs.gh-secrets-environment }}
+    steps:
+      - uses: im-open/workflow-conclusion@v2.1
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update deployment board
+        if: always()
+        uses: im-open/update-deployment-board@v1.5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          environment: ${{ inputs.deployment-environment }}
+          board-number: ${{ inputs.deployment-board-number }}
+          ref: ${{ inputs.release-tag }}
+          ref-type: 'tag'
+          deployable-type: ${{ inputs.deployable-type }}
+          deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          timezone: ${{ inputs.timezone }}
+
+      - name: Configure facts for team's notification channel
+        if: always()
+        id: team-channel-facts
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const rawFacts = process.env.FACTS;
+            console.log(`"${rawFacts}"`);
+            let facts = rawFacts && rawFacts.trim().length > 0 ? JSON.parse(rawFacts) : null;
+            
+            if (!facts || facts.length === 0){
+              console.log(`Custom facts were not provided for the Team's Notification channel, use the default facts:`);
+              facts = [
+                { name: 'Workflow', value: '${{ github.workflow }}'},
+                { name: 'Run', value: '${{ github.run_id }}'},
+                { name: 'Actor', value: '${{ github.actor }}'},
+                { name: 'Version', value: '${{ inputs.release-tag }}'}
+              ]
+            }
+            else {
+              console.log(`Custom facts were supplied as an argument, using those in the Team's Notification channel:`);
+            }
+
+            console.log(facts);
+            core.setOutput('facts', facts);
+        env:
+          FACTS: ${{ inputs.custom-facts-for-team-channel }}
+      
+      - name: Send status to team's notification channel
+        if: always()
+        uses: im-open/post-status-to-teams-action@v1.3
+        with:
+          title: ${{ inputs.title-of-teams-post }}
+          workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          workflow-type: Deploy
+          teams-uri: ${{ secrets.MS_TEAMS_URI }}
+          timezone: ${{ inputs.timezone }}
+          custom-facts: ${{ steps.team-channel-facts.outputs.facts }}
+
+      - name: Determine if a post should be made in Deployment Notifications channel
+        if: always()
+        id: post-to-deployment-channel
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const postInProd = ${{ inputs.post-status-in-deployment-notifications-channel }};
+            const deployEnv = '${{ inputs.deployment-environment }}';
+            const workflowConclusion = '${{ steps.conclusion.outputs.workflow_conclusion }}';
+            
+            const isProdEnv = deployEnv === 'prod' || deployEnv === 'prod-secondary';
+            
+            const post = postInProd && isProdEnv && workflowConclusion === 'success';
+            core.setOutput('post', post);
+
+            const message = `Values used to determine if a Deployment Notifications post will be made:
+              \tpost-status-in-deployment-notifications-channel input: ${postInProd}\t(must be true to post)
+              \tWorkflow Conclusion: ${workflowConclusion}                          \t\t(must be 'success' to post)
+              \tEnvironment: ${deployEnv}                                           \t(must be 'prod' or 'prod-secondary' to post)`;
+              console.log(message);
+
+            if (!post) {
+              console.log('The conditions were not satisfied and a post will not be made in the Deployment Notifications channel.');
+            } else {
+              console.log('The conditions were statisfied so a post will be made in the Deployment Notifications channel.');
+            }
+
+      - name: Configure facts for Deployment Notifications channel
+        if: always() && steps.post-to-deployment-channel.outputs.post == 'true'
+        id: deployment-channel-facts
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const rawFacts = process.env.FACTS;
+            let facts = rawFacts && rawFacts.trim().length > 0 ? JSON.parse(rawFacts) : null;
+            
+            if (!facts || facts.length === 0){
+              console.log('Custom facts were not provided for the Deployment Notifications channel, use the default facts:');
+              facts = [
+                { name: 'Actor', value: '${{ github.actor }}'},
+                { name: 'Version', value: '${{ inputs.release-tag }}'}
+              ]
+            }
+            else {
+              console.log('Custom facts were supplied as an argument, using those in the Deployment Notifications channel:');
+            }
+
+            console.log(facts);
+            core.setOutput('facts', facts);
+        env:
+          FACTS: ${{ inputs.custom-facts-for-deployment-notifications-channel }}
+      
+      - name: Send Status to Deployment Notifications Channel for Prod Deploys
+        if: always() && steps.post-to-deployment-channel.outputs.post == 'true'
+        uses: im-open/post-status-to-teams-action@v1.3
+        with:
+          title: ${{ inputs.title-of-teams-post }}
+          workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          workflow-type: Deploy
+          teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}
+          timezone: ${{ inputs.timezone }}
+          include-default-facts: false # This cuts down on the message size for the prod room
+          custom-facts: ${{ steps.deployment-channel-facts.outputs.facts }}
