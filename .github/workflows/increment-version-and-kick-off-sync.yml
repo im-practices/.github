@@ -33,15 +33,28 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
+          ref: main
           fetch-depth: 0
 
-      # See https://github.com/im-open/git-version for more details around how to increment major/minor/patch through commit messages
+      # See https://github.com/im-open/git-version-lite for more details around how to increment
+      # major/minor/patch through commit messages
       - name: Increment the version
-        uses: im-open/git-version-lite@v2.2
+        id: version
+        uses: im-open/git-version-lite@v2
         with:
-          create-ref: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           default-release-type: major
+      
+      - name: Create version tag, create or update major, and minor tags
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag ${{ steps.version.outputs.NEXT_VERSION }} ${{ github.sha }}
+          git tag -f ${{ steps.version.outputs.NEXT_MAJOR_VERSION }} ${{ github.sha }}
+          git tag -f ${{ steps.version.outputs.NEXT_MINOR_VERSION }} ${{ github.sha }}
+          git push origin ${{ steps.version.outputs.NEXT_VERSION }}
+          git push origin ${{ steps.version.outputs.NEXT_MAJOR_VERSION }} -f
+          git push origin ${{ steps.version.outputs.NEXT_MINOR_VERSION }} -f
 
       - name: Tell github-management to sync templates
         uses: actions/github-script@v6
@@ -51,7 +64,7 @@ jobs:
           github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org level secret
           script: |
             github.rest.repos.createDispatchEvent({
-              owner: 'bc-swat',
+              owner: 'im-platform',
               repo: 'github-management',
               event_type: 'sync_workflows'
             });
