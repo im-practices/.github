@@ -18,7 +18,7 @@ on:
       is-merge-to-main:
           description: Flag indicating whether this is a merge to the default branch.
           required: true
-          type: boolean
+          type: string
       timezone:
         description: 'Timezone for the project.  Defaults to america/denver.'
         required: false
@@ -100,7 +100,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            let isMergeToMain = ${{ inputs.is-merge-to-main }};
+            const isMergeToMain = '${{ inputs.is-merge-to-main }}' == 'true';
             const nextVersion = '${{ inputs.next-version }}';
             const repoUrl = '${{ github.repositoryUrl }}';
             const conclusion = '${{ steps.conclusion.outputs.workflow_conclusion }}';
