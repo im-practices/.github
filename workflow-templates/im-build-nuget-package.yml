@@ -247,7 +247,7 @@ jobs:
     # env:
     #   NEXT_VERSION: ${{ needs.build-test-publish.outputs.NEXT_VERSION }}
     #   IS_MERGE_TO_MAIN: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
-    uses:  im-practices/.github/.github/workflows/im-reusable-finish-build-workflow@v2
+    uses:  im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
     with:
       next-version: ${{ needs.build-test-publish.outputs.NEXT_VERSION }}
       title-of-teams-post: 'Build and Publish <project-name> to GH Packages' # TODO: Replace <project-name> 

@@ -612,7 +612,7 @@ jobs:
   finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
     needs: [dotnet-test, jest, build-deployment-artifacts]
-    uses:  im-practices/.github/.github/workflows/im-reusable-finish-build-workflow@v2
+    uses:  im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
     with:
       next-version: ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
       title-of-teams-post: '<project-name> CI Build' # TODO: Replace <project-name>

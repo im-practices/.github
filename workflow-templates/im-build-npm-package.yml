@@ -167,7 +167,7 @@ jobs:
   finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
     needs: [examine-triggers, build-and-publish-to-gpr]
-    uses:  im-practices/.github/.github/workflows/im-reusable-finish-build-workflow@v2
+    uses:  im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
     with:
       next-version: ${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}
       title-of-teams-post: 'Build and Publish <project-name> to GH Packages' # TODO: Replace <project-name> 
