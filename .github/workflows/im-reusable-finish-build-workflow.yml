@@ -2,7 +2,7 @@
 # which includes posting a status to teams, updating a PR comment and setting the final 
 # workflow outcome.
 
-name: Finish Workflow
+name: Finish Build Workflow
 on:
   workflow_call:
     inputs:
