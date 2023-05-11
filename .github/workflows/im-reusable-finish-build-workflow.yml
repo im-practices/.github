@@ -102,14 +102,14 @@ jobs:
           script: |
             const isMergeToMain = '${{ inputs.is-merge-to-main }}' == 'true';
             const nextVersion = '${{ inputs.next-version }}';
-            const repoUrl = '${{ github.repositoryUrl }}';
+            const orgAndRepo = '${{ github.repository }}';
             const conclusion = '${{ steps.conclusion.outputs.workflow_conclusion }}';
             const runId = '${{ github.run_id }}';
 
-            const workflowRunText = `[Workflow Run - ${conclusion}](${repoUrl}/actions/runs/${runId})`;
+            const workflowRunText = `[Workflow Run - ${conclusion}](https://github.com/${orgAndRepo}/actions/runs/${runId})`;
             
             const nextVersionText = isMergeToMain ?
-              `[Tag - ${nextVersion}](${repoUrl}/releases/tag/${nextVersion})` :
+              `[Tag - ${nextVersion}](https://github.com/${orgAndRepo}/releases/tag/${nextVersion})` :
               `Next Version - ${nextVersion}`;
             
             const prComment = `
