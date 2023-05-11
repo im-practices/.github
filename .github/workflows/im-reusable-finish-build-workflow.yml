@@ -115,9 +115,10 @@ jobs:
             const prComment = `
             - ${workflowRunText}
             - ${nextVersionText}
-            ${{ inputs.additional-pr-comment-content }}`
+            ${process.env.ADDITIONAL_CONTENT}
             core.setOutput('prComment', prComment);
-        
+        env:
+          ADDITIONAL_CONTENT: ${{ inputs.additional-pr-comment-content }}
 
       - name: Comment on PR with version ${{ inputs.next-version}}
         if: github.event_name == 'pull_request'
