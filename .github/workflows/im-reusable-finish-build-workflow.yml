@@ -115,7 +115,7 @@ jobs:
             const prComment = `
             - ${workflowRunText}
             - ${nextVersionText}
-            ${process.env.ADDITIONAL_CONTENT}
+            ${process.env.ADDITIONAL_CONTENT}`
             core.setOutput('prComment', prComment);
         env:
           ADDITIONAL_CONTENT: ${{ inputs.additional-pr-comment-content }}
