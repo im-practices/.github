@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v15   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v16   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -75,69 +75,118 @@ on:
         default: '50'
 
 env:
-      TIMEZONE: 'america/denver' # TODO: Verify timezone
-      WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
-      GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1' # TODO: Verify link to your dashboard
-      NODE_VERSION: '16.x' # TODO: Set correct node version
-      LOOP_DURATION: '1m' # TODO: Update duration of loop to your specification.  The action im-practices/run-k6-operator-test documenation has more details on setting this parameter.
+  TIMEZONE: 'america/denver' # TODO: Verify timezone
+  WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
+  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1' # TODO: Verify link to your dashboard
+  NODE_VERSION: '16.x' # TODO: Set correct node version
+  LOOP_DURATION: '1m' # TODO: Update duration of loop to your specification.  The action im-practices/run-k6-operator-test documenation has more details on setting this parameter.
 
-      # InfluxDB addresses -
-      # DNS: https://influxdb-v1.mktp.io/loadtesting
-      K6_DEFAULT_PARAMETERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 parameters
-      RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
-      K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
+  # InfluxDB addresses -
+  # DNS: https://influxdb-v1.mktp.io/loadtesting # Output to influx is currently broken with the k6 operator --out influxdb=https://influxdb-v1.mktp.io/loadtesting
+  K6_DEFAULT_PARAMETERS: '--insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 parameters
+  RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
+  K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
-      ###### DO NOT EDIT ######
-      PRIVATE_CONTAINER_REGISTRY: 'bdaimdna26corecr1.azurecr.io'
-      CLUSTER_NAME: 'BDAIM-D-NA26-PERFTEST-K8-CL'
-      CLUSTER_RESOURCE_GROUP: 'BDAIM-D-NA26-PerformanceTesting-RGRP'
-      CLUSTER_DNS_ZONE_NAME: 'perftest.privatelink.westus2.azmk8s.io'
-      ###### DO NOT EDIT ######
+  ###### DO NOT EDIT ######
+  PRIVATE_CONTAINER_REGISTRY: 'bdaimdna26corecr1.azurecr.io'
+  CLUSTER_NAME: 'BDAIM-D-NA26-PERFTEST-K8-CL'
+  CLUSTER_RESOURCE_GROUP: 'BDAIM-D-NA26-PerformanceTesting-RGRP'
+  ###### DO NOT EDIT ######
 
 jobs:
-  annotations:
-    runs-on: ubuntu-latest
+  # TODO: Delete if you don't build your k6 tests
+  npm-cache:
+    runs-on: [self-hosted, coldstone, build-npm-nuget-cache]
+    if: inputs.run-npm-build
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      NPM_HASH_FILE: ${{ './${{ env.WORKING_DIRECTORY }}/package-lock.json' }}
+
+    outputs:
+      NPM_CACHE_key: ${{ env.NPM_CACHE_KEY }}
 
     steps:
-      - name: Show Input Variables
-        run: |
-          echo "Workflow Inputs:"
-          echo "
-            env: ${{ github.event.inputs.env }};
-            working-directory: ${{ env.WORKING_DIRECTORY }}
-            test-file: ${{ github.event.inputs.test-file }}
-            upload-type: ${{ github.event.inputs.upload-type }}
-            upload-files-folder: '${{ github.event.inputs.upload-files-folder }}'
-            k6-parameters: '${{ github.event.inputs.k6-parameters }}'
-            k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }}'
-            parallelism: '${{ github.event.inputs.parallelism }}'
-            separate-nodes: '${{ github.event.inputs.separate-nodes }}'
-            loop-count: '${{ github.event.inputs.loop-count }}'
-            loop-duration: '${{ env.LOOP_DURATION }}'
-            run-npm-build: '${{ github.event.inputs.run-npm-build }}'
-          "
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
       - name: Annotate Inputs
         run: |
           echo $'
           | Input Name            | Value                    |
           | ---                   |  ---                     |
-          | Environment           | `${{ github.event.inputs.env }}` |
+          | Environment           | `${{ inputs.environment }}` |
+          | Workflow Branch/Tag    | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |
           | Working Directory     | `${{ env.WORKING_DIRECTORY }}` |
-          | Test File             | `${{ github.event.inputs.test-file }}` |
-          | Parallelism           | `${{ github.event.inputs.parallelism }}` |
-          | Separate-nodes        | `${{ github.event.inputs.separate-nodes }}` |
-          | Upload Type           | `${{ github.event.inputs.upload-type }}` |
-          | Upload File/Folders   | `${{ github.event.inputs.upload-files-folder}}` |
-          | K6 Parameters         | `${{ github.event.inputs.k6-parameters }}` |
+          | Test File             | `${{ inputs.test-file }}` |
+          | Parallelism           | `${{ inputs.parallelism }}` |
+          | Separate-nodes        | `${{ inputs.separate-nodes }}` |
+          | Upload Type           | `${{ inputs.upload-type }}` |
+          | Upload File/Folders   | `${{ inputs.upload-files-folder}}` |
+          | K6 Parameters         | `${{ inputs.k6-parameters }}` |
           | K6 Default Parameters | `${{ env.K6_DEFAULT_PARAMETERS }}`  |
-          | Loop Count            | `${{ github.event.inputs.loop-count }}` |
+          | Loop Count            | `${{ inputs.loop-count }}` |
           | Loop Duration         | `${{ env.LOOP_DURATION }}` |
-          | Run NPM Build         | `${{ github.event.inputs.run-npm-build }}` |' >> $GITHUB_STEP_SUMMARY
+          | Run NPM Build         | `${{ inputs.run-npm-build }}` |' >> $GITHUB_STEP_SUMMARY
+
+      - name: Set Cache Keys
+        # As long as these files don't change the cache will remain in tact and the time
+        # to restore the different packages in the various jobs will be reduced.  If one
+        # of the files does change though, a new cache will be uploaded the next time
+        # it runs, then subsequent runs should be faster.
+        run: echo "NPM_CACHE_KEY=k6_node_modules-${{ hashFiles('./tests/k6/package-lock.json') }}" >> $GITHUB_ENV
+
+      - name: Check for an npm cache
+        id: has-cache
+        uses: im-open/check-for-cache@v1.1.2
+        with:
+          path: '**/k6/node_modules'
+          key: ${{ env.NPM_CACHE_KEY }}
+
+      # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
+
+      # This action creates a post-job step that will upload the node_modules dir to the cache if the job
+      # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
+      # folder if the package-lock.json hasn't changed and it uses a ubuntu-20.04 runner to restore the cache from.
+      # TODO: Delete if you don't build your k6 tests
+      - name: Install Node ${{ env.NODE_VERSION }}
+        if: steps.has-cache.outputs.cache-hit == 'false'
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup caching for node_modules directory
+        if: steps.has-cache.outputs.cache-hit == 'false'
+        uses: actions/cache@v3.2.6
+        with:
+          key: ${{ env.NPM_CACHE_KEY }}
+          path: '**/k6/node_modules'
+          enableCrossOsArchive: true
+
+      # TODO:  If the project contains internal npm packages, uncomment and update the orgs with the needed organizations
+      # - name: Authenticate with GitHub Packages
+      #   if: steps.has-cache.outputs.cache-hit == 'false'
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.0
+      #   with:
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+      #     orgs: ''
+
+      - name: NPM Install
+        if: steps.has-cache.outputs.cache-hit == 'false'
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          echo "Installing NPM"
+          npm ci
 
   run_k6_operator:
     runs-on: [self-hosted, ubuntu-20.04]
-    needs: [annotations]
-    environment: ${{ github.event.inputs.env }}
+    needs: [npm-cache] # TODO: Delete if you don't build your k6 tests
+    environment: ${{ inputs.env }}
 
     defaults:
       run:
@@ -151,55 +200,63 @@ jobs:
 
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
-        if: github.event.inputs.run-npm-build == 'true'
+        if: inputs.run-npm-build
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       # TODO: Delete if you don't build your k6 tests
-      - name: NPM Cache
-        id: npm-cache
-        if: github.event.inputs.run-npm-build == 'true'
-        uses: actions/cache@v3
+      - name: Download npm cache
+        uses: actions/cache/restore@v3.2.6
+        if: inputs.run-npm-build
         with:
-          path: '${{ env.WORKING_DIRECTORY }}/node_modules'
-          key: ${{ runner.os }}-modules-k6-${{ hashFiles('${{ env.WORKING_DIRECTORY }}/package-lock.json') }}
-          restore-keys: ${{ runner.os }}-modules-k6-
+          key: ${{ needs.npm-cache.outputs.NPM_CACHE_KEY }}
+          path: '**/k6/node_modules'
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
 
       # TODO: Delete if you don't build your k6 tests
-      # This step must be modified to support npm workspaces and --ignore-scripts must be used if failures occur on this step.
-      - name: Install NPM Dependencies
-        if: github.event.inputs.run-npm-build == 'true' && steps.npm-cache.outputs.cache-hit != 'true'
+      - name: Rebuild Node Modules
+        if: inputs.run-npm-build
         working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: npm ci
+        run: npm rebuild
 
       # TODO: Delete if you don't build your k6 tests
       - name: Build K6 Tests via npm build
-        if: github.event.inputs.run-npm-build == 'true'
+        if: inputs.run-npm-build
         working-directory: ${{ env.WORKING_DIRECTORY }}
         run: npm run build
 
-      - name: Setup kubectl config
-        uses: im-practices/setup-kubectl-config-for-private-aks@latest
-        id: kube-config
+      - name: AZ Login
+        uses: azure/login@v1
         with:
-          config-secret: ${{ secrets.K6_OPERATOR_KUBE_CONFIG }} # This is a repo-level secret (unless 'environment:' has been added to the job)
-          aks-resource-group: ${{ env.CLUSTER_RESOURCE_GROUP }}
-          aks-cluster-name: ${{ env.CLUSTER_NAME }}
-          enable-azure-login: 'true'
-          dns-zone-name: ${{ env.CLUSTER_DNS_ZONE_NAME }}
-          azure-credentials: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup kubectl config
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        id: kube-config
+        run: |
+          base_path=$(pwd)
+          kube_config_file_path="$base_path/.kube/config-sp"
+          export KUBECONFIG=$kube_config_file_path
+          az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --format exec --overwrite-existing --public-fqdn --file $kube_config_file_path
+          kubelogin convert-kubeconfig --login azurecli --kubeconfig $kube_config_file_path
+
+          echo "kube-config-file=$kube_config_file_path" >> $GITHUB_OUTPUT
+
+          powerstate=$(az aks show --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --query 'powerState.code' --out tsv)
+          echo "cluster-powerstate=$powerstate" >> $GITHUB_OUTPUT
+          echo "::notice title=Cluster Power State::Cluster Power State - $powerstate"
 
       - name: Stop test if Cluster is off
         if: steps.kube-config.outputs.cluster-powerstate != 'Running'
-        run:
-          exit 1
+        run: exit 1
 
       - name: Send Status to Teams - Starting Test
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.3
         with:
-          title: 'K6 Test Starting Shortly in AKS - ${{ github.event.inputs.run-name }}'
+          title: 'K6 Test Starting Shortly in AKS - ${{inputs.run-name }}'
           workflow-status: started
           workflow-type: Runbook
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -209,8 +266,8 @@ jobs:
               { "name": "Workflow", "value": "${{ github.workflow }}" },
               { "name": "Run", "value": "${{ github.run_id }}" },
               { "name": "Actor", "value": "${{ github.actor }}" },
-              { "name": "Environment", "value": "${{ github.event.inputs.env }}"},
-              { "name": "K6 Test", "value": "${{ github.event.inputs.test-file }}" }
+              { "name": "Environment", "value": "${{ inputs.env }}"},
+              { "name": "K6 Test", "value": "${{ inputs.test-file }}" }
             ]
           custom-actions: |
             [
@@ -223,7 +280,7 @@ jobs:
       - name: Clean Test File Name for K6 Tag
         id: test-tag
         run: |
-          k6_test_file_tag="--tag test=${{ github.event.inputs.test-file }}"
+          k6_test_file_tag="--tag test=${{ inputs.test-file }}"
           # Removing slashes from k6_test_file_tag
           k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
           echo "test-tag=$k6_test_file_tag" >> $GITHUB_OUTPUT
@@ -233,16 +290,16 @@ jobs:
         id: run-k6-operator-test
         with:
           working-directory: ${{ env.WORKING_DIRECTORY }}
-          test-file: ${{ github.event.inputs.test-file }}
-          run-name: ${{ github.event.inputs.run-name }}
-          upload-type: ${{ github.event.inputs.upload-type}}
-          upload-files-folder: ${{ github.event.inputs.upload-files-folder }}
-          k6-parameters: '${{ github.event.inputs.k6-parameters }}'
+          test-file: ${{ inputs.test-file }}
+          run-name: ${{ inputs.run-name }}
+          upload-type: ${{ inputs.upload-type}}
+          upload-files-folder: ${{ inputs.upload-files-folder }}
+          k6-parameters: '${{ inputs.k6-parameters }}'
           k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }} ${{ steps.test-tag.outputs.test-tag }}'
-          parallelism: ${{ github.event.inputs.parallelism }}
+          parallelism: ${{ inputs.parallelism }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
-          loop-count: ${{ github.event.inputs.loop-count }}
+          loop-count: ${{ inputs.loop-count }}
           loop-duration: ${{ env.LOOP_DURATION }}
           # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: uncomment to use custom k6 binary with k6 extensions installed
           # pod-log-lines-gha-output: 500 # TODO: uncomment if you want to change the number of lines in github actions that the pod logs output.
@@ -283,10 +340,18 @@ jobs:
           rm -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
+      - name: Azure logout
+        if: always()
+        continue-on-error: true
+        run: |
+          az logout
+          az cache purge
+          az account clear
 
       - name: Remove kubectl config
         if: always()
         shell: bash
+        working-directory: ${{ env.WORKING_DIRECTORY }}
         continue-on-error: true
         run: |
           # Remove kubectl config
@@ -297,7 +362,7 @@ jobs:
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.3
         with:
-          title: 'K6 Test in AKS Complete - ${{ github.event.inputs.run-name }}'
+          title: 'K6 Test in AKS Complete - ${{ inputs.run-name }}'
           workflow-status: ${{ steps.run-k6-operator-test.outcome }}
           workflow-type: Runbook
           teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -307,8 +372,8 @@ jobs:
               { "name": "Workflow", "value": "${{ github.workflow }}" },
               { "name": "Run", "value": "${{ github.run_id }}" },
               { "name": "Actor", "value": "${{ github.actor }}" },
-              { "name": "Environment", "value": "${{ github.event.inputs.env }}"},
-              { "name": "K6 Test", "value": "${{ github.event.inputs.test-file }}" },
+              { "name": "Environment", "value": "${{ inputs.env }}"},
+              { "name": "K6 Test", "value": "${{ inputs.test-file }}" },
               { "name": "K6 Run Name w/Timestamp", "value": "${{ steps.run-k6-operator-test.outputs.run-name }}"},
               { "name": "K6 Cluster Powerstate", "value": "${{ steps.kube-config.outputs.cluster-powerstate }}"}
             ]
