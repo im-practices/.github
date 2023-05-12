@@ -1,4 +1,4 @@
-# Workflow Code: MysteriousStranger_v9    DO NOT REMOVE
+# Workflow Code: MysteriousStranger_v10    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -53,13 +53,13 @@ on:
   #       2. Delete the workflow_dispatch trigger
   #       3. Change the env.ENVIRONMENT value from "${{ inputs.environment }}" to: "${{ github.event.client_payload.environment }}"
   #       4. Change the env.RELEASE_TAG value from "${{ inputs.tag }}" to: "${{ github.event.client_payload.tag }}"
-  #       5. Under the 'verify-tag' job:
+  #       5. Under the 'setup-deployment-workflow' job:
   #          a. Delete the 'Checkout Repository' step
   #          b. Delete the 'Verify Tag Exists' step
   #       6. Delete the 'stakeholder-approval' job
   #       7. Delete the 'attestor-approval' job
-  #       8. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
-  #       9. Under the 'deploy-service' job, update the needs property to be: "needs: [verify-tag]"
+  #       8. Delete the 'setup-deployment-workflow' job
+  #       9. Under the 'deploy-service' job, update the needs property to be: "needs: [setup-deployment-workflow]"
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
@@ -69,31 +69,22 @@ env:
   # TODO: Add any global environment vars that don't change based on deployment environment (dev, qa, stage....)
 
 jobs:
-  verify-tag:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-
-    steps:
-      - run: |
-          echo $'
-          | Build Arguments | Value                    |
-          | ---             |  ---                     |
-          | Environment     | `${{ env.ENVIRONMENT }}` |
-          | Tag             | `${{ env.RELEASE_TAG }}` |' >> $GITHUB_STEP_SUMMARY
-          
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Verify Tag Exists
-        uses: im-open/verify-git-ref@v1.2
-        with:
-          branch-tag-sha: ${{ env.RELEASE_TAG }}
+  # This job utilizes a reusable workflow which will:
+  #   1 - Verify the tag provided is a valid ref.
+  #   2 - If deploying to a production environment, verify the tag is reachable from the default branch 
+  #       and that the corresponding release is production ready (not pre-release or a draft).
+  setup-deployment-workflow:
+    uses: im-practices/.github/.github/im-reusable-setup-deployment-workflow.yml@v2
+    with:
+      ref-to-deploy: ${{ inputs.tag }}
+      deployment-environment: ${{ inputs.environment }}
+      # production-environments: 'prod,prod-secondary'  # TODO:  Adjust and include the production-environments if necessary (some apps may need to add stage/stage-secondary to this list)
+      # default-branch: main # TODO:  Update and include this arg if the default branch is not main
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
-    needs: [verify-tag]
+    needs: [setup-deployment-workflow]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ inputs.environment }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
@@ -105,7 +96,7 @@ jobs:
   # Each env has their own attestor approval environment (meant for QA Attestations).  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   attestor-approval:
-    needs: [verify-tag]
+    needs: [setup-deployment-workflow]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ inputs.environment }} Attestor Approval' # Use inputs context because env context is not available to environment:
     steps:
@@ -113,44 +104,8 @@ jobs:
           echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
           echo "Attestor approval was received or no required reviewers were set for this environment."
 
-  # This job needs to run for all environments because deploy-files relies
-  # on it but the steps inside this job will only run for the Prod env.
-  validate-tag-is-in-main-for-prod-deploys:
-    needs: [verify-tag]
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    steps:
-      - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
-
-      # In this job, always checkout the default branch (not the tag that was provided as an input).  Also use
-      # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
-      - name: Checkout Repository
-        if: env.ENVIRONMENT == 'prod'
-        uses: actions/checkout@v3
-        with:
-          ref: 'main'
-          fetch-depth: 0
-
-      - uses: im-open/is-tag-reachable-from-default-branch@v1.1
-        if: env.ENVIRONMENT == 'prod'
-        with:
-          tag: ${{ env.RELEASE_TAG }}
-
-      - uses: im-open/is-release-production-ready@v1.1
-        if: env.ENVIRONMENT == 'prod'
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.RELEASE_TAG }}
-          fail-for-prerelease: true # This only runs for prod environments, so if the release is not production ready it should fail
-
-  # If you want to verify that the Jira ticket being deployed has the proper attestations, there is an action for that.
-  # https://github.com/im-open/verify-fields-on-jira-task
-  # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
-  # Details on how to use the action can be found in the action's README.
-
   deploy-files:
     needs: |
-      - verify-tag
-      - validate-tag-is-in-main-for-prod-deploys
       - stakeholder-approval
       - attestor-approval
     runs-on: [self-hosted, windows-2019]
@@ -253,9 +208,13 @@ jobs:
           rm -f ${{ env.DEPLOY_ZIP }}
           rm -rf ${{ env.UNZIPPED_ASSET }}
 
+  # This job utilizes a reusable workflow which will:
+  #  1 - Update the deployment board based on the workflow conclusion
+  #  2 - Post a deployment status in the repo owner's Teams channel (connected to the MS_TEAMS_URI secret)
+  #  3 - Post a deployment status in the Deployment Notifications Teams channel if the deploy is for prod, is successful and the flag to do so is not set to false
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    needs: [verify-tag, deploy-files]
+    needs: [setup-deployment-workflow, deploy-files]
     if: always()
     uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2
     with:
