@@ -5,7 +5,7 @@
 # Example Usage in a repo's workflow:
 # jobs:
 #  setup-deployment-workflow:
-#    uses: im-practices/.github/.github/workflows/im-reusable-finish-build-workflow@v2
+#    uses: im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
 #    with:
 #      next-version: ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
 #      title-of-teams-post: 'My CI Build'
@@ -42,7 +42,7 @@ on:
         required: true
         type: string
       is-merge-to-main:
-          description: Flag indicating whether this is a merge to the default branch.
+          description: Flag indicating whether this is a merge to the default branch. Expected `true` or `false`.
           required: true
           type: string
       timezone:

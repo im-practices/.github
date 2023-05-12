@@ -1,0 +1,155 @@
+# The purpose of this workflow is to print a workflow summary, examine the
+# workflow triggers and set various outputs like whether to create a tag
+# or whether the pull request event is a merge to main and generate
+# the next tag version using git-version-lite.
+
+# Example Usage in a repo's workflow:
+# jobs:
+#  setup-build-workflow:
+#    uses: im-practices/.github/.github/workflows/im-reusable-setup-build-workflow.yml@v2
+#    with:
+#     default-branch: main
+#     tag-prefix: none
+#     workflow-summary: |
+#       |Workflow Item | Value|
+#       |Actor | ${{ github.actor }} |
+
+on:
+  workflow_call:
+    inputs:
+      default-branch:
+        description: Default branch of which contains the tag
+        required: false
+        type: string
+        default: main
+      tag-prefix:
+        description: 'Prefix for the tag git-version-lite will generate.'
+        type: string
+        default: ''
+      workflow-summary:
+        description: 'String that will override the default GitHub Summary when provided.'
+        type: string
+        required: false
+
+    outputs:
+      CONTINUE_WORKFLOW:
+        description: Flag indicating whether subsequent build jobs should continue.
+        value: ${{ jobs.setup-build-workflow.outputs.CONTINUE_WORKFLOW }}
+      CREATE_RELEASE:
+        description: Flag indicating whether a release should be created for this pull_request event.
+        value: ${{ jobs.setup-build-workflow.outputs.CREATE_RELEASE }}
+      IS_PRERELEASE:
+        description: Flag indicating whether the pull_request event is for something other than a merge to main.  Inverse of IS_MERGE_TO_MAIN.
+        value: ${{ jobs.setup-build-workflow.outputs.IS_PRERELEASE }}
+      IS_MERGE_TO_MAIN:
+        description: Flag indicating whether the pull_request event is a merge to the default branch.  Inverse of IS_PRERELEASE.
+        value: ${{ jobs.setup-build-workflow.outputs.IS_PRERELEASE }}
+      REF_TO_BUILD_AND_TAG:
+        description: String containing the reference to build and tag.
+        value: ${{ jobs.setup-build-workflow.outputs.REF_TO_BUILD_AND_TAG }}
+      DIST_TAG:
+        description: String containing the distribution reference.  Value set to 'latest' for merges to main, otherwise set to the source ref.  Primarily used with npm packages.
+        value: ${{ jobs.setup-build-workflow.outputs.DIST_TAG }}
+      NEXT_VERSION:
+        description: The next version calculated by git-version-lite.
+        value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION }}
+      NEXT_VERSION_NO_PREFIX:
+        description: The next version calculated by git-version-lite without a prefix.
+        value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION }}
+      
+jobs:
+  setup-build-workflow:
+    runs-on: im-linux
+    
+    outputs:
+      CONTINUE_WORKFLOW: ${{ steps.set-vars.outputs.CONTINUE_WORKFLOW }}
+      CREATE_RELEASE: ${{ steps.set-vars.outputs.CREATE_RELEASE }}
+      IS_PRERELEASE: ${{ steps.set-vars.outputs.IS_PRERELEASE }}
+      IS_MERGE_TO_MAIN: ${{ steps.set-vars.outputs.IS_MERGE_TO_MAIN }}
+      REF_TO_BUILD_AND_TAG: ${{ steps.set-vars.outputs.REF_TO_BUILD_AND_TAG }}
+      DIST_TAG: ${{ steps.set-vars.outputs.DIST_TAG }}
+      NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
+      NEXT_VERSION_NO_PREFIX: ${{ steps.version.outputs.NEXT_VERSION_NO_PREFIX }}
+
+    steps:
+      - name: Set default env variables
+        id: set-vars
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const targetRef = '${{ github.base_ref }}';
+            const sourceRef = '${{ github.head_ref }}';
+            const mergeRef = '${{ github.ref }}';
+
+            const prIsDraft = '${{ github.event.pull_request.draft }}' === 'true';
+            const prClosed = '${{ github.event.action }}' === 'closed';
+            const prMerged = prClosed && '${{ github.event.pull_request.merged }}' === 'true';
+            const prMergedToMain = prMerged && targetRef === '${{ inputs.default-branch }}';
+            
+            const isPreRelease = !prMergedToMain;
+
+            // For a detailed explanation of why we use different refs for different scenarios 
+            // see https://docs.github.com/en/rest/reference/pulls#get-a-pull-request
+            const refToBuildAndTag = prMergedToMain ? mergeRef : sourceRef;
+
+            const continueWorkflow = prClosed && !prMerged ? false : true;
+            const doTagRelease = continueWorkflow && !prIsDraft ? true :  false;
+            const distTag = prMergedToMain ? 'latest' : sourceRef;
+
+            Object.entries({
+              CONTINUE_WORKFLOW: continueWorkflow,
+              CREATE_RELEASE: doTagRelease,
+              IS_PRERELEASE: isPreRelease,
+              IS_MERGE_TO_MAIN: prMergedToMain,
+              REF_TO_BUILD_AND_TAG: refToBuildAndTag,
+              DIST_TAG: distTag
+            }).forEach(pair => {
+              core.setOutput(...pair);
+              console.info(...pair);
+            });
+      
+      - name: Construct Workflow Summary
+        id: summary  
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let summary = process.env.SUMMARY;
+            if (!summary || summary.trim().length === 0){
+              console.log('A workflow summary was not provided.  The default value will be constructed for this workflow run.');
+              summary = `
+              | Workflow Item        |  Value                                                  |
+              | ---                  |  ---                                                    |
+              | Actor                | \`${{ github.actor }}\`                                 |
+              | Source Ref           | \`${{ github.head_ref }}\`                              |
+              | Workflow Source      | \`${{ github.ref_name }}\` - SHA: \`${{ github.sha }}\` |
+              | CONTINUE_WORKFLOW    | \`${{ steps.set-vars.outputs.CONTINUE_WORKFLOW }}\`     |
+              | CREATE_RELEASE       | \`${{ steps.set-vars.outputs.CREATE_RELEASE}}\`         |
+              | IS_PRERELEASE        | \`${{ steps.set-vars.outputs.IS_PRERELEASE }}\`         |
+              | IS_MERGE_TO_MAIN     | \`${{ steps.set-vars.outputs.IS_MERGE_TO_MAIN }}\`      |
+              | REF_TO_BUILD_AND_TAG | \`${{ steps.set-vars.outputs.REF_TO_BUILD_AND_TAG }}\`  |
+              | DIST_TAG             | \`${{ steps.set-vars.outputs.DIST_TAG }}\`              |`;
+            } else {
+              console.log('A workflow summary was provided and will be used instead of the default value.');
+            }
+            console.log('Workflow Summary:');
+            console.log(summary);
+            core.setOutput('summary', summary);
+        env:
+          SUMMARY: ${{ inputs.workflow-summary }}
+      
+      - run: echo '${{ steps.summary.outputs.summary }}' >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/checkout@v3
+        if: steps.set-vars.outputs.CONTINUE_WORKFLOW == 'true'
+        with:
+          ref: ${{ steps.set-vars.outputs.REF_TO_BUILD_AND_TAG }}
+          fetch-depth: 0
+      
+      - name: Calculate next version
+        if: steps.set-vars.outputs.CONTINUE_WORKFLOW == 'true'
+        id: version
+        uses: im-open/git-version-lite@v2.2
+        with:
+          calculate-prerelease-version: ${{ steps.set-vars.outputs.IS_PRERELEASE }}
+          branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
+          tag-prefix: ${{ inputs.tag-prefix }}
