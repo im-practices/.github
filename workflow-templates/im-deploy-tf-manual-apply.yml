@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v36    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v37    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -60,7 +60,20 @@ env:
     ]
 
 jobs:
+  # This job utilizes a reusable workflow which will:
+  #   1 - Verify the branch/tag/sha provided is a valid ref.
+  #   2 - If deploying to a production environment, verify the tag is reachable from the default branch.
+  setup-deployment-workflow:
+    uses: im-practices/.github/.github/im-reusable-setup-deployment-workflow.yml@v2
+    with:
+      ref-to-deploy: ${{ inputs.branch-tag-sha }}
+      deployment-environment: ${{ inputs.root-module }}
+      verify-release-is-production-ready: false # Set to false since terraform projects generally do not have an associated release
+      # production-environments: 'prod,prod-secondary'  # TODO:  Adjust and include the production-environments if necessary (some apps may need to add stage/stage-secondary to this list)
+      # default-branch: main # TODO:  Update and include this arg if the default branch is not main
+      
   set-vars:
+    needs: [setup-deployment-workflow]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
 
     outputs:
@@ -72,24 +85,6 @@ jobs:
       GITHUB_SECRETS_ENVIRONMENT: ${{ steps.set-variables.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     steps:
-      - run: |
-          echo $'
-          | Build Arguments | Value                    |
-          | ---             |  ---                     |
-          | Root module     | `${{ inputs.root-module }}` |
-          | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |
-          | Workflow Source | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |' >> $GITHUB_STEP_SUMMARY
-
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Verify Ref Exists
-        uses: im-open/verify-git-ref@v1.2
-        with:
-          branch-tag-sha: ${{ env.GITHUB_REF }}
-
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
@@ -152,33 +147,8 @@ jobs:
       - name: Approval Received
         run: echo "Stakeholder approval was received"
 
-  # This job needs to run for all environments because tf-plan relies
-  # on it but the steps inside this job will only run for the Prod env.
-  validate-tag-is-in-main-for-prod-deploys:
-    needs: [set-vars]
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    steps:
-      # In this job, always checkout the default branch (not the branch that was provided as an input).  Also use
-      # fetch-depth: 0 to retrieve the history and tags so we can check if a tag is reachable from the default branch.
-      - name: Checkout Repository
-        if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod'
-        uses: actions/checkout@v3
-        with:
-          ref: 'main' # TODO: verify the name of your default branch
-          fetch-depth: 0
-
-      - uses: im-open/is-tag-reachable-from-default-branch@v1.1
-        if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod'
-        with:
-          tag: ${{ env.GITHUB_REF }}
-
-  # If you want to verify that the Jira ticket being deployed has the proper attestations, there is an action for that.
-  # https://github.com/im-open/verify-fields-on-jira-task
-  # Set up a new job, or add to an existing one that makes sense, and add a step with that action.
-  # Details on how to use the action can be found in the action's README.
-
   tf-plan:
-    needs: [set-vars, validate-tag-is-in-main-for-prod-deploys]
+    needs: [set-vars, stakeholder-approval]
     runs-on: [self-hosted, ubuntu-20.04]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
     env:
@@ -414,6 +384,10 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           maintenance-window-id: ${{ needs.tf-plan.outputs.maintenance_window_id }}
 
+  # This job utilizes a reusable workflow which will:
+  #  1 - Update the deployment board based on the workflow conclusion
+  #  2 - Post a deployment status in the repo owner's Teams channel (connected to the MS_TEAMS_URI secret)
+  #  3 - Post a deployment status in the Deployment Notifications Teams channel if the deploy is for prod, is successful and the flag to do so is not set to false
   update-deployment-board-and-send-teams-notification:
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     needs: [set-vars, tf-apply]

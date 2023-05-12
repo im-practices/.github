@@ -1,6 +1,36 @@
 # The purpose of this reusable job is to run the final steps of a deployment workflow
 # which includes updating the deployment board and posting a status to Teams.
 
+# Example Usage in a repo's workflow:
+# jobs:
+#  finish-deployment-workflow:
+#    uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow@v2
+#    with:
+#      gh-secrets-environment: ${{ inputs.environment-or-target }}
+#      deployment-environment: ${{ needs.set-vars.outputs.GH_SECRETS_ENVIRONMENT}}
+#      release-tag: ${{ inputs.tag }}
+#      title-of-teams-post: 'Deploy ${{ needs.set-vars.outputs.AZ_APP_NAME }} ${{ inputs.tag }} to ${{ inputs.environment-or-target }}'
+#      post-status-in-deployment-notifications-channel: true
+#      timezone: america/denver
+#      deployment-board-number: 1
+#      deployable-type: 'API'
+#      custom-facts-for-team-channel: |
+#      [
+#        { "name": "Workflow", "value": "${{ github.workflow }}" },
+#        { "name": "Run", "value": "${{ github.run_id }}" },
+#        { "name": "Actor", "value": "${{ github.actor }}" },
+#        { "name": "Version", "value": "${{ inputs.tag }}" }
+#      ]
+#      custom-facts-for-deployment-notifications-channel: |
+#      [
+#        { "name": "Actor", "value": "${{ github.actor }}" },
+#        { "name": "Version", "value": "${{ inputs.tag }}" }
+#      ]
+#    secrets:
+#      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }}  
+#      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL}}
+
+
 on:
   workflow_call:
     inputs:
