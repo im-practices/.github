@@ -2,7 +2,33 @@
 # which includes posting a status to teams, updating a PR comment and setting the final 
 # workflow outcome.
 
-name: Finish Workflow
+# Example Usage in a repo's workflow:
+# jobs:
+#  setup-deployment-workflow:
+#    uses: im-practices/.github/.github/workflows/im-reusable-finish-build-workflow@v2
+#    with:
+#      next-version: ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
+#      title-of-teams-post: 'My CI Build'
+#      is-merge-to-main: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
+#      timezone: america/denver
+#      additional-conclusions |
+#        [
+#          { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.test }}" },
+#          { "name": "dotnet coverage", "conclusion" : "${{ needs.dotnet-build-and-test.outputs.coverage }}" }
+#        ]
+#      additional-pr-comment-content |
+#        - To test this version try running:
+#          ```bash
+#          npm install @<org>/<package-name>@${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
+#          ```
+#      custom-facts-for-team-channel |
+#        [
+#          { "name": "Workflow", "value": "${{ github.workflow }}" },
+#          { "name": "Run", "value": "${{ github.run_id }}" },
+#          { "name": "Actor", "value": "${{ github.actor }}" },
+#          { "name": "Version", "value": "${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}" }
+#        ]
+
 on:
   workflow_call:
     inputs:

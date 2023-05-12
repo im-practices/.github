@@ -609,6 +609,10 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           branch-name: ${{ github.head_ref }}
 
+  # This job utilizes a reusable workflow which will:
+  #   1 - Send a status to a teams channel
+  #   2 - Add a comment to the PR with the status/next version
+  #   3 - Check for workflow failures
   finish-build:
     if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
     needs: [dotnet-test, jest, build-deployment-artifacts]
