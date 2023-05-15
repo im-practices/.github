@@ -4,7 +4,7 @@
 # Example Usage in a repo's workflow:
 # jobs:
 #  finish-deployment-workflow:
-#    uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow@v2
+#    uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2
 #    with:
 #      gh-secrets-environment: ${{ inputs.environment-or-target }}
 #      deployment-environment: ${{ needs.set-vars.outputs.GH_SECRETS_ENVIRONMENT}}

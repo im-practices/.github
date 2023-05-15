@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v40    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v41    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -23,7 +23,7 @@ on:
   # This workflow will run for the PR events:
   # opened/reopened: A PR is opened/re-opened,
   # synchronize: The PR's head branch is updated (commits pushed, the base branch changed or the head is updated from the base branch)
-  # closed: A PR is merged or closed (The examine-triggers job makes sure we only run if a merge happened, not when a close happens)
+  # closed: A PR is merged or closed (The setup-build-workflow job makes sure we only run if a merge happened, not when a close happens)
   pull_request:
     types: [opened, reopened, synchronize, closed]
 
@@ -49,48 +49,22 @@ env:
   TIMEZONE: America/Denver # TODO: Verify timezone
 
 jobs:
-  examine-triggers:
-    runs-on: ubuntu-latest
-    outputs:
-      CONTINUE_WORKFLOW: ${{ env.CONTINUE_WORKFLOW }}
-      CREATE_RELEASE: ${{ env.CREATE_RELEASE }}
-      IS_MERGE_TO_MAIN: ${{ env.IS_MERGE_TO_MAIN }}
-      IS_PRERELEASE: ${{ env.IS_PRERELEASE }}
-      REF_TO_BUILD_AND_TAG: ${{ env.REF_TO_BUILD_AND_TAG }}
-
-    steps:
-      - name: Set default env variables
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const targetRef = '${{ github.base_ref }}';
-            const sourceRef = '${{ github.head_ref }}';
-            const mergeRef = '${{ github.ref }}';
-
-            const prIsDraft = '${{ github.event.pull_request.draft }}' === 'true';
-            const prClosed = '${{ github.event.action }}' === 'closed';
-            const prMerged = prClosed && '${{ github.event.pull_request.merged }}' === 'true';
-            const prMergedToMain = prMerged && targetRef === 'main';
-            const isPreRelease = !prMergedToMain;
-
-            // For a detailed explanation of why we use different refs for different scenarios 
-            // see https://docs.github.com/en/rest/reference/pulls#get-a-pull-request
-            const refToBuildAndTag = prMergedToMain ? mergeRef : sourceRef;
-
-            const continueWorkflow = prClosed && !prMerged ? false : true;
-            const doTagRelease = continueWorkflow && !prIsDraft ? true :  false;
-
-            core.exportVariable('IS_PRERELEASE', isPreRelease);
-            core.exportVariable('IS_MERGE_TO_MAIN', prMergedToMain);
-            core.exportVariable('REF_TO_BUILD_AND_TAG', refToBuildAndTag);
-            core.exportVariable('CONTINUE_WORKFLOW', continueWorkflow);
-            core.exportVariable('CREATE_RELEASE', doTagRelease);
+  # This job utilizes a reusable workflow which will:
+  #   1 - Examine the triggers and set various flags for subsequent jobs to use when evaluating whether to run
+  #   2 - Print a workflow summary
+  #   3 - Generate the next version for the repo
+  setup-build-workflow:
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-build-workflow.yml@v2
+    with:
+      tag-prefix: 'v' # TODO: If you prefix your tags like (mfe/db/etc) uncomment and add that value here
+      # default-branch: main # TODO:  Update and include this argument if default branch is different
+      # workflow-summary : | # TODO:  If desired, the workflow summary that is generated can be overridden by providing this custom value.
 
   # TODO:  Remove this job and references to this job if the project does not use npm
   npm-cache:
     runs-on: [self-hosted, ubuntu-20.04]
-    needs: [examine-triggers]
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+    needs: [setup-build-workflow]
+    if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
       run:
@@ -103,7 +77,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG }}
+          ref: ${{ needs.setup-build-workflow.outputs.REF_TO_BUILD_AND_TAG }}
 
       - name: Set Cache Keys
         # As long as these files don't change the cache will remain in tact and the time
@@ -149,8 +123,8 @@ jobs:
 
   nuget-cache:
     runs-on: [self-hosted, ubuntu-20.04]
-    needs: [examine-triggers]
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+    needs: [setup-build-workflow]
+    if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
       run:
@@ -163,7 +137,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG }}
+          ref: ${{ needs.setup-build-workflow.outputs.REF_TO_BUILD_AND_TAG }}
 
       - name: Set Cache Keys
         # As long as these files don't change the cache will remain in tact and the time
@@ -213,8 +187,8 @@ jobs:
 
   dotnet-test:
     runs-on: [self-hosted, ubuntu-20.04]
-    needs: [examine-triggers, nuget-cache]
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+    needs: [setup-build-workflow, nuget-cache]
+    if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
       run:
@@ -225,7 +199,7 @@ jobs:
       test: ${{ steps.dotnet_test_check.outputs.test-outcome }}
 
     env:
-      REF_TO_BUILD_AND_TAG: ${{ needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG }}
+      REF_TO_BUILD_AND_TAG: ${{ needs.setup-build-workflow.outputs.REF_TO_BUILD_AND_TAG }}
       CODE_COVERAGE_REPORT_NAME_DOTNET: '<project-name> .Net Code Coverage' # TODO: Replace <project-name>
       CODE_COVERAGE_CHECK_NAME_DOTNET: 'dotnet code coverage'
       CODE_COVERAGE_DIR_DOTNET: 'coverage-results/dotnet'
@@ -353,8 +327,8 @@ jobs:
 
   jest:
     runs-on: [self-hosted, ubuntu-20.04]
-    needs: [examine-triggers, npm-cache]
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+    needs: [setup-build-workflow, npm-cache]
+    if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
 
     defaults:
       run:
@@ -365,7 +339,7 @@ jobs:
       test: ${{ steps.jest_test_check.outputs.test-outcome }}
 
     env:
-      REF_TO_BUILD_AND_TAG: ${{ needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG }}
+      REF_TO_BUILD_AND_TAG: ${{ needs.setup-build-workflow.outputs.REF_TO_BUILD_AND_TAG }}
       CODE_COVERAGE_REPORT_NAME_JEST: '<project-name> Jest Code Coverage' # TODO: Replace <project-name>
       CODE_COVERAGE_CHECK_NAME_JEST: 'jest code coverage'
       CODE_COVERAGE_DIR_JEST: 'coverage-results/jest'
@@ -460,19 +434,18 @@ jobs:
 
   build-deployment-artifacts:
     runs-on: [self-hosted, ubuntu-20.04]
-    needs: [examine-triggers, npm-cache, nuget-cache]
-    if: needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true' && needs.examine-triggers.outputs.CREATE_RELEASE == 'true'
+    needs: [setup-build-workflow, npm-cache, nuget-cache]
+    if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true' && needs.setup-build-workflow.outputs.CREATE_RELEASE == 'true'
 
     defaults:
       run:
         shell: bash
 
-    outputs:
-      NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
-
     env:
-      REF_TO_BUILD_AND_TAG: ${{ needs.examine-triggers.outputs.REF_TO_BUILD_AND_TAG }}
-      IS_PRERELEASE: ${{ needs.examine-triggers.outputs.IS_PRERELEASE }}
+      REF_TO_BUILD_AND_TAG: ${{ needs.setup-build-workflow.outputs.REF_TO_BUILD_AND_TAG }}
+      IS_PRERELEASE: ${{ needs.setup-build-workflow.outputs.IS_PRERELEASE }}
+      NEXT_VERSION: ${{ needs.setup-build-workflow.outputs.NEXT_VERSION }}
+      NEXT_VERSION_NO_PREFIX: ${{ needs.setup-build-workflow.outputs.NEXT_VERSION_NO_PREFIX }}
 
       # TODO: If you have a single deployable in the repo, use these variables and delete the multi-deployable block below
       PROJECT_ROOT: '' # TODO: Fill in the path to the folder containing the project that will be deployed, like ./src/MyBff
@@ -496,7 +469,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
           ref: ${{ env.REF_TO_BUILD_AND_TAG }}
 
       # These caches are only valid if the 'npm-cache' and 'nuget-cache' jobs that creates the cache and
@@ -531,20 +503,6 @@ jobs:
         env:
           DOTNET_INSTALL_DIR: './.dotnet'
 
-      # TODO: If you have multiple deployables in the repo and each deployable has it's own tag:
-      #       1 - Duplicate this step once per deployable
-      #       2 - Duplicate the following Build and Publish step, changing it to build one deployable at a time instead of the whole solution.
-      #       3 - Update the ID so the NEXT_VERSION can be referenced elsewhere
-      #       4 - Uncomment and add a value for the prefix (mfe/db/site/api/etc) so the deployable's tag can be incremented.
-      #       5 - At the top of this job, add a NEXT_VERSION with the appropriate prefix/suffix for the deployable
-      - name: Calculate next version
-        id: version
-        uses: im-open/git-version-lite@v2.2
-        with:
-          calculate-prerelease-version: ${{ env.IS_PRERELEASE }}
-          branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
-          # tag-prefix: '' # TODO: If you prefix your tags like (mfe/db/etc) uncomment and add that value here
-
       # TODO: If the project being built publishes to Azure Event Hubs, this step is needed to build an AsyncAPI Document.
       #       It runs a console application that calls the Mktp.Messaging.Events.Publisher.AsyncApi library.
       #       See https://github.com/im-practices/cloud-events/blob/main/src/Mktp.Messaging.Events.Publisher.AsyncApi/README.md for more information.
@@ -560,7 +518,7 @@ jobs:
         working-directory: ${{ env.PROJECT_ROOT }}
         shell: pwsh # On a Windows build runner, the 'zip' commandline tool isn't available. Use PowerShell instead.
         run: |
-          dotnet build --configuration Release /p:Version=${{ steps.version.outputs.NEXT_VERSION_NO_PREFIX }}
+          dotnet build --configuration Release /p:Version=${{ env.NEXT_VERSION_NO_PREFIX }}
           dotnet publish --configuration Release --no-build -o ./${{ env.PUBLISHED_APP }}
           Compress-Archive -Path ./${{ env.PUBLISHED_APP }}/* -DestinationPath ${{ env.DEPLOY_ZIP }}
 
@@ -579,7 +537,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
           delete-existing-release: true # Handy when you hit 're-run jobs' on a workflow run
-          tag-name: ${{ steps.version.outputs.NEXT_VERSION }}
+          tag-name: ${{ env.NEXT_VERSION }}
           prerelease: ${{ env.IS_PRERELEASE }}
           commitish: ${{ env.REF_TO_BUILD_AND_TAG }}
           # TODO: if there are multiple deployables that use the same tag (and release), delete these three items.
@@ -614,13 +572,13 @@ jobs:
   #   2 - Add a comment to the PR with the status/next version
   #   3 - Check for workflow failures
   finish-build:
-    if: always() && needs.examine-triggers.outputs.CONTINUE_WORKFLOW == 'true'
+    if: always() && needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
     needs: [dotnet-test, jest, build-deployment-artifacts]
     uses:  im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
     with:
       next-version: ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
       title-of-teams-post: '<project-name> CI Build' # TODO: Replace <project-name>
-      is-merge-to-main: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
+      is-merge-to-main: ${{ needs.setup-build-workflow.outputs.IS_MERGE_TO_MAIN }}
       additional-conclusions: | # TODO: Determine if there are any additional step outcomes/outputs you want considered or remove some items if they do not apply (like jest)
         [
           { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-test.outputs.test }}" },

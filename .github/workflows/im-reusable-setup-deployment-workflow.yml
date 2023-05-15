@@ -7,7 +7,7 @@
 # Example Usage in a repo's workflow:
 # jobs:
 #  setup-deployment-workflow:
-#    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow@v2
+#    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
 #    with:
 #      ref-to-deploy: v1.2.3
 #      deployment-environment: prod
@@ -40,21 +40,42 @@ on:
         required: false
         type: string
         default: main
+      workflow-summary:
+        description: 'String that will override the default GitHub Summary when provided.'
+        type: string
+        required: false
       
 jobs:
   setup-deployment-workflow:
     runs-on: im-linux
 
     steps:
-      - run: |
-          echo $'
-          | Deployment Arguments   |  Value                                              |
-          | ---                    |  ---                                                |
-          | Deployment Environment | `${{ inputs.deployment-environment }}`              |
-          | Ref to Deploy          | `${{ inputs.ref-to-deploy }}`                       |
-          | Actor                  | `${{ github.actor }}`                               |
-          | Workflow Source        | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |' >> $GITHUB_STEP_SUMMARY'
+      - name: Construct Workflow Summary
+        id: summary  
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let summary = process.env.SUMMARY;
+            if (!summary || summary.trim().length === 0){
+              console.log('A workflow summary was not provided.  The default value will be constructed for this workflow run.');
+              summary = `
+              | Deployment Arguments   |  Value                                                  |
+              | ---                    |  ---                                                    |
+              | Deployment Environment | \`${{ inputs.deployment-environment }}\`                |
+              | Ref to Deploy          | \`${{ inputs.ref-to-deploy }}\`                         |
+              | Actor                  | \`${{ github.actor }}\`                                 |
+              | Workflow Source        | \`${{ github.ref_name }}\` - SHA: \`${{ github.sha }}\` |`;
+            } else {
+              console.log('A workflow summary was provided and will be used instead of the default value.');
+            }
+            console.log('Workflow Summary:');
+            console.log(summary);
+            core.setOutput('summary', summary);
+        env:
+          SUMMARY: ${{ inputs.workflow-summary }}
       
+      - run: echo '${{ steps.summary.outputs.summary }}' >> $GITHUB_STEP_SUMMARY
+
       # In this job, always checkout the default branch (not the tag that was provided as an input).  
       # Also use fetch-depth: 0 to retrieve the history and tags so we can check if a tag is 
       # exists, is reachable from the default branch and is production ready.
@@ -83,7 +104,7 @@ jobs:
             const deploymentEnv = '${{ inputs.deployment-environment }}'.trim();
             
             const isProd = prodEnvs.includes(deploymentEnv);
-            core.setVariable('IS_PROD', isProd);
+            core.setOutput('IS_PROD', isProd);
 
       - uses: im-open/is-tag-reachable-from-default-branch@v1
         if: steps.check-env.outputs.IS_PROD == 'true'
