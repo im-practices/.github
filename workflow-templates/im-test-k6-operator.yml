@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v16   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v17   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -81,9 +81,8 @@ env:
   NODE_VERSION: '16.x' # TODO: Set correct node version
   LOOP_DURATION: '1m' # TODO: Update duration of loop to your specification.  The action im-practices/run-k6-operator-test documenation has more details on setting this parameter.
 
-  # InfluxDB addresses -
-  # DNS: https://influxdb-v1.mktp.io/loadtesting # Output to influx is currently broken with the k6 operator --out influxdb=https://influxdb-v1.mktp.io/loadtesting
-  K6_DEFAULT_PARAMETERS: '--insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 parameters
+  # TODO: Add --out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" to K6_DEFAULT_PARAMATERS if you want test results in grafana.
+  K6_DEFAULT_PARAMETERS: '--insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=TEST,family=pf -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
   RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
   K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
