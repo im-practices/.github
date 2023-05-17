@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v41    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v43    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -62,7 +62,7 @@ jobs:
 
   # TODO:  Remove this job and references to this job if the project does not use npm
   npm-cache:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     needs: [setup-build-workflow]
     if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
 
@@ -97,7 +97,7 @@ jobs:
 
       # This action creates a post-job step that will upload the node_modules dir to the cache if the job
       # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
-      # folder if the package-lock.json hasn't changed and it uses a ubuntu-20.04 runner to restore the cache from.
+      # folder if the package-lock.json hasn't changed and it uses a im-linux runner to restore the cache from.
       - name: Setup caching for node_modules directory
         if: steps.has-cache.outputs.cache-hit == 'false'
         uses: actions/cache@v3
@@ -122,7 +122,7 @@ jobs:
         if: steps.has-cache.outputs.cache-hit == 'false'
 
   nuget-cache:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     needs: [setup-build-workflow]
     if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
 
@@ -158,7 +158,7 @@ jobs:
 
       # This action creates a post-job step that will upload the ./.nuget/packages dir to the cache if the job
       # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the ./.nuget/packages
-      # folder if the csproj files haven't changed and it uses a ubuntu-20.04 runner to restore the cache from.
+      # folder if the csproj files haven't changed and it uses a im-linux runner to restore the cache from.
       - name: Setup caching for nuget packages
         if: steps.has-cache.outputs.cache-hit == 'false'
         uses: actions/cache@v3
@@ -186,7 +186,7 @@ jobs:
         if: steps.has-cache.outputs.cache-hit == 'false'
 
   dotnet-test:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     needs: [setup-build-workflow, nuget-cache]
     if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
 
@@ -210,6 +210,15 @@ jobs:
       INSTALL_MOCK_DB_OBJ: '' # TODO: [true|false] Indicates whether you want mock objects installed on the db.  Delete if not using.
       MOCK_DB_OBJ_URL: '' # TODO: The url to the nuget feed that contains your mock db obs.  Delete if not using mock db objects.
       DROP_DB_AFTER_STEP: '' # TODO: [true|false] Indicates whether the db should be dropped after the build step
+      SQL_SERVER_PASSWORD: 'StrongPassword!1'
+      
+    # TODO:  Remove this services block if you do not setup a database to run tests against during ci
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+          - 1433:1433
+        options: -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=StrongPassword!1"
 
     steps:
       - name: Checkout Repository
@@ -249,7 +258,16 @@ jobs:
           seed-data-files-path: '' # TODO: Add the path to the directory with your seed data files
           use-integrated-security: false
           db-username: 'sa' # The default system administrator account that comes with SQL Server. This is the only account set up in our self hosted Action Runners' SQL Server instances.
-          db-password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }} # This is an org level secret. It is the password for the sa account.
+          db-password: ${{ env.SQL_SERVER_PASSWORD }} # This is an org level secret. It is the password for the sa account.
+
+      # TODO:  If you are setting up a sql database, you may need to update connection strings
+      #        in appsettings.json or other config to ensure the application can connect properly.
+      # - name: Update sql connection string
+      #   uses: im-open/variable-substitution@v2
+      #   with:
+      #     files: '' # TOD:  add file path to appsettings.json
+      #   env:
+      #     ConnectionStrings.<<PROJECT>>: 'Server=localhost;Database=${{ env.DB_NAME }};Trusted_Connection=False;User ID=SA;Password=${{ env.SQL_SERVER_PASSWORD }}' # TODO:  Verify connectionString name for app setting and any additional properties that need to be added
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v3
@@ -326,7 +344,7 @@ jobs:
   # TODO: Remove this job if you do not have jest tests
 
   jest:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     needs: [setup-build-workflow, npm-cache]
     if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
 
@@ -433,7 +451,7 @@ jobs:
           path: ${{ env.CODE_COVERAGE_DIR_JEST }}
 
   build-deployment-artifacts:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     needs: [setup-build-workflow, npm-cache, nuget-cache]
     if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true' && needs.setup-build-workflow.outputs.CREATE_RELEASE == 'true'
 

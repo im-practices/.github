@@ -1,4 +1,4 @@
-# Workflow Code: GuiltyBison_v12    DO NOT REMOVE
+# Workflow Code: GuiltyBison_v13    DO NOT REMOVE
 # Purpose:
 #    Runs the Postman script specified in the workflow when someone
 #    manually kicks it off or when another workflow triggers it.
@@ -38,7 +38,7 @@ env:
 
 jobs:
   run-postman:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
 
     defaults:
       run:

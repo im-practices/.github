@@ -1,9 +1,11 @@
 # .github
+
 Community Health Files for the `im-practices` organization.
 
 Each repository within this organization will inherit these default files unless the repository has defined their own.
 
 ## Workflow Templates
+
 The templates defined in this repository have been customized for our build processes and standards.  By including them in this repository, users can [add a workflow] to their repo by clicking a button.
 
 The templates defined in this repository are also the source of truth for the `im-` templates in each of the Enterprise Org `.github` repos.  When a merge to main happens, the template files in this repo will be copied to the other `.github` repositories in the Enterprise.  If changes have been made to any of the `im-` template files in those organizations' `.github` repos they will be overwritten by these changes.
@@ -17,12 +19,14 @@ Templates that are specific to an organization should be added directly to that 
 For detailed info around creating or modifying the templates see [Sharing workflows with your organization].
 
 The templates in this repository fall into one of the following categories:
+
 - Build
 - Deploy
 - Test
 - Run
- 
+
 ### Template Standards
+
 - For new `.svg` files ensure:
   - [ ] The file contains the `im_` prefix
 - For new `properties.json` files ensure:
@@ -50,25 +54,23 @@ The templates in this repository fall into one of the following categories:
   - [ ] Clearly state the format if something specific is required
   - [ ] If you want to use the github hosted runners use the `runs-on: ubuntu-latest` tag
   - [ ] If the workflow takes in the environment as a parameter, use the `type: choice` pattern that is implemented in other workflows like [im-deploy-tf-manual-apply.yml]
-  - For consistency, 
+  - For consistency:
     - [ ] Ensure there are spaces between the brackets and the expression when using expression syntax
       - Expected: ${{ secrets.thing }}
-      - Not expected: ${{secrets.mything}}
-    - [ ] If only one label is included in the `runs-on` property, do not include brackets
-      - Expected: `runs-on: ubuntu-latest`
-      - Not Expected: `runs-on: [ubuntu-latest]`
+      - Not expected: ${{secrets.thing}}
     - [ ] Outside of script blocks, use single `'` instead of double `"`
     - [ ] For any secrets, document whether it is an org, repo or environment level secret
-      
+
 ## start-project Integration
+
 This repository contains two files that enable integration with `start-project`:
+
 - [package.json]
   - This allows the repository to be restored via npm
 - [start-project-template-inventory.json]
   - This file tells `start-project` which workflow templates should be added to different project types
 
 When `start-project` runs, it restores this repository and examines the inventory file to determine which Workflows should be included.  The generator should include the latest version of the Workflow.
-
 
 [add a workflow]: https://docs.github.com/en/actions/guides/setting-up-continuous-integration-using-workflow-templates
 [Sharing workflows with your organization]: https://docs.github.com/en/actions/learn-github-actions/sharing-workflows-with-your-organization

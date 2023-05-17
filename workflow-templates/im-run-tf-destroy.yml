@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v16    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v17    DO NOT REMOVE
 # Purpose:
 #    Destroys the resources created by a terraform configuration when someone kicks it off manually.
 #
@@ -142,7 +142,7 @@ jobs:
 
   tf-plan:
     needs: [set-vars, stakeholder-approval]
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     defaults:
@@ -255,7 +255,7 @@ jobs:
 
   tf-apply:
     needs: [set-vars, tf-plan, tf-plan-manual-approval, stakeholder-approval]
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     defaults:

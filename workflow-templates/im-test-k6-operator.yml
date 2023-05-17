@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v17   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v18   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -151,7 +151,7 @@ jobs:
 
       # This action creates a post-job step that will upload the node_modules dir to the cache if the job
       # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
-      # folder if the package-lock.json hasn't changed and it uses a ubuntu-20.04 runner to restore the cache from.
+      # folder if the package-lock.json hasn't changed and it uses a im-linux runner to restore the cache from.
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
         if: steps.has-cache.outputs.cache-hit == 'false'
@@ -183,7 +183,7 @@ jobs:
           npm ci
 
   run_k6_operator:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     needs: [npm-cache] # TODO: Delete if you don't build your k6 tests
     environment: ${{ inputs.env }}
 

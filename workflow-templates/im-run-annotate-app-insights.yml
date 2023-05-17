@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v14    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v15    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc app insights annotation for a specified
 #    environment when someone kicks it off manually.
@@ -49,7 +49,7 @@ env:
 
 jobs:
   create-annotation:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ github.event.inputs.environment }}
     steps:
       - run: |

@@ -1,4 +1,4 @@
-# Workflow Code: FrazzledFerret_v19    DO NOT REMOVE
+# Workflow Code: FrazzledFerret_v20    DO NOT REMOVE
 # Purpose:
 #    Removes a lock from the terraform state when someone kicks it off manually.
 #
@@ -57,7 +57,7 @@ env:
 
 jobs:
   tf-unlock-state:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     defaults:
