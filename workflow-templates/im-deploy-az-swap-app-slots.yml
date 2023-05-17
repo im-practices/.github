@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v17    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v18    DO NOT REMOVE
 # Purpose:
 #    Swaps deployment slots in a specified environment for an Azure App Service
 #    or Function outside of a deployment when someone kicks it off manually.
@@ -45,7 +45,7 @@ on:
 
 jobs:
   swap-slots:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ github.event.inputs.environment || github.event.client_payload.environment }}
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window

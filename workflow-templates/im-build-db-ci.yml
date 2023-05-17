@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v13    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v14    DO NOT REMOVE
 # Purpose:
 #    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #    In addition to that, however, there are three other things this workflow template is set up to do.
@@ -129,9 +129,20 @@ jobs:
           path-to-lint-config: ./.tsqllintrc # TODO: Update this with the path to your project's .tsllintrc file
 
   build-database:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     needs: [set-vars, lint-migration-files] # TODO: Remove any jobs you deleted above
     if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }} # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
+    
+    env:
+      SQL_SERVER_PASSWORD: 'StrongPassword!1'
+      
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+          - 1433:1433
+        options: -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=StrongPassword!1"
+    
     steps:
       - uses: actions/checkout@v3
 
@@ -158,7 +169,7 @@ jobs:
           seed-data-files-path: '' # TODO: Add the path to the directory with your seed data files
           use-integrated-security: false
           db-username: 'sa' # The default system administrator account that comes with SQL Server. This is the only account set up in our self hosted Action Runners' SQL Server instances.
-          db-password: ${{ secrets.ACTIONS_RUNNER_MSSQL_SA_PWD }} # This is an org level secret. It is the password for the sa account.
+          db-password: ${{ env.SQL_SERVER_PASSWORD }}
 
 
       #########################################################################################################################

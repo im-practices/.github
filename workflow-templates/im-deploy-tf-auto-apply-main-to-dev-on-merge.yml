@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v27    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v28    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform apply -auto-approve with the changes
 #    in the PR against the dev environment when a PR is merged to main.
@@ -49,7 +49,7 @@ jobs:
   auto-apply-tf:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO: verify default branch name
 
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
 
     environment: 'Dev'
 

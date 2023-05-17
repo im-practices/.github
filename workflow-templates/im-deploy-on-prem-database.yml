@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v26    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v27    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures tags
 #    are valid for production deployments and runs the migrations against an on-prem
@@ -104,7 +104,7 @@ jobs:
 
   deploy-on-prem-db:
     needs: [stakeholder-approval, attestor-approval]
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ inputs.environment }} # Use inputs context because env context is not available to environment:
     outputs:
       DB_NAME: ${{ steps.environment-specific-vars.outputs.DB_NAME }}

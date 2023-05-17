@@ -1,4 +1,4 @@
-# Workflow Code: DrearyBuck_v16    DO NOT REMOVE
+# Workflow Code: DrearyBuck_v17    DO NOT REMOVE
 
 # Purpose:
 #    Imports a specified resource into the terraform state when someone kicks it off manually.
@@ -61,7 +61,7 @@ env:
 
 jobs:
   tf-import-state:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     defaults:

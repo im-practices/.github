@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v41    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v42    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -200,7 +200,7 @@ jobs:
 
   deploy-code:
     needs: [set-vars, stakeholder-approval, attestor-approval]
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     env:

@@ -1,4 +1,4 @@
-# Workflow Code: ShinySQUIRREL_v19    DO NOT REMOVE
+# Workflow Code: ShinySQUIRREL_v20    DO NOT REMOVE
 # Purpose:
 #    Validates that the deployed terraform matches what is supposed to be deployed
 #    when it runs at a scheduled time or when someone kicks it off manually.
@@ -28,7 +28,7 @@ on:
 
 jobs:
   auto-plan-the-tf:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
 
     strategy:
       matrix:

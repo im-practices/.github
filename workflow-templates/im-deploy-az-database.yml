@@ -1,4 +1,4 @@
-# Workflow Code: BetrayedCod_v25    DO NOT REMOVE
+# Workflow Code: BetrayedCod_v26    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures
 #    tags are valid for production deployments and runs the migrations against
@@ -156,7 +156,7 @@ jobs:
 
   deploy-az-db:
     needs: [set-vars, stakeholder-approval, attestor-approval]
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
     outputs:
       DB_NAME: ${{ steps.db-vars.outputs.DB_NAME }}

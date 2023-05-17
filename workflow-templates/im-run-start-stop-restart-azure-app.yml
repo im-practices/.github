@@ -1,4 +1,4 @@
-# Workflow Code: NeedyPig_v13    DO NOT REMOVE
+# Workflow Code: NeedyPig_v14    DO NOT REMOVE
 # Purpose:
 #    Performs a start, stop or restart on an app service in the
 #    specified environment when someone kicks it off manually.
@@ -46,7 +46,7 @@ env:
 
 jobs:
   start-stop-restart:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     env:

@@ -178,7 +178,7 @@ jobs:
       - set-vars
       - stakeholder-approval
       - attestor-approval
-    runs-on: [self-hosted, windows-2019]
+    runs-on: [self-hosted, windows-2019] # In order to use WinRM this must remain as a windows runner
     environment: ${{ inputs.environment }} # Use inputs context because env context is not available to environment:
 
     strategy:

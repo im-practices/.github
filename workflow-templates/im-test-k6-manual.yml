@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v19    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v20    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -68,7 +68,7 @@ env:
 
 jobs:
   matrix-setup:
-    runs-on: ubuntu-20.04
+    runs-on: [self-hosted, im-linux]
 
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -112,7 +112,7 @@ jobs:
             core.notice(`${output}`);
 
   k6_test:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     needs: [matrix-setup]
 
     defaults:
