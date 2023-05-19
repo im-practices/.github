@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v28    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v29    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform apply -auto-approve with the changes
 #    in the PR against the dev environment when a PR is merged to main.
@@ -25,11 +25,11 @@ env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PAGERDUTY_WINDOW_IN_MIN: 10 # TODO: Verify the length of your PD Maintenance Window
   PAGERDUTY_WINDOW_DESC: 'Auto apply main branch to Dev environment from GitHub Actions' # TODO: Verify this description
-  # The following ARM_* secrets are env-level secrets
-  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  # The following ARM_* values are env-level secrets/variables
+  ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
+  ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
@@ -85,7 +85,7 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
-          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
+          service-id: ${{ vars.PAGERDUTY_SERVICE_ID }} # This is an env-level variable
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
       # TODO: Remove the pagerduty token if not configuring pagerduty.  If using pagerduty verify 'pagerduty_token' is the name of the variable that tf expects
@@ -110,7 +110,7 @@ jobs:
           title: Auto-Deploying <project-name> Terraform to Dev # TODO: Replace <project-name> with your project
           workflow-status: ${{ job.status }}
           workflow-type: Deploy
-          teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a env-level secret (because 'environment:' has been added to the job).  If an env-level secret is not provided, it will look at the repo-level for the secret.
+          teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a env-level variable (because 'environment:' has been added to the job).  If an env-level variable is not provided, it will look at the repo-level for the variable.
           timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [

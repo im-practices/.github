@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v18   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v19   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -258,7 +258,7 @@ jobs:
           title: 'K6 Test Starting Shortly in AKS - ${{inputs.run-name }}'
           workflow-status: started
           workflow-type: Runbook
-          teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
+          teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [
@@ -364,7 +364,7 @@ jobs:
           title: 'K6 Test in AKS Complete - ${{ inputs.run-name }}'
           workflow-status: ${{ steps.run-k6-operator-test.outcome }}
           workflow-type: Runbook
-          teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
+          teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [

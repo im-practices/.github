@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v34    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v35    DO NOT REMOVE
 # Purpose:
 #    Automatically builds the project and runs tests with code coverage. If
 #    everything is green, a new semantic version is calculated and a new package
@@ -226,4 +226,4 @@ jobs:
       #   ]
       
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }}
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}

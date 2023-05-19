@@ -117,7 +117,7 @@ jobs:
           title: ${{ inputs.title-of-teams-post }}
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Build
-          teams-uri: ${{ secrets.MS_TEAMS_URI }}
+          teams-uri: ${{ vars.MS_TEAMS_URI }}
           timezone: ${{ inputs.timezone }}
           custom-facts: ${{ steps.team-channel-facts.outputs.facts }}
       

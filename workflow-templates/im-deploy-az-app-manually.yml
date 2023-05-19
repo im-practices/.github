@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v42    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v43    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -278,7 +278,7 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
-          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
+          service-id: ${{ vars.PAGERDUTY_SERVICE_ID }} # This is an env-level variable
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
       - name: AZ Login
@@ -304,14 +304,14 @@ jobs:
       #     }
 
       # TODO: Uncomment if you want to create a slot to deploy to.  Delete if you have a permanent slot or do not wish to use slots.
-      # ARM_SUBSCRIPTION_ID is an env-level secret
+      # ARM_SUBSCRIPTION_ID is an env-level variable
       # - name: Create a deployment slot
       #   run: |
       #     az ${{ env.AZ_APP_TYPE }} deployment slot create \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
-      #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
+      #     --subscription ${{ vars.ARM_SUBSCRIPTION_ID }} \
       #     --configuration-source ${{ needs.set-vars.outputs.AZ_APP_NAME }}
 
       # TODO: Uncomment if you use User Managed Identity in your app service.
@@ -322,7 +322,7 @@ jobs:
       #       --name ${{ needs.set-vars.outputs.AZ_APP_NAME }} \
       #       --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #       --slot ${{ env.AZ_SLOT_NAME }} \
-      #       --identities /subscriptions/${{ secrets.ARM_SUBSCRIPTION_ID }}/resourcegroups/${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${{ needs.set-vars.outputs.AZ_APP_MSI }}
+      #       --identities /subscriptions/${{ vars.ARM_SUBSCRIPTION_ID }}/resourcegroups/${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${{ needs.set-vars.outputs.AZ_APP_MSI }}
 
       # TODO Uncomment if you require networking on bootstrap of application.  IE Eventhub, Hashicorp Vault
       # - name: Assign VNet to slot
@@ -352,23 +352,23 @@ jobs:
           slot-name: ${{ env.AZ_SLOT_NAME }} # TODO: Delete if not using slots
 
       # TODO: Uncomment if using slots and you want to swap them now (as opposed to doing it in another workflow).  Delete this block if you don't.
-      # ARM_SUBSCRIPTION_ID is an env-level secret
+      # ARM_SUBSCRIPTION_ID is an env-level variable
       # - name: Swap slots
       #   run: |
       #     az ${{ env.AZ_APP_TYPE }} deployment slot swap \
-      #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
+      #     --subscription ${{ vars.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --target-slot ${{ env.TARGET_SLOT }}
 
       # TODO: Uncomment if you want to delete the temporary slot.  Delete this block if you don't.
-      # ARM_SUBSCRIPTION_ID is an env-level secret
+      # ARM_SUBSCRIPTION_ID is an env-level variable
       # - run: |
       #     az ${{ env.AZ_APP_TYPE }} deployment slot delete \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
-      #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
+      #     --subscription ${{ vars.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}
 
       # TODO: Uncomment if you have azure locks in stage and prod
@@ -389,7 +389,7 @@ jobs:
       - name: Annotate App Insights
         uses: im-open/create-app-insights-annotation@v1.0
         with:
-          subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
           resourceGroupName: ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
           releaseName: '${{ needs.set-vars.outputs.AZ_APP_NAME }}-${{ env.RELEASE_TAG }}'
@@ -461,5 +461,5 @@ jobs:
       #     { "name": "Version", "value": "${{ inputs.tag }}" }
       #   ]
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}

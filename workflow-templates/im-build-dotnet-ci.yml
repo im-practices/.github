@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v43    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v44    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -614,4 +614,4 @@ jobs:
       #     { "name": "Version", "value": "${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}" }
       #   ]
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }}
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}

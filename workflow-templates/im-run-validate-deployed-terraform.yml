@@ -1,4 +1,4 @@
-# Workflow Code: ShinySQUIRREL_v20    DO NOT REMOVE
+# Workflow Code: ShinySQUIRREL_v21    DO NOT REMOVE
 # Purpose:
 #    Validates that the deployed terraform matches what is supposed to be deployed
 #    when it runs at a scheduled time or when someone kicks it off manually.
@@ -38,11 +38,11 @@ jobs:
     environment: ${{ matrix.environment }}
 
     env:
-      # The following ARM_* secrets are org-level secrets
-      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      # The following ARM_* values are env-level secrets/variables
+      ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
+      ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
       ARM_ENVIRONMENT: 'public'
       TF_IN_AUTOMATION: 'true'
       TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
@@ -153,7 +153,7 @@ jobs:
         uses: im-open/create-pagerduty-incident@v1.1
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
-          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
+          service-id: ${{ vars.PAGERDUTY_SERVICE_ID }} # This is an env-level variable
           email: 'svc-hubot@extendhealth.com'
           title: 'Your terraform does not match what was expected!'
           body: 'The workflow found changes in the ${{matrix.environment}} environment.  The workflow expected the infrastructure to match the terraform at ${{ steps.get-latest.outputs.VERSION }}.  See workflow run at ${{ env.REPO_URL }}/actions/runs/${{ github.run_id }} for more details.'
