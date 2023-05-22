@@ -1,4 +1,4 @@
-# Workflow Code: BetrayedCod_v26    DO NOT REMOVE
+# Workflow Code: BetrayedCod_v27    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures
 #    tags are valid for production deployments and runs the migrations against
@@ -238,7 +238,7 @@ jobs:
       - name: Annotate App Insights
         uses: im-open/create-app-insights-annotation@v1.0
         with:
-          subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
           resourceGroupName: ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
           releaseName: '${{ needs.set-vars.outputs.APP_INSIGHTS_ANNOTATION }}'
@@ -287,5 +287,5 @@ jobs:
       #     { "name": "Version", "value": "${{ inputs.tag == 0 && github.ref_name || inputs.tag }}" }
       #   ]
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}    
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}    

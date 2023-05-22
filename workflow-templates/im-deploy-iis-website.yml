@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v39    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v40    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -259,7 +259,7 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an env-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
-          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
+          service-id: ${{ vars.PAGERDUTY_SERVICE_ID }} # This is an env-level variable
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
       - name: Download artifacts from release
@@ -414,5 +414,5 @@ jobs:
       #     { "name": "Version", "value": "${{ inputs.tag }}" }
       #   ]
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}    
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}    

@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v18    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v19    DO NOT REMOVE
 # Purpose:
 #    Swaps deployment slots in a specified environment for an Azure App Service
 #    or Function outside of a deployment when someone kicks it off manually.
@@ -97,7 +97,7 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
-          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
+          service-id: ${{ vars.PAGERDUTY_SERVICE_ID }} # This is an env-level variable
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
       - name: AZ Login
@@ -107,22 +107,22 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
 
       - name: Swap
-        # ARM_SUBSCRIPTION_ID is an env-level secret
+        # ARM_SUBSCRIPTION_ID is an env-level variable
         run: |
           az ${{ env.AZ_APP_TYPE }} deployment slot swap \
-          --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
+          --subscription ${{ vars.ARM_SUBSCRIPTION_ID }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --name ${{ env.AZ_APP_NAME }}  \
           --slot ${{ env.SOURCE_SLOT }} \
           --target-slot ${{ env.TARGET_SLOT }}
 
       # TODO: Uncomment if you want to destroy the slot after swap.  Delete if you don't.
-      # ARM_SUBSCRIPTION_ID is an env-level secret
+      # ARM_SUBSCRIPTION_ID is an env-level variable
       # - run: |
       #     az ${{ env.AZ_APP_TYPE }} deployment slot delete \
       #     --slot ${{ env.SOURCE_SLOT }} \
       #     --name ${{ env.AZ_APP_NAME }}  \
-      #     --subscription ${{ secrets.ARM_SUBSCRIPTION_ID }} \
+      #     --subscription ${{ vars.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ env.RESOURCE_GROUP }}
 
       - name: Azure logout

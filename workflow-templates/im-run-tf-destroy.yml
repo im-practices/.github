@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v17    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v18    DO NOT REMOVE
 # Purpose:
 #    Destroys the resources created by a terraform configuration when someone kicks it off manually.
 #
@@ -41,11 +41,11 @@ env:
   DEPLOYMENT_DESC: 'Destroying <project-name> ${{ inputs.tf-targets }} ${{ inputs.root-module }} via Terraform at ${{ inputs.branch-tag-sha }}' # TODO: Replace <project-name> with your project
   GITHUB_REF: ${{ inputs.branch-tag-sha  }}
   PLAN_STORAGE_CONTAINER: 'tfstate'
-  # The following ARM_* secrets are env-level secrets
-  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  # The following ARM_* values are env-level secrets/variables
+  ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
+  ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
@@ -378,5 +378,5 @@ jobs:
       #     { "name": "Version", "value": "${{ inputs.branch-tag-sha }}" }
       #   ]
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }} 
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }} 
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}

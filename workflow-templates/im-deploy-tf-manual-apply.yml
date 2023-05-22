@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v38    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v39    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -39,11 +39,11 @@ env:
   DEPLOYMENT_DESC: 'Applying <project-name> ${{ inputs.root-module }} terraform at ${{ inputs.branch-tag-sha }} from GitHub Actions.' # TODO: Replace <project-name> with your project
   GITHUB_REF: ${{ inputs.branch-tag-sha  }} # This is the branch/tag/sha that we'll be deploying
   PLAN_STORAGE_CONTAINER: 'tfstate'
-  # The following ARM_* secrets are env-level secrets
-  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  # The following ARM_* values are env-level secrets/variables
+  ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
+  ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
   ARM_ENVIRONMENT: 'public'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
@@ -183,7 +183,7 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.DEPLOYMENT_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
-          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
+          service-id: ${{ vars.PAGERDUTY_SERVICE_ID }} # This is an env-level variable
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
       - name: AZ Login
@@ -356,7 +356,7 @@ jobs:
       #   uses: im-open/create-app-insights-annotation@v1.0
       #   continue-on-error: true
       #   with:
-      #     subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
+      #     subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
       #
       #     # The following line assumes the App insights resource is always in the primary region's resource group.
       #     # You might change this when App insights becomes available in our secondary region.
@@ -420,5 +420,5 @@ jobs:
       #     { "name": "Version", "value": "${{ inputs.branch-tag-sha  }}" }
       #   ]
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}

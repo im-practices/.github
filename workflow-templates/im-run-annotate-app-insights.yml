@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v15    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v16    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc app insights annotation for a specified
 #    environment when someone kicks it off manually.
@@ -93,7 +93,7 @@ jobs:
       - name: annotate
         uses: im-open/create-app-insights-annotation@v1.0
         with:
-          subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
           resourceGroupName: ${{ env.RESOURCE_GROUP }}
           appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
           releaseName: ${{ github.event.inputs.eventName }}

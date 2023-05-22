@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v20    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v21    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -215,7 +215,7 @@ jobs:
           title: 'K6 Test for <your project> - ${{ github.event.inputs.run-name }}' # TODO: Update
           workflow-status: ${{ steps.k6-run.outcome }}
           workflow-type: Runbook
-          teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
+          teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [
