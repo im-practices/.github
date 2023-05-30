@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v34    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v35    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -77,7 +77,7 @@ jobs:
   #   2 - If deploying to a production environment, verify the tag is reachable from the default branch 
   #       and that the corresponding release is production ready (not pre-release or a draft).
   setup-deployment-workflow:
-    uses: im-practices/.github/.github/im-reusable-setup-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
     with:
       ref-to-deploy: ${{ inputs.tag }}
       deployment-environment: ${{ inputs.environment }}

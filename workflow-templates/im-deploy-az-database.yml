@@ -1,4 +1,4 @@
-# Workflow Code: BetrayedCod_v27    DO NOT REMOVE
+# Workflow Code: BetrayedCod_v28    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures
 #    tags are valid for production deployments and runs the migrations against
@@ -68,7 +68,7 @@ jobs:
   #   1 - Verify the tag provided is a valid ref.
   #   2 - If deploying to a production environment, verify the tag is reachable from the default branch.
   setup-deployment-workflow:
-    uses: im-practices/.github/.github/im-reusable-setup-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
     with:
       ref-to-deploy: ${{ inputs.tag == 0 && github.ref_name || inputs.tag }}
       deployment-environment: ${{ inputs.environment-or-target }}
