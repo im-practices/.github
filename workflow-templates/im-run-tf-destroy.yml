@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v18    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v19    DO NOT REMOVE
 # Purpose:
 #    Destroys the resources created by a terraform configuration when someone kicks it off manually.
 #
@@ -66,7 +66,7 @@ jobs:
   #   1 - Verify the branch/tag/sha provided is a valid ref.
   #   2 - If deploying to a production environment, verify the tag is reachable from the default branch.
   setup-deployment-workflow:
-    uses: im-practices/.github/.github/im-reusable-setup-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
     with:
       ref-to-deploy: ${{ inputs.branch-tag-sha }}
       deployment-environment: ${{ inputs.root-module }}
