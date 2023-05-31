@@ -55,7 +55,7 @@ on:
         value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION }}
       NEXT_VERSION_NO_PREFIX:
         description: The next version calculated by git-version-lite without a prefix.
-        value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION }}
+        value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION_NO_PREFIX }}
       
 jobs:
   setup-build-workflow:
