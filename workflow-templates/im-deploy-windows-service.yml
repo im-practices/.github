@@ -288,7 +288,7 @@ jobs:
       - name: Deploy Deployment Package
         id: deploy
         if: steps.app-pool-stop.outcome == 'success'
-        uses: im-open/deploy-windows-files@v2.0
+        uses: im-open/deploy-windows-files@v2.1
         with:
           server: ${{ matrix.windows-server }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}

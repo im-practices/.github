@@ -192,7 +192,7 @@ jobs:
 
       - name: Deploy Deployment Package
         id: deploy
-        uses: im-open/deploy-windows-files@v2.0
+        uses: im-open/deploy-windows-files@v2.1
         with:
           server: ${{ env.WINDOWS_SERVER }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
