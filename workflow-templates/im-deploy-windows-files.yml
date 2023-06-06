@@ -1,4 +1,4 @@
-# Workflow Code: MysteriousStranger_v12    DO NOT REMOVE
+# Workflow Code: MysteriousStranger_v13    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -192,7 +192,7 @@ jobs:
 
       - name: Deploy Deployment Package
         id: deploy
-        uses: im-open/deploy-windows-files@v2.0
+        uses: im-open/deploy-windows-files@v2.1
         with:
           server: ${{ env.WINDOWS_SERVER }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}

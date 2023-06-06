@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v35    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v36    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -288,7 +288,7 @@ jobs:
       - name: Deploy Deployment Package
         id: deploy
         if: steps.app-pool-stop.outcome == 'success'
-        uses: im-open/deploy-windows-files@v2.0
+        uses: im-open/deploy-windows-files@v2.1
         with:
           server: ${{ matrix.windows-server }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
