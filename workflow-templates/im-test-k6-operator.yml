@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v19   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v20   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -73,6 +73,11 @@ on:
         description: 'Loop Count: Number of loops to wait for test to complete.'
         required: false
         default: '50'
+
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
 
 env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
@@ -229,7 +234,11 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       - name: Setup kubectl config
         working-directory: ${{ env.WORKING_DIRECTORY }}

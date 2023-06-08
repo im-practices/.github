@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v17    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v18    DO NOT REMOVE
 # Purpose:
 #    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
@@ -34,6 +34,11 @@ on:
         description: The branch, tag or sha of the flyway scripts that should be repaired.
         required: true
 
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+
 env:
   ENVIRONMENT: ${{ github.event.inputs.environment }}
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha }}
@@ -66,6 +71,7 @@ jobs:
 
       # TODO: Remove this step if this workflow is run against an on-prem database
       #       or if your database uses Azure Active Directory Authentication
+       
       - name: AZ Login
         id: login
         uses: azure/login@v1
@@ -73,7 +79,12 @@ jobs:
           # TODO: If repairing an on prem database's migration history, the Service Principal these credentials are for needs to be given access to login to Vault.
           #       See this git-er-done article for more information:
           #       https://github.com/im-practices/git-er-done/blob/main/actions/hashicorp-vault-integration.md#setup
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
+
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       # TODO: Use this for any variables that change per environment
       - name: Set Database Vars
