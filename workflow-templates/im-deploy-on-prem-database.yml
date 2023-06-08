@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v29    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v30    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures tags
 #    are valid for production deployments and runs the migrations against an on-prem
@@ -57,6 +57,14 @@ on:
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+  # Required for update-deployment-board
+  repository-projects: write
+  issues: write
+
 env:
   ENVIRONMENT: ${{ inputs.environment }}
   RELEASE_TAG: ${{ inputs.tag  }} # This is the tag that we'll be deploying
@@ -82,6 +90,7 @@ jobs:
   
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  
   stakeholder-approval:
     needs: [setup-deployment-workflow]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
@@ -141,11 +150,14 @@ jobs:
           DB_SERVER_NAME@prod: ''
 
       - name: AZ Login
+        id: login
         uses: azure/login@v1
         with:
-          # TODO: The Service Principal these credentials are for needs to be given access to login to Vault. See this git-er-done article for more information:
-          # https://github.com/im-practices/git-er-done/blob/main/actions/hashicorp-vault-integration.md#setup
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       - name: Get Vault Token
         id: vault_token

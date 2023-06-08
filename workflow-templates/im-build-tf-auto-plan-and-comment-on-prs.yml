@@ -1,4 +1,4 @@
-# Workflow Code: DeterminedPorcupine_v20    DO NOT REMOVE
+# Workflow Code: DeterminedPorcupine_v21    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform plan against the specified environments and
 #    comments on the PR with the expected changes when commits are pushed to a PR.
@@ -20,6 +20,13 @@ on:
     paths:
       - 'infrastructure/**'
 
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+  # Required for commenting on PR
+  pull-requests: write
+
 jobs:
   auto-plan-the-tf:
     runs-on: [self-hosted, im-linux]
@@ -35,9 +42,9 @@ jobs:
       # The following ARM_* values are env-level secrets/variables
       ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
       ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
       ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
       ARM_ENVIRONMENT: 'public'
+      ARM_USE_OIDC : 'true'
       TF_IN_AUTOMATION: 'true'
       TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
       TF_WORKING_DIR: './infrastructure/${{ matrix.environment }}' # TODO: Verify this directory structure would be correct for your repository (older projects may not be inside of an infrastructure folder)
@@ -61,6 +68,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
+          
       - name: Setup Terraform
         id: setup
         uses: hashicorp/setup-terraform@v2.0.3
@@ -118,3 +134,10 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
+      
+      - name: Azure logout
+        if: always()
+        run: |
+          az logout
+          az cache purge
+          az account clear

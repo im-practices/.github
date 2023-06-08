@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v44    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v45    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -61,6 +61,14 @@ on:
   #       9. Under the 'deploy-code' job, update the needs property to be: "needs: [set-vars]"
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
+
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+  # Required for update-deployment-board
+  repository-projects: write
+  issues: write
 
 env:
   RELEASE_TAG: ${{ inputs.tag }} # This is the tag that we'll be deploying
@@ -285,7 +293,11 @@ jobs:
         id: login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Delete RGRP Azure Locks

@@ -1,4 +1,4 @@
-# Workflow Code: ScornfulFlamingo_v5   DO NOT REMOVE
+# Workflow Code: ScornfulFlamingo_v6   DO NOT REMOVE
 # Purpose:
 #    Deletes a blob from a specified Azure Storage Account when someone kicks it off manually.
 #
@@ -40,6 +40,11 @@ on:
           - uat
           - prod
 
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+
 jobs:
   delete-blob:
     runs-on: [self-hosted, im-linux]
@@ -60,7 +65,11 @@ jobs:
         id: login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       # This call uses RBAC (--auth-mode login) to delete files from the azure storage account.
       # No other key or connection string is needed. In order to delete files from a stg account

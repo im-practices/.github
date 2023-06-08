@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v19    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v20    DO NOT REMOVE
 # Purpose:
 #    Destroys the resources created by a terraform configuration when someone kicks it off manually.
 #
@@ -37,6 +37,14 @@ on:
         description: 'Targeted Destroys: format -target module.your-module.resource'
         required: false
 
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+  # Required for update-deployment-board
+  repository-projects: write
+  issues: write
+
 env:
   DEPLOYMENT_DESC: 'Destroying <project-name> ${{ inputs.tf-targets }} ${{ inputs.root-module }} via Terraform at ${{ inputs.branch-tag-sha }}' # TODO: Replace <project-name> with your project
   GITHUB_REF: ${{ inputs.branch-tag-sha  }}
@@ -44,9 +52,9 @@ env:
   # The following ARM_* values are env-level secrets/variables
   ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
-  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
   ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
   ARM_ENVIRONMENT: 'public'
+  ARM_USE_OIDC : 'true'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
   TF_WORKING_DIR: './infrastructure/${{ inputs.root-module }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
@@ -168,7 +176,11 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       - name: Setup Terraform
         id: setup
@@ -278,7 +290,11 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       - name: Setup Terraform
         id: setup

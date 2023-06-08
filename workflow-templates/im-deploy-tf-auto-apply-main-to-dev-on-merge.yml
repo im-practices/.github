@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v29    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v30    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform apply -auto-approve with the changes
 #    in the PR against the dev environment when a PR is merged to main.
@@ -21,6 +21,14 @@ on:
     paths:
       - 'infrastructure/**'
 
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+  # Required for update-deployment-board
+  repository-projects: write
+  issues: write
+
 env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PAGERDUTY_WINDOW_IN_MIN: 10 # TODO: Verify the length of your PD Maintenance Window
@@ -28,9 +36,9 @@ env:
   # The following ARM_* values are env-level secrets/variables
   ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
   ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
-  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
   ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
   ARM_ENVIRONMENT: 'public'
+  ARM_USE_OIDC : 'true'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
   TF_WORKING_DIR: './infrastructure/dev' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
@@ -68,6 +76,15 @@ jobs:
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
+          
       - name: Setup Terraform
         id: setup
         uses: hashicorp/setup-terraform@v2.0.3
@@ -102,6 +119,13 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
+      - name: Azure logout
+        if: always()
+        run: |
+          az logout
+          az cache purge
+          az account clear
+          
       # TODO: Remove this step if you do not want a teams notification
       - name: Send Status to Teams
         if: always()

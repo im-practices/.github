@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v16    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v17    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc app insights annotation for a specified
 #    environment when someone kicks it off manually.
@@ -44,6 +44,11 @@ on:
         required: false
         default: ''
 
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+
 env:
   ENVIRONMENT: ${{ github.event.inputs.environment }}
 
@@ -88,7 +93,11 @@ jobs:
         id: login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       - name: annotate
         uses: im-open/create-app-insights-annotation@v1.0
