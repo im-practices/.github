@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v21   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v22   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -99,7 +99,7 @@ env:
 jobs:
   # TODO: Delete if you don't build your k6 tests
   npm-cache:
-    runs-on: [self-hosted, coldstone, build-npm-nuget-cache]
+    runs-on: [self-hosted, im-linux]
     if: inputs.run-npm-build
 
     defaults:
