@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v20   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v21   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -86,8 +86,7 @@ env:
   NODE_VERSION: '16.x' # TODO: Set correct node version
   LOOP_DURATION: '1m' # TODO: Update duration of loop to your specification.  The action im-practices/run-k6-operator-test documenation has more details on setting this parameter.
 
-  # TODO: Add --out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" to K6_DEFAULT_PARAMATERS if you want test results in grafana.
-  K6_DEFAULT_PARAMETERS: '--insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=TEST,family=pf -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
+  K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=TEST,family=pf -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
   RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
   K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
@@ -239,6 +238,20 @@ jobs:
           # These are env-level variables
           subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
           client-id: ${{ vars.ARM_CLIENT_ID }}
+
+      # TODO: Delete if your runner has kubelogin and kubectl already installed
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3.2
+        with:
+          version: latest
+
+      # TODO: Delete if your runner has kubelogin and kubectl already installed
+      - name: Setup Kubelogin
+        uses: azure/use-kubelogin@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          kubelogin-version: 'latest'
 
       - name: Setup kubectl config
         working-directory: ${{ env.WORKING_DIRECTORY }}
