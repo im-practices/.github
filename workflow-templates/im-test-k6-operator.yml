@@ -231,6 +231,20 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # TODO: Delete if your runner has kubelogin and kubectl already installed
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3.2
+        with:
+          version: latest
+
+      # TODO: Delete if your runner has kubelogin and kubectl already installed
+      - name: Setup Kubelogin
+        uses: azure/use-kubelogin@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          kubelogin-version: 'latest'
+
       - name: Setup kubectl config
         working-directory: ${{ env.WORKING_DIRECTORY }}
         id: kube-config
