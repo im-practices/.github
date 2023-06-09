@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v21    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v23    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and deploys a directory to the
 #    specified storage account when someone kicks it off manually.
@@ -35,6 +35,14 @@ on:
           - uat
           - prod
 
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+  # Required for update-deployment-board
+  repository-projects: write
+  issues: write
+
 env:
   ENVIRONMENT: ${{ github.event.inputs.environment }}
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha }}
@@ -45,7 +53,7 @@ env:
 
 jobs:
   deploy-to-azure:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
 
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
@@ -72,7 +80,11 @@ jobs:
         id: login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       # This call uses RBAC (--auth-mode login) to upload files to the azure storage account.
       # No other key or connection string is needed. In order to push files to a stg account

@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v16    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v20    DO NOT REMOVE
 # Purpose:
 #    Destroys the resources created by a terraform configuration when someone kicks it off manually.
 #
@@ -37,16 +37,24 @@ on:
         description: 'Targeted Destroys: format -target module.your-module.resource'
         required: false
 
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+  # Required for update-deployment-board
+  repository-projects: write
+  issues: write
+
 env:
   DEPLOYMENT_DESC: 'Destroying <project-name> ${{ inputs.tf-targets }} ${{ inputs.root-module }} via Terraform at ${{ inputs.branch-tag-sha }}' # TODO: Replace <project-name> with your project
   GITHUB_REF: ${{ inputs.branch-tag-sha  }}
   PLAN_STORAGE_CONTAINER: 'tfstate'
-  # The following ARM_* secrets are env-level secrets
-  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  # The following ARM_* values are env-level secrets/variables
+  ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
+  ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
   ARM_ENVIRONMENT: 'public'
+  ARM_USE_OIDC : 'true'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
   TF_WORKING_DIR: './infrastructure/${{ inputs.root-module }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
@@ -66,13 +74,14 @@ jobs:
   #   1 - Verify the branch/tag/sha provided is a valid ref.
   #   2 - If deploying to a production environment, verify the tag is reachable from the default branch.
   setup-deployment-workflow:
-    uses: im-practices/.github/.github/im-reusable-setup-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
     with:
       ref-to-deploy: ${{ inputs.branch-tag-sha }}
       deployment-environment: ${{ inputs.root-module }}
       verify-release-is-production-ready: false # Set to false since terraform projects generally do not have an associated release
       # production-environments: 'prod,prod-secondary'  # TODO:  Adjust and include the production-environments if necessary (some apps may need to add stage/stage-secondary to this list)
       # default-branch: main # TODO:  Update and include this arg if the default branch is not main
+      # workflow-summary : | # TODO:  If desired, the workflow summary that is generated can be overridden by providing this custom value.
 
   set-vars:
     needs: [setup-deployment-workflow]
@@ -141,7 +150,7 @@ jobs:
 
   tf-plan:
     needs: [set-vars, stakeholder-approval]
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     defaults:
@@ -167,7 +176,11 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       - name: Setup Terraform
         id: setup
@@ -254,7 +267,7 @@ jobs:
 
   tf-apply:
     needs: [set-vars, tf-plan, tf-plan-manual-approval, stakeholder-approval]
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     defaults:
@@ -277,7 +290,11 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # This is an env-level secret
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       - name: Setup Terraform
         id: setup
@@ -377,5 +394,5 @@ jobs:
       #     { "name": "Version", "value": "${{ inputs.branch-tag-sha }}" }
       #   ]
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }} 
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }} 
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}

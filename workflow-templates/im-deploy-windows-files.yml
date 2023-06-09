@@ -1,4 +1,4 @@
-# Workflow Code: MysteriousStranger_v10    DO NOT REMOVE
+# Workflow Code: MysteriousStranger_v13    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -74,12 +74,13 @@ jobs:
   #   2 - If deploying to a production environment, verify the tag is reachable from the default branch 
   #       and that the corresponding release is production ready (not pre-release or a draft).
   setup-deployment-workflow:
-    uses: im-practices/.github/.github/im-reusable-setup-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
     with:
       ref-to-deploy: ${{ inputs.tag }}
       deployment-environment: ${{ inputs.environment }}
       # production-environments: 'prod,prod-secondary'  # TODO:  Adjust and include the production-environments if necessary (some apps may need to add stage/stage-secondary to this list)
       # default-branch: main # TODO:  Update and include this arg if the default branch is not main
+      # workflow-summary : | # TODO:  If desired, the workflow summary that is generated can be overridden by providing this custom value.
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
@@ -108,7 +109,7 @@ jobs:
     needs: |
       - stakeholder-approval
       - attestor-approval
-    runs-on: [self-hosted, windows-2019]
+    runs-on: [self-hosted, windows-2019] # In order to use WinRM this must remain as a windows runner
     environment: ${{ inputs.environment }} # Use inputs context because env context is not available to environment:
 
     env:
@@ -191,7 +192,7 @@ jobs:
 
       - name: Deploy Deployment Package
         id: deploy
-        uses: im-open/deploy-windows-files@v2.0
+        uses: im-open/deploy-windows-files@v2.1
         with:
           server: ${{ env.WINDOWS_SERVER }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
@@ -243,5 +244,5 @@ jobs:
       #     { "name": "Version", "value": "${{ inputs.tag }}" }
       #   ]
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}    
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}    

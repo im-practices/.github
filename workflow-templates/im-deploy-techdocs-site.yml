@@ -1,4 +1,4 @@
-# Workflow Code: SparklyToad_v1    DO NOT REMOVE
+# Workflow Code: SparklyToad_v2    DO NOT REMOVE
 # Purpose:
 #    Publishes a techdocs site to the storage account where TechHub
 #    looks for TechDocs.
@@ -18,6 +18,11 @@ on:
   # workflow_dispatch:
   # pull_request:
   #   types: [closed]
+
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
 
 jobs:
   publish-techdocs-site:
@@ -51,7 +56,11 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO:  Verify this secret is set
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       # The im-techdocs runner used in this workflow contains the TechDocs CLI & several plugins, see the installed items here:
       #     https://github.com/im-practices/coldstone-configs/blob/main/configs/im-techdocs.cold.json
@@ -70,4 +79,11 @@ jobs:
       #       2 - Give each step a more specific name
       #       3 - Update the working directory to the location of the additional site
       #       4 - Update the --entity argument with the name of the additional site
+
+      - name: Azure logout
+        if: always()
+        run: |
+          az logout
+          az cache purge
+          az account clear
       

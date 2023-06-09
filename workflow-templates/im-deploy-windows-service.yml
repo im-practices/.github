@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v33    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v36    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -77,12 +77,13 @@ jobs:
   #   2 - If deploying to a production environment, verify the tag is reachable from the default branch 
   #       and that the corresponding release is production ready (not pre-release or a draft).
   setup-deployment-workflow:
-    uses: im-practices/.github/.github/im-reusable-setup-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
     with:
       ref-to-deploy: ${{ inputs.tag }}
       deployment-environment: ${{ inputs.environment }}
       # production-environments: 'prod,prod-secondary'  # TODO:  Adjust and include the production-environments if necessary (some apps may need to add stage/stage-secondary to this list)
       # default-branch: main # TODO:  Update and include this arg if the default branch is not main
+      # workflow-summary : | # TODO:  If desired, the workflow summary that is generated can be overridden by providing this custom value.
 
   set-vars:
     needs: [setup-deployment-workflow]
@@ -177,7 +178,7 @@ jobs:
       - set-vars
       - stakeholder-approval
       - attestor-approval
-    runs-on: [self-hosted, windows-2019]
+    runs-on: [self-hosted, windows-2019] # In order to use WinRM this must remain as a windows runner
     environment: ${{ inputs.environment }} # Use inputs context because env context is not available to environment:
 
     strategy:
@@ -217,7 +218,7 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an env-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
           minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
-          service-id: ${{ secrets.PAGERDUTY_SERVICE_ID }} # This is an env-level secret
+          service-id: ${{ vars.PAGERDUTY_SERVICE_ID }} # This is an env-level variable
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
       # For more information and best practices on the usage and options available
@@ -287,7 +288,7 @@ jobs:
       - name: Deploy Deployment Package
         id: deploy
         if: steps.app-pool-stop.outcome == 'success'
-        uses: im-open/deploy-windows-files@v2.0
+        uses: im-open/deploy-windows-files@v2.1
         with:
           server: ${{ matrix.windows-server }}
           service-account-id: ${{ env.DEPLOYMENT_SA_ID }}
@@ -372,5 +373,5 @@ jobs:
       #     { "name": "Version", "value": "${{ inputs.tag }}" }
       #   ]
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}    
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}    

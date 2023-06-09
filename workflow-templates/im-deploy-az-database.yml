@@ -1,4 +1,4 @@
-# Workflow Code: BetrayedCod_v25    DO NOT REMOVE
+# Workflow Code: BetrayedCod_v29    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures
 #    tags are valid for production deployments and runs the migrations against
@@ -57,6 +57,14 @@ on:
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+  # Required for update-deployment-board
+  repository-projects: write
+  issues: write
+
 env:
   RELEASE_TAG: ${{ inputs.tag == 0 && github.ref_name || inputs.tag }} # This is the tag that we'll be deploying
   DB_SERVER_PORT: '1433' # TODO: Verify that this is the correct port
@@ -68,13 +76,14 @@ jobs:
   #   1 - Verify the tag provided is a valid ref.
   #   2 - If deploying to a production environment, verify the tag is reachable from the default branch.
   setup-deployment-workflow:
-    uses: im-practices/.github/.github/im-reusable-setup-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
     with:
       ref-to-deploy: ${{ inputs.tag == 0 && github.ref_name || inputs.tag }}
       deployment-environment: ${{ inputs.environment-or-target }}
       verify-release-is-production-ready: false # Set to false since db projects generally do not have an associated release
       # production-environments: 'prod,prod-secondary'  # TODO:  Adjust and include the production-environments if necessary (some apps may need to add stage/stage-secondary to this list)
       # default-branch: main # TODO:  Update and include this arg if the default branch is not main
+      # workflow-summary : | # TODO:  If desired, the workflow summary that is generated can be overridden by providing this custom value.
 
   set-vars:
     needs: [setup-deployment-workflow]
@@ -155,7 +164,7 @@ jobs:
 
   deploy-az-db:
     needs: [set-vars, stakeholder-approval, attestor-approval]
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
     outputs:
       DB_NAME: ${{ steps.db-vars.outputs.DB_NAME }}
@@ -168,9 +177,14 @@ jobs:
 
       # TODO: If your database uses Azure Active Directory Authentication then this step can be removed
       - name: AZ Login
+        id: login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       - name: Setup Flyway
         uses: im-open/setup-flyway@v1.1
@@ -237,7 +251,7 @@ jobs:
       - name: Annotate App Insights
         uses: im-open/create-app-insights-annotation@v1.0
         with:
-          subscriptionId: ${{ secrets.ARM_SUBSCRIPTION_ID }} # This is an env-level secret
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
           resourceGroupName: ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
           releaseName: '${{ needs.set-vars.outputs.APP_INSIGHTS_ANNOTATION }}'
@@ -286,5 +300,5 @@ jobs:
       #     { "name": "Version", "value": "${{ inputs.tag == 0 && github.ref_name || inputs.tag }}" }
       #   ]
     secrets:
-      MS_TEAMS_URI: ${{ secrets.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}    
+      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}    

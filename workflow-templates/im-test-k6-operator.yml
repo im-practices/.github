@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v18   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v20   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -73,6 +73,11 @@ on:
         description: 'Loop Count: Number of loops to wait for test to complete.'
         required: false
         default: '50'
+
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
 
 env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
@@ -150,7 +155,7 @@ jobs:
 
       # This action creates a post-job step that will upload the node_modules dir to the cache if the job
       # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
-      # folder if the package-lock.json hasn't changed and it uses a ubuntu-20.04 runner to restore the cache from.
+      # folder if the package-lock.json hasn't changed and it uses a im-linux runner to restore the cache from.
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
         if: steps.has-cache.outputs.cache-hit == 'false'
@@ -182,7 +187,7 @@ jobs:
           npm ci
 
   run_k6_operator:
-    runs-on: [self-hosted, ubuntu-20.04]
+    runs-on: [self-hosted, im-linux]
     needs: [npm-cache] # TODO: Delete if you don't build your k6 tests
     environment: ${{ inputs.env }}
 
@@ -228,7 +233,11 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
 
       # TODO: Delete if your runner has kubelogin and kubectl already installed
       - name: Setup Kubectl
@@ -271,7 +280,7 @@ jobs:
           title: 'K6 Test Starting Shortly in AKS - ${{inputs.run-name }}'
           workflow-status: started
           workflow-type: Runbook
-          teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
+          teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [
@@ -377,7 +386,7 @@ jobs:
           title: 'K6 Test in AKS Complete - ${{ inputs.run-name }}'
           workflow-status: ${{ steps.run-k6-operator-test.outcome }}
           workflow-type: Runbook
-          teams-uri: ${{ secrets.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
+          teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [
