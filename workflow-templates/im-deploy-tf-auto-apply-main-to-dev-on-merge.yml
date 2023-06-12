@@ -134,7 +134,7 @@ jobs:
           title: Auto-Deploying <project-name> Terraform to Dev # TODO: Replace <project-name> with your project
           workflow-status: ${{ job.status }}
           workflow-type: Deploy
-          teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a env-level variable (because 'environment:' has been added to the job).  If an env-level variable is not provided, it will look at the repo-level for the variable.
+          teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a env-level variable (because 'environment:' has been added to the job).
           timezone: ${{ env.TIMEZONE }}
           custom-facts: |
             [

@@ -63,7 +63,7 @@ on:
         description: The custom facts that will be included in the post in the team's channel.  By default Workflow, Run, Actor and Version are included.
         required: false
         type: string  
-      
+  
     secrets:
       MS_TEAMS_URI:
         description: The URI for the teams channel where a status will be posted.
@@ -117,7 +117,7 @@ jobs:
           title: ${{ inputs.title-of-teams-post }}
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Build
-          teams-uri: ${{ vars.MS_TEAMS_URI }}
+          teams-uri: ${{ secrets.MS_TEAMS_URI }}
           timezone: ${{ inputs.timezone }}
           custom-facts: ${{ steps.team-channel-facts.outputs.facts }}
       
