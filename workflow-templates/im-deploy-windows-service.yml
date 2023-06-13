@@ -221,6 +221,16 @@ jobs:
           service-id: ${{ vars.PAGERDUTY_SERVICE_ID }} # This is an env-level variable
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
+      # TODO: Use this for any variables that change per environment
+      # With the Variables feature available now in GitHub this action may not be necessary.  If values are populated
+      # as env-level variables, they can be used directly inside of subsequent actions (octostache and var-substitution) 
+      # like secrets are.  The choice of which to use is up to the team and what works best for the project.
+      # Variables - pros & cons
+      #   - Pros: streamlined workflow, ability to change values without creating a new release/build (helpful for values that change a lot)
+      #   - Cons: UI visibility & editing is limited to repo admins, tedious to create variables if there are many
+      # set-environment-variables-by-scope action - pros & cons
+      #   - Pros: Works well for repos with a lot of arguments, everyone has visibility and can change values with a PR
+      #   - Cons: To change values a new release is required, workflows may be cluttered
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables

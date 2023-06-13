@@ -146,7 +146,7 @@ jobs:
           title: ${{ inputs.title-of-teams-post }}
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
-          teams-uri: ${{ vars.MS_TEAMS_URI }}
+          teams-uri: ${{ secrets.MS_TEAMS_URI }}
           timezone: ${{ inputs.timezone }}
           custom-facts: ${{ steps.team-channel-facts.outputs.facts }}
 
@@ -209,7 +209,7 @@ jobs:
           title: ${{ inputs.title-of-teams-post }}
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
-          teams-uri: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}
+          teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}
           timezone: ${{ inputs.timezone }}
           include-default-facts: false # This cuts down on the message size for the prod room
           custom-facts: ${{ steps.deployment-channel-facts.outputs.facts }}
