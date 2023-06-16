@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v41    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v42    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -263,9 +263,8 @@ jobs:
           echo "current directory:"
           ls -R
 
-          echo "Uploading tf plan to azure storage account ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}"
-          $key = az storage account keys list --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --resource-group ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }} --query [0].value -o tsv
-          az storage blob upload --no-progress --auth-mode key --account-key $key --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $terraformPlanName --name $terraformBlobName
+          echo "Uploading tf plan to azure storage account ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }}"          
+          az storage blob upload --no-progress --auth-mode login --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $terraformPlanName --name $terraformBlobName
           echo "The plan was successfully uploaded"
 
           echo "tf_plan_name=$terraformPlanName" >> $env:GITHUB_OUTPUT
@@ -332,8 +331,7 @@ jobs:
           echo "The blob name is: $terraformBlobName"
 
           Write-Host "Download blob to ./plans"
-          $key = az storage account keys list --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --resource-group ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }} --query [0].value -o tsv
-          az storage blob download --no-progress --auth-mode key --account-key $key --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $pwd/$terraformBlobName --name $terraformBlobName
+          az storage blob download --no-progress --auth-mode login --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $pwd/$terraformBlobName --name $terraformBlobName
 
           try {
             [System.IO.Compression.ZipFile]::ExtractToDirectory("$pwd/$terraformBlobName", "$pwd/plans")
