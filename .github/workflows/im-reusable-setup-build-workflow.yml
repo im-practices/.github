@@ -43,7 +43,7 @@ on:
         value: ${{ jobs.setup-build-workflow.outputs.IS_PRERELEASE }}
       IS_MERGE_TO_MAIN:
         description: Flag indicating whether the pull_request event is a merge to the default branch.  Inverse of IS_PRERELEASE.
-        value: ${{ jobs.setup-build-workflow.outputs.IS_PRERELEASE }}
+        value: ${{ jobs.setup-build-workflow.outputs.IS_MERGE_TO_MAIN }}
       REF_TO_BUILD_AND_TAG:
         description: String containing the reference to build and tag.
         value: ${{ jobs.setup-build-workflow.outputs.REF_TO_BUILD_AND_TAG }}
