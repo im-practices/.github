@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v35    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v36    DO NOT REMOVE
 # Purpose:
 #    Automatically builds the project and runs tests with code coverage. If
 #    everything is green, a new semantic version is calculated and a new package
@@ -63,7 +63,7 @@ jobs:
       NEXT_VERSION: ${{ needs.setup-build-workflow.outputs.NEXT_VERSION }}
       NEXT_VERSION_NO_PREFIX: ${{ needs.setup-build-workflow.outputs.NEXT_VERSION_NO_PREFIX }}
       IS_MERGE_TO_MAIN: ${{ needs.setup-build-workflow.outputs.IS_MERGE_TO_MAIN }}
-      PRERELEASE: ${{ needs.setup-build-workflow.outputs.PRERELEASE }}
+      PRERELEASE: ${{ needs.setup-build-workflow.outputs.IS_PRERELEASE }}
       CODE_COVERAGE_CHECK_NAME_DOTNET: 'dotnet code coverage'
       CODE_COVERAGE_DIR_DOTNET: 'coverage-results/dotnet'
       CODE_COVERAGE_REPORT_NAME_DOTNET: '<project-name> .Net Code Coverage' # TODO: Replace <project-name>
