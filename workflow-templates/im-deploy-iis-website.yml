@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v42    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v43    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -394,7 +394,6 @@ jobs:
   #  2 - Post a deployment status in the repo owner's Teams channel (connected to the MS_TEAMS_URI secret)
   #  3 - Post a deployment status in the Deployment Notifications Teams channel if the deploy is for prod, is successful and the flag to do so is not set to false
   update-deployment-board-and-send-teams-notification:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     needs: [set-vars, deploy-site-to-machine]
     if: always()
     uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2
