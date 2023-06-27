@@ -30,7 +30,7 @@ on:
         required: false
         type: string
         default: 'prod,prod-secondary'      
-      verify-release-production-ready:
+      verify-release-is-production-ready:
           description: Verify associated release is not draft or prerelease
           required: false
           type: boolean
@@ -114,7 +114,7 @@ jobs:
           error-if-not-reachable: true  # This only runs for prod environments, so if the tag is not in main, it should fail
 
       - uses: im-open/is-release-production-ready@v1
-        if: steps.check-env.outputs.IS_PROD == 'true' && inputs.verify-release-production-ready == 'true'
+        if: steps.check-env.outputs.IS_PROD == 'true' && inputs.verify-release-is-production-ready == 'true'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-tag: ${{ inputs.ref-to-deploy }}
