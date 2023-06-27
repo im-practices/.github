@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v42    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v43    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -76,7 +76,7 @@ jobs:
     with:
       ref-to-deploy: ${{ inputs.branch-tag-sha }}
       deployment-environment: ${{ inputs.root-module }}
-      verify-release-is-production-ready: false # Set to false since terraform projects generally do not have an associated release
+      verify-release-production-ready: false # Set to false since terraform projects generally do not have an associated release
       # production-environments: 'prod,prod-secondary'  # TODO:  Adjust and include the production-environments if necessary (some apps may need to add stage/stage-secondary to this list)
       # default-branch: main # TODO:  Update and include this arg if the default branch is not main
       # workflow-summary : | # TODO:  If desired, the workflow summary that is generated can be overridden by providing this custom value.
@@ -404,7 +404,6 @@ jobs:
   #  2 - Post a deployment status in the repo owner's Teams channel (connected to the MS_TEAMS_URI secret)
   #  3 - Post a deployment status in the Deployment Notifications Teams channel if the deploy is for prod, is successful and the flag to do so is not set to false
   update-deployment-board-and-send-teams-notification:
-    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     needs: [set-vars, tf-apply]
     if: always()
     uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2
