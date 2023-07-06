@@ -78,6 +78,7 @@ permissions:
   # Required for secretless azure access and deploys
   id-token: write
   contents: read
+  actions: read
 
 env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
