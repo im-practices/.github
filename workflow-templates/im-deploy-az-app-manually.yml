@@ -69,6 +69,7 @@ permissions:
   # Required for update-deployment-board
   repository-projects: write
   issues: write
+  actions: read
 
 env:
   RELEASE_TAG: ${{ inputs.tag }} # This is the tag that we'll be deploying
