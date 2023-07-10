@@ -64,6 +64,7 @@ permissions:
   # Required for update-deployment-board
   repository-projects: write
   issues: write
+  actions: read
 
 env:
   ENVIRONMENT: ${{ inputs.environment }}

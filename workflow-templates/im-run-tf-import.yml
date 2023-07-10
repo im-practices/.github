@@ -1,4 +1,4 @@
-# Workflow Code: DrearyBuck_v19    DO NOT REMOVE
+# Workflow Code: DrearyBuck_v20    DO NOT REMOVE
 
 # Purpose:
 #    Imports a specified resource into the terraform state when someone kicks it off manually.
@@ -51,9 +51,8 @@ env:
   ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
   ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
   ARM_ENVIRONMENT: 'public'
-  ARM_USE_OIDC : 'true'
   TF_IN_AUTOMATION: 'true'
-  TF_VERSION: '~>1.0.5' #TODO:  Verify your version of terraform.
+  TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
   TF_WORKING_DIR: './infrastructure/${{ github.event.inputs.environment }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
   # The following SSH_* secrets are org-level secrets
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
@@ -95,15 +94,6 @@ jobs:
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
-      - name: AZ Login
-        uses: azure/login@v1
-        with:
-          # This is an org-level variable
-          tenant-id: ${{ vars.ARM_TENANT_ID }}
-          # These are env-level variables
-          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
-          client-id: ${{ vars.ARM_CLIENT_ID }}
-          
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2.0.3
         with:
@@ -115,10 +105,3 @@ jobs:
       - name: Terraform Import
         # TODO: Add any additional parameters that are needed
         run: terraform import ${{ github.event.inputs.tf-resource-address }} ${{ github.event.inputs.tf-resource-id }}
-      
-      - name: Azure logout
-        if: always()
-        run: |
-          az logout
-          az cache purge
-          az account clear

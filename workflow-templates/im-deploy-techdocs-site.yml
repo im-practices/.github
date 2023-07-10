@@ -56,11 +56,15 @@ jobs:
       - name: AZ Login
         uses: azure/login@v1
         with:
-          # This is an org-level variable
-          tenant-id: ${{ vars.ARM_TENANT_ID }}
-          # These are env-level variables
-          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
-          client-id: ${{ vars.ARM_CLIENT_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO:  Verify this secret is set
+          # TODO:  If the repo you are publishing from has federated access to the techdocs RGRP, you can use the secretless
+          #        pattern below for accessing the rgrp, otherwise, you need to provide azure credentials for publishing the docs.
+          # # This is an org-level variable
+          # tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # # These are env-level variables
+          # subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          # client-id: ${{ vars.ARM_CLIENT_ID }}
+
 
       # The im-techdocs runner used in this workflow contains the TechDocs CLI & several plugins, see the installed items here:
       #     https://github.com/im-practices/coldstone-configs/blob/main/configs/im-techdocs.cold.json

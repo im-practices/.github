@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v43    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v44    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -42,6 +42,7 @@ permissions:
   # Required for update-deployment-board
   repository-projects: write
   issues: write
+  actions: read
 
 env:
   DEPLOYMENT_DESC: 'Applying <project-name> ${{ inputs.root-module }} terraform at ${{ inputs.branch-tag-sha }} from GitHub Actions.' # TODO: Replace <project-name> with your project
@@ -52,7 +53,6 @@ env:
   ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
   ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
   ARM_ENVIRONMENT: 'public'
-  ARM_USE_OIDC : 'true'
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
   TF_WORKING_DIR: './infrastructure/${{ inputs.root-module }}' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
