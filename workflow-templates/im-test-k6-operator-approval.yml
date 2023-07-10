@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v23   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v1   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -11,8 +11,9 @@
 #    - On-Prem Service         (Optional Template)
 # # TODO: Prerequisites:
 #    - Ensure each of the repo-level MS_TEAMS_URI and env-level secrets used in this workflow have been populated by an admin in your repository.
+#    - Create environment K6 Operator Approval
 
-name: 🧪️ Run K6 Operator Test
+name: 🧪️ Run K6 Operator Test with Approval
 run-name: Run K6 Operator Test to ${{ inputs.env }} with test ${{ inputs.test-file }}
 
 on:
@@ -69,10 +70,6 @@ on:
         required: false
         type: boolean
         default: false # TODO: Set true if you require npm build to run for your k6 bundle to be created
-      loop-count:
-        description: 'Loop Count: Number of loops to wait for test to complete.'
-        required: false
-        default: '50'
 
 permissions:
   # Required for secretless azure access and deploys
@@ -85,7 +82,6 @@ env:
   WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
   GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>' # TODO: Verify link to your dashboard
   NODE_VERSION: '18.x' # TODO: Set correct node version
-  LOOP_DURATION: '1m' # TODO: Update duration of loop to your specification.  The action im-practices/run-k6-operator-test documenation has more details on setting this parameter.
 
   K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
   RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
@@ -124,7 +120,7 @@ jobs:
           echo $'
           | Input Name            | Value                    |
           | ---                   |  ---                     |
-          | Environment           | `${{ inputs.environment }}` |
+          | Environment           | `${{ inputs.env }}` |
           | Workflow Branch/Tag    | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |
           | Working Directory     | `${{ env.WORKING_DIRECTORY }}` |
           | Test File             | `${{ inputs.test-file }}` |
@@ -134,8 +130,6 @@ jobs:
           | Upload File/Folders   | `${{ inputs.upload-files-folder}}` |
           | K6 Parameters         | `${{ inputs.k6-parameters }}` |
           | K6 Default Parameters | `${{ env.K6_DEFAULT_PARAMETERS }}`  |
-          | Loop Count            | `${{ inputs.loop-count }}` |
-          | Loop Duration         | `${{ env.LOOP_DURATION }}` |
           | Run NPM Build         | `${{ inputs.run-npm-build }}` |' >> $GITHUB_STEP_SUMMARY
 
       - name: Set Cache Keys
@@ -187,20 +181,41 @@ jobs:
           echo "Installing NPM"
           npm ci
 
-  run_k6_operator:
+  start-k6-operator-test:
     runs-on: [self-hosted, im-linux]
-    needs: [npm-cache] # TODO: Delete if you don't build your k6 tests
+    needs: [npm-cache]
     environment: ${{ inputs.env }}
 
     defaults:
       run:
         shell: bash
 
+    outputs:
+      run-name: ${{ steps.start-k6-test.outputs.run-name }}
+      config-map-name: ${{ steps.start-k6-test.outputs.config-map-name }}
+      deploy-yaml-artifact: ${{ steps.start-k6-test.outputs.deploy-yaml-artifact }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
+
+      - name: Show Input Variables
+        run: |
+          echo "Workflow Inputs:"
+          echo "
+            env: ${{ inputs.env }};
+            workflow-branch-tag: ${{ github.ref_name }} - SHA: ${{ github.sha }}
+            working-directory: ${{ env.WORKING_DIRECTORY }}
+            test-file: ${{ inputs.test-file }}
+            upload-type: ${{ inputs.upload-type }}
+            upload-files-folder: '${{ inputs.upload-files-folder }}'
+            k6-parameters: '${{ inputs.k6-parameters }}'
+            k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }}'
+            parallelism: '${{ inputs.parallelism }}'
+            separate-nodes: '${{ inputs.separate-nodes }}'
+          "
 
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
@@ -278,7 +293,7 @@ jobs:
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.3
         with:
-          title: 'K6 Test Starting Shortly in AKS - ${{inputs.run-name }}'
+          title: 'K6 Test Starting Shortly in AKS - ${{ inputs.run-name }}'
           workflow-status: started
           workflow-type: Runbook
           teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -307,9 +322,9 @@ jobs:
           k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
           echo "test-tag=$k6_test_file_tag" >> $GITHUB_OUTPUT
 
-      - name: Run K6-Operator Test
-        uses: im-practices/run-k6-operator-test@latest
-        id: run-k6-operator-test
+      - name: Start K6-Operator Test
+        uses: im-practices/run-k6-operator-test/start@latest
+        id: start-k6-test
         with:
           working-directory: ${{ env.WORKING_DIRECTORY }}
           test-file: ${{ inputs.test-file }}
@@ -319,14 +334,10 @@ jobs:
           k6-parameters: '${{ inputs.k6-parameters }}'
           k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }} ${{ steps.test-tag.outputs.test-tag }}'
           parallelism: ${{ inputs.parallelism }}
+          separate-nodes: ${{ inputs.separate-nodes }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
-          loop-count: ${{ inputs.loop-count }}
-          loop-duration: ${{ env.LOOP_DURATION }}
           # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: uncomment to use custom k6 binary with k6 extensions installed
-          # pod-log-lines-gha-output: 500 # TODO: uncomment if you want to change the number of lines in github actions that the pod logs output.
-          # pod-log-lines-file-output: 3000 # TODO: uncomment if you want to change the number of lines to file that the pod logs output.
-
       ### Cleanup K6-Operator test if workflow is cancelled ###
 
       # Due to composite actions not supporting post steps, the following workflow steps are required to stop a k6-operator mid stream.
@@ -335,8 +346,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.run-k6-operator-test.outputs.deploy-yaml-artifact }}-bk
-          path: ${{ env.WORKING_DIRECTORY }}/${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+          name: ${{ steps.start-k6-test.outputs.deploy-yaml-artifact }}-bk
+          path: ${{ env.WORKING_DIRECTORY }}/${{ steps.start-k6-test.outputs.run-name }}.yaml
           retention-days: ${{ env.RETENTION_IN_DAYS }}
 
       - name: Stop Test and Cleanup if Workflow is Cancelled
@@ -348,18 +359,134 @@ jobs:
           #  Cleanup Test Deploy and Configmap
 
           echo ""
-          echo "Deleting configmap: ${{ steps.run-k6-operator-test.outputs.config-map-name }}"
-          kubectl delete configmap ${{ steps.run-k6-operator-test.outputs.config-map-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
+          echo "Deleting configmap: ${{ steps.start-k6-test.outputs.config-map-name }}"
+          kubectl delete configmap ${{ steps.start-k6-test.outputs.config-map-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
 
           echo ""
-          echo "Listing folder contents to validate that ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml exists"
-          ls -la ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+          echo "Listing folder contents to validate that ${{ steps.start-k6-test.outputs.run-name }}.yaml exists"
+          ls -la ${{ steps.start-k6-test.outputs.run-name }}.yaml
 
           echo ""
-          echo "Deleting runner pods for ${{ steps.run-k6-operator-test.outputs.run-name }}"
-          kubectl delete --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+          echo "Deleting runner pods for ${{ steps.start-k6-test.outputs.run-name }}"
+          kubectl delete --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} -f ${{ steps.start-k6-test.outputs.run-name }}.yaml
 
-          rm -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
+          rm -f ${{ steps.start-k6-test.outputs.run-name }}.yaml
+
+      ### Cleanup K6-Operator test if workflow is cancelled ###
+      - name: Azure logout
+        if: always()
+        continue-on-error: true
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
+      - name: Remove kubectl config
+        if: always()
+        shell: bash
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        continue-on-error: true
+        run: |
+          # Remove kubectl config
+          rm -rf ${{ steps.kube-config.outputs.kube-config-file }}
+
+  # TODO: Create K6 Operator Approval environment and add required approvers.
+  # This job targets the K6 Operator Approval environment.  This will break the workflow and give one of the
+  # required reviewers for this environment a chance to validate the k6 test is completed in the previous job and approve it.
+  k6-operator-approval:
+    needs: [start-k6-operator-test]
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    environment: 'K6 Operator Approval'
+    steps:
+      - name: Approval Received
+        run: echo "Approval on cleaning up the test run."
+
+  stop-k6-operator-test:
+    runs-on: [self-hosted, im-linux]
+    needs: [start-k6-operator-test, k6-operator-approval]
+    environment: ${{ inputs.env }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
+
+      - name: Setup kubectl config
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        id: kube-config
+        run: |
+          base_path=$(pwd)
+          kube_config_file_path="$base_path/.kube/config-sp"
+          export KUBECONFIG=$kube_config_file_path
+          az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --format exec --overwrite-existing --public-fqdn --file $kube_config_file_path
+          kubelogin convert-kubeconfig --login azurecli --kubeconfig $kube_config_file_path
+
+          echo "kube-config-file=$kube_config_file_path" >> $GITHUB_OUTPUT
+
+          powerstate=$(az aks show --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --query 'powerState.code' --out tsv)
+          echo "cluster-powerstate=$powerstate" >> $GITHUB_OUTPUT
+          echo "::notice title=Cluster Power State::Cluster Power State - $powerstate"
+
+      - name: Stop test if Cluster is off
+        if: steps.kube-config.outputs.cluster-powerstate != 'Running'
+        run: exit 1
+
+      - name: Stop K6-Operator Test
+        uses: im-practices/run-k6-operator-test/stop@latest
+        id: stop-k6-test
+        with:
+          working-directory: ./tests/k6
+          run-name: ${{ needs.start-k6-operator-test.outputs.run-name }}
+          kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
+          deploy-yaml-artifact-name: ${{ needs.start-k6-operator-test.outputs.deploy-yaml-artifact }}
+          retention-in-days: 1
+          # pod-log-lines-gha-output: 500 # TODO: uncomment if you want to change the number of lines in github actions that the pod logs output.
+          # pod-log-lines-file-output: 3000 # TODO: uncomment if you want to change the number of lines to file that the pod logs output.
+
+      ### Cleanup K6-Operator test if workflow is cancelled ###
+      - name: Download K6 Deployment Yaml
+        if: cancelled() || steps.stop-k6-test.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: ${{ needs.start-k6-operator-test.outputs.deploy-yaml-artifact }}
+          path: ${{ env.WORKING_DIRECTORY }}/${{ needs.start-k6-operator-test.outputs.run-name }}.yaml
+
+      - name: Stop Test and Cleanup if Workflow is Cancelled
+        if: cancelled() || steps.stop-k6-test.outcome == 'failure'
+        continue-on-error: true
+        shell: bash
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          #  Cleanup Test Deploy and Configmap
+
+          echo ""
+          echo "Deleting configmap: ${{ needs.start-k6-operator-test.outputs.config-map-name }}"
+          kubectl delete configmap ${{ needs.start-k6-operator-test.outputs.config-map-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
+
+          echo ""
+          echo "Listing folder contents to validate that ${{ needs.start-k6-operator-test.outputs.run-name }}.yaml exists"
+          ls -la ${{ needs.start-k6-operator-test.outputs.run-name }}.yaml
+
+          echo ""
+          echo "Deleting runner pods for ${{ needs.start-k6-operator-test.outputs.run-name }}"
+          kubectl delete --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} -f ${{ needs.start-k6-operator-test.outputs.run-name }}.yaml
+
+          rm -f ${{ needs.start-k6-operator-test.outputs.run-name }}.yaml
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
       - name: Azure logout
@@ -385,7 +512,7 @@ jobs:
         uses: im-open/post-status-to-teams-action@v1.3
         with:
           title: 'K6 Test in AKS Complete - ${{ inputs.run-name }}'
-          workflow-status: ${{ steps.run-k6-operator-test.outcome }}
+          workflow-status: ${{ steps.stop-k6-test.outcome }}
           workflow-type: Runbook
           teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           timezone: ${{ env.TIMEZONE }}
@@ -396,7 +523,7 @@ jobs:
               { "name": "Actor", "value": "${{ github.actor }}" },
               { "name": "Environment", "value": "${{ inputs.env }}"},
               { "name": "K6 Test", "value": "${{ inputs.test-file }}" },
-              { "name": "K6 Run Name w/Timestamp", "value": "${{ steps.run-k6-operator-test.outputs.run-name }}"},
+              { "name": "K6 Run Name w/Timestamp", "value": "${{ needs.start-k6-operator-test.outputs.run-name }}"},
               { "name": "K6 Cluster Powerstate", "value": "${{ steps.kube-config.outputs.cluster-powerstate }}"}
             ]
           custom-actions: |
