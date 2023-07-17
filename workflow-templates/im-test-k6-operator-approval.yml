@@ -80,7 +80,7 @@ permissions:
 env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
-  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>&var-env=${{inputs.env}}' # TODO: Update product tag
+  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>&var-env=${{ inputs.env }}' # TODO: Update product tag
   NODE_VERSION: '18.x' # TODO: Set correct node version
 
   K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{inputs.env}} -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
