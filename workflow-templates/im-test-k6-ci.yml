@@ -30,7 +30,7 @@ env:
   # DNS: https://influxdb-v1.mktp.io/loadtesting
   # Alternatively you can use IPs if the dns doesn't resolve.
   # IPS: https://10.206.234.23/loadtesting or https://10.206.234.22/loadtesting  or https://10.206.234.21/loadtesting
-  K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=dev -e RUN_ENV=dev' # TODO: Set default k6 paramaters. Update product and vamily tag
+  K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=K6-CI-Test,product=<your-product-tag>,family=pf,env=dev -e RUN_ENV=dev' # TODO: Set default k6 parameters. Update product and family tag
 
   # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
   # Update to desired version of releases found in https://github.com/im-practices/performance-testing/releases?q=k6&expanded=true
