@@ -54,8 +54,8 @@ env:
   NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
   # InfluxDB addresses -
   # DNS: https://influxdb-v1.mktp.io/loadtesting
-  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>&var-env=${{inputs.env}}' # TODO: Update product tag
-  K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{inputs.env}} -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
+  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>&var-env=${{ inputs.env }}' # TODO: Update product tag
+  K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
   K6_VERSION: 'v0.45.0'
 
   # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
