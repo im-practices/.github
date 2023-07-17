@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v1   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v2   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -80,10 +80,10 @@ permissions:
 env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
-  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>' # TODO: Verify link to your dashboard
+  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>&var-env=${{ inputs.env }}' # TODO: Update product tag
   NODE_VERSION: '18.x' # TODO: Set correct node version
 
-  K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
+  K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
   RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
   K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 

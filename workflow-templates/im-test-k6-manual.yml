@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v21    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v22    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -39,10 +39,6 @@ on:
       k6-paramaters:
         description: 'K6 extra paramaters. IE: -tag product=TEST,family=TEST'
         required: false
-      k6-version:
-        description: 'K6 version.  Versions lower than 0.32.0 will not work with this action.  Do not include the "v" prefix.'
-        required: true
-        default: '0.38.3' # TODO: Set default version of k6. IE. 0.38.3
       number-of-runners:
         description: 'Number of Runners: specify number of github self hosted runners.  Max: 10 or maxiumum self hosted linux runners.'
         required: true
@@ -58,8 +54,9 @@ env:
   NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
   # InfluxDB addresses -
   # DNS: https://influxdb-v1.mktp.io/loadtesting
-  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/L8Ilp7C7k/k6-load-testing-results-product-tag-filter?orgId=1' # TODO: Verify link to your dashboard
-  K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=${{ github.event.inputs.run-name }} -e RUN_ENV=${{ github.event.inputs.env }}' # TODO: Set default k6 paramaters
+  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>&var-env=${{ inputs.env }}' # TODO: Update product tag
+  K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
+  K6_VERSION: 'v0.45.0'
 
   # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
   # Update to desired version of releases found in https://github.com/im-practices/performance-testing/releases?q=k6&expanded=true

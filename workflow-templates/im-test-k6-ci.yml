@@ -1,13 +1,13 @@
-# Workflow Code: TroubledJaguar_v4    DO NOT REMOVE
-# Purpose: 
-#    Uses a container to run K6 with the file specified in 
+# Workflow Code: TroubledJaguar_v5    DO NOT REMOVE
+# Purpose:
+#    Uses a container to run K6 with the file specified in
 #    the workflow when commits are pushed to the main branch.
-#    
+#
 # Frequency:
 #    - This workflow is intended to be reusable, and used once per repository.
 #      If the workflow is updated to hardcode the testFile argument instead of
 #      taking it in as an arg, then it could be duplicated, once per k6 project.
-#    
+#
 # Projects to use this Template with:
 #    - App Service or Function (Optional Template)
 #    - On-Prem Service         (Optional Template)
@@ -23,18 +23,18 @@ env:
   NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
   ENABLE_NPM_STEPS: 'false'
   WORKING_DIRECTORY: 'tests/k6' # TODO: Add the location of your tests.  Root directory of k6 test files including configs, etc. IE: tests/k6
-  K6_VERSION: '3.38.3' # TODO: Set version of k6. IE. 0.38.3
+  K6_VERSION: 'v0.45.0' # TODO: Set version of k6. IE. 0.38.3
   TEST_FILE: '' # TODO: Add test file to run.
-  
-  # InfluxDB addresses - 
-  # DNS: https://influxdb-v1.mktp.io/loadtesting 
-  # Alternatively you can use IPs if the dns doesn't resolve.  
-  # IPS: https://10.206.234.23/loadtesting or https://10.206.234.22/loadtesting  or https://10.206.234.21/loadtesting 
-  K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=K6-CI-Test -e RUN_ENV=DEV' # TODO: Set default k6 paramaters
+
+  # InfluxDB addresses -
+  # DNS: https://influxdb-v1.mktp.io/loadtesting
+  # Alternatively you can use IPs if the dns doesn't resolve.
+  # IPS: https://10.206.234.23/loadtesting or https://10.206.234.22/loadtesting  or https://10.206.234.21/loadtesting
+  K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=K6-CI-Test,product=<your-product-tag>,family=pf,env=dev -e RUN_ENV=dev' # TODO: Set default k6 parameters. Update product and family tag
 
   # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
   # Update to desired version of releases found in https://github.com/im-practices/performance-testing/releases?q=k6&expanded=true
-  # K6_EXTENSION_ASSET_NAME: 'k6-im_0.0.1_linux_amd64.tar.gz' 
+  # K6_EXTENSION_ASSET_NAME: 'k6-im_0.0.1_linux_amd64.tar.gz'
   # K6_EXTENSION_TAG_NAME: 'k6-v0.0.1'
 
 jobs:
@@ -50,7 +50,7 @@ jobs:
         if: env.ENABLE_NPM_STEPS == 'true'
         uses: actions/setup-node@v3
         with:
-            node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
 
       # TODO: Delete if you don't build your k6 tests
       - name: NPM Cache
