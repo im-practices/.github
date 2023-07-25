@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v15    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v16    DO NOT REMOVE
 # Purpose:
 #    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #    In addition to that, however, there are three other things this workflow template is set up to do.
@@ -70,18 +70,18 @@ jobs:
           $CurrentBranchIsDefault = ($CurrentBranch -eq "${{ env.DEFAULT_BRANCH }}")
           $LastCommitIsSnapshot = ($LastCommitBy -eq "github-actions")
 
-          echo "::set-output name=isDefaultBranch::$CurrentBranchIsDefault"
-          echo "::set-output name=isSnapshot::$LastCommitIsSnapshot"
+          echo "isDefaultBranch=$CurrentBranchIsDefault" >> $GITHUB_OUTPUT
+          echo "isSnapshot=$LastCommitIsSnapshot" >> $GITHUB_OUTPUT
 
           if ($LastCommitIsSnapshot -and !$CurrentBranchIsDefault)
           {
             Write-Host "Snapshot was last commit, skipping the other jobs"
-            echo "::set-output name=skip::true"
+            echo "skip=true" >> $GITHUB_OUTPUT
           }
           else
           {
             Write-Host "Snapshot was not the last commit, continuing with the other jobs"
-            echo "::set-output name=skip::false"
+            echo "skip=false" >> $GITHUB_OUTPUT
           }
 
   # TODO: Remove this linting job if your project doesn't need/want it
@@ -98,7 +98,7 @@ jobs:
 
       - id: migration-folder
         shell: pwsh
-        run: echo "::set-output name=folder::$($(Get-Date).Year).$($(Get-Date).Month.ToString("00"))"
+        run: echo "folder=$($(Get-Date).Year).$($(Get-Date).Month.ToString("00"))" >> $GITHUB_OUTPUT
       - name: SQL Lint
         uses: im-open/tsql-lint-action@v1.1
         with:
@@ -195,7 +195,7 @@ jobs:
       #     $mappedObjects = $changedObjects | foreach-object { @{ schemaName=$_.schemaName; objectName=$_.objectName; objectType=$_.objectType; operationType=$_.operationType } }
       #     $objectsAsJson = $mappedObjects | ConvertTo-Json -Compress
 
-      #     echo "::set-output name=json::$objectsAsJson"
+      #     echo "json=$objectsAsJson" >> $GITHUB_OUTPUT
 
       # - name: Increment snapshots
       #   uses: im-open/increment-database-object-snapshots@v1.0
