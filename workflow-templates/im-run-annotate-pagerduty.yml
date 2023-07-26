@@ -55,28 +55,6 @@ jobs:
           | Environment     | `${{ env.ENVIRONMENT }}`                   |
           | Event           | `${{ github.event.inputs.event }}`         |' >> $GITHUB_STEP_SUMMARY
               
-      # For more information and best practices on the usage and options available
-      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
-      - name: Set Variables
-        id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.1
-        with:
-          scope: ${{ github.event.inputs.environment }}
-        env:
-          # This variable is used to upload and download blobs from blob storage
-          RESOURCE_GROUP@dev: ''
-          RESOURCE_GROUP@qa: ''
-          RESOURCE_GROUP@stage: ''
-          RESOURCE_GROUP@demo: ''
-          RESOURCE_GROUP@uat: ''
-          RESOURCE_GROUP@prod: ''
-          # TODO: For the following app insights name inputs, fill in the value if you have the environment and delete the environment if it does not exist
-          APP_INSIGHTS_NAME@dev: ''
-          APP_INSIGHTS_NAME@qa: ''
-          APP_INSIGHTS_NAME@stage: ''
-          APP_INSIGHTS_NAME@demo: ''
-          APP_INSIGHTS_NAME@uat: ''
-          APP_INSIGHTS_NAME@prod: ''
 
       - name: Create a change event
         uses: im-open/pagerduty-change-events-action@v5
