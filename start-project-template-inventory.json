@@ -53,6 +53,7 @@
         ],
         "optionalTemplates": [
             { "name": "im-run-annotate-app-insights.yml", "canHaveMultiples": false},
+            { "name": "im-run-annotate-pagerduty-template.yml", "canHaveMultiples": false},
             { "name": "im-run-tf-import.yml", "canHaveMultiples": false},
             { "name": "im-run-tf-taint.yml", "canHaveMultiples": false},
             { "name": "im-run-add-or-update-az-keyvault-secret.yml", "canHaveMultiples": false},
