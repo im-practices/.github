@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v24   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v25   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -91,6 +91,9 @@ env:
   RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
   K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
+  PAGERDUTY_WINDOW_IN_MIN: '60' # TODO: Set this to your longest running k6 test.
+  PAGERDUTY_WINDOW_DESC: 'Running K6 Test on ${{ inputs.env }} from K6-Operator in AKS'
+
   ###### DO NOT EDIT ######
   PRIVATE_CONTAINER_REGISTRY: 'bdaimdna26corecr1.azurecr.io'
   CLUSTER_NAME: 'BDAIM-D-NA26-PERFTEST-K8-CL'
@@ -124,7 +127,7 @@ jobs:
           echo $'
           | Input Name            | Value                    |
           | ---                   |  ---                     |
-          | Environment           | `${{ inputs.environment }}` |
+          | Environment           | `${{ inputs.env }}` |
           | Workflow Branch/Tag    | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |
           | Working Directory     | `${{ env.WORKING_DIRECTORY }}` |
           | Test File             | `${{ inputs.test-file }}` |
@@ -274,11 +277,21 @@ jobs:
         if: steps.kube-config.outputs.cluster-powerstate != 'Running'
         run: exit 1
 
+      - name: Open a PagerDuty Maintenance Window
+        id: open-window
+        uses: im-open/open-pagerduty-maintenance-window@v1.2
+        with:
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
+          description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
+          minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
+          service-id: ${{ vars.PAGERDUTY_SERVICE_ID }} # This is an env-level variable
+          #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
+
       - name: Send Status to Teams - Starting Test
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.3
         with:
-          title: 'K6 Test Starting Shortly in AKS - ${{inputs.run-name }}'
+          title: 'K6 Test Starting Shortly in AKS - ${{ inputs.run-name }}'
           workflow-status: started
           workflow-type: Runbook
           teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -319,6 +332,7 @@ jobs:
           k6-parameters: '${{ inputs.k6-parameters }}'
           k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }} ${{ steps.test-tag.outputs.test-tag }}'
           parallelism: ${{ inputs.parallelism }}
+          separate-nodes: ${{ inputs.separate-nodes }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
           retention-in-days: ${{ env.RETENTION_IN_DAYS }}
           loop-count: ${{ inputs.loop-count }}
@@ -378,6 +392,14 @@ jobs:
         run: |
           # Remove kubectl config
           rm -rf ${{ steps.kube-config.outputs.kube-config-file }}
+
+      - name: Close the PagerDuty Maintenance Window
+        if: always()
+        continue-on-error: true
+        uses: im-open/close-pagerduty-maintenance-window@v1.1
+        with:
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
+          maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
       - name: Send Status to Teams - Test Finished
         if: always()
