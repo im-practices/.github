@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v2   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v3   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -70,6 +70,10 @@ on:
         required: false
         type: boolean
         default: false # TODO: Set true if you require npm build to run for your k6 bundle to be created
+      maintenance-window-duration:
+        description: 'Maintenance Window Duration: Duration of maintenance window in minutes.'
+        required: false
+        default: '60'
 
 permissions:
   # Required for secretless azure access and deploys
@@ -86,6 +90,9 @@ env:
   K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
   RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
   K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
+
+  PAGERDUTY_WINDOW_IN_MIN: ${{ inputs.maintenance-window-duration }}
+  PAGERDUTY_WINDOW_DESC: 'Running K6 Test on ${{ inputs.env }} from K6-Operator in AKS'
 
   ###### DO NOT EDIT ######
   PRIVATE_CONTAINER_REGISTRY: 'bdaimdna26corecr1.azurecr.io'
@@ -130,7 +137,8 @@ jobs:
           | Upload File/Folders   | `${{ inputs.upload-files-folder}}` |
           | K6 Parameters         | `${{ inputs.k6-parameters }}` |
           | K6 Default Parameters | `${{ env.K6_DEFAULT_PARAMETERS }}`  |
-          | Run NPM Build         | `${{ inputs.run-npm-build }}` |' >> $GITHUB_STEP_SUMMARY
+          | Run NPM Build         | `${{ inputs.run-npm-build }}` |
+          | Maintenance Window Duration | `${{ inputs.maintenance-window-duration }}` |' >> $GITHUB_STEP_SUMMARY
 
       - name: Set Cache Keys
         # As long as these files don't change the cache will remain in tact and the time
@@ -194,6 +202,7 @@ jobs:
       run-name: ${{ steps.start-k6-test.outputs.run-name }}
       config-map-name: ${{ steps.start-k6-test.outputs.config-map-name }}
       deploy-yaml-artifact: ${{ steps.start-k6-test.outputs.deploy-yaml-artifact }}
+      maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
     steps:
       - name: Checkout Repository
@@ -288,6 +297,16 @@ jobs:
       - name: Stop test if Cluster is off
         if: steps.kube-config.outputs.cluster-powerstate != 'Running'
         run: exit 1
+
+      - name: Open a PagerDuty Maintenance Window
+        id: open-window
+        uses: im-open/open-pagerduty-maintenance-window@v1.2
+        with:
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
+          description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
+          minutes: ${{ env.PAGERDUTY_WINDOW_IN_MIN }}
+          service-id: ${{ vars.PAGERDUTY_SERVICE_ID }} # This is an env-level variable
+          #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
       - name: Send Status to Teams - Starting Test
         continue-on-error: true
@@ -505,6 +524,14 @@ jobs:
         run: |
           # Remove kubectl config
           rm -rf ${{ steps.kube-config.outputs.kube-config-file }}
+
+      - name: Close the PagerDuty Maintenance Window
+        if: always()
+        continue-on-error: true
+        uses: im-open/close-pagerduty-maintenance-window@v1.1
+        with:
+          pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
+          maintenance-window-id: ${{ needs.start-k6-operator-test.outputs.maintenance-window-id }}
 
       - name: Send Status to Teams - Test Finished
         if: always()
