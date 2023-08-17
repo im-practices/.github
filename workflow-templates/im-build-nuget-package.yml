@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v37    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v38    DO NOT REMOVE
 # Purpose:
 #    Automatically builds the project and runs tests with code coverage. If
 #    everything is green, a new semantic version is calculated and a new package
@@ -161,12 +161,19 @@ jobs:
           line-threshold: 0
           branch-threshold: 0
 
+      - name: Pre-Zip Code Coverage Artifacts
+        # GitHub zips whatever we upload but they charge based on the pre-zip size.  
+        # The artifact will be double-zipped when downloaded but we will save on storage costs.
+        if: always() && steps.dotnet_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
+        shell: pwsh
+        run: Compress-Archive -Path ./${{ env.CODE_COVERAGE_DIR_DOTNET }}/* -DestinationPath "./${{ env.CODE_COVERAGE_DIR_DOTNET }}/${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}.zip"
+
       - name: upload dotnet code coverage report
-        if: env.IS_DEPENDABOT_PR == 'false'
+        if: always() && steps.dotnet_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
-          path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
+          path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}/${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}.zip
           retention-days: 15 # Cannot exceed 30 days.
 
       - name: Check for Test Failures

@@ -1,4 +1,4 @@
-# Workflow Code: SurprisedHedgehog_v17    DO NOT REMOVE
+# Workflow Code: SurprisedHedgehog_v18    DO NOT REMOVE
 # Purpose:
 #    Runs the Cypress script specified in the workflow when commits
 #    are pushed to the PR or when someone kicks it off manually.
@@ -47,6 +47,7 @@ env:
   CYPRESS_REPORT_SCRIPT: 'cy:report' #TODO:  Add the name of the npm script that merges the files and creates an html report, if you copied the one above it is cy:report
   CYPRESS_RESULTS_FILE: 'merged-results.json' # TODO: Update this value if it was added as something different in the npm report script
   CYPRESS_REPORT_DIR: 'cypress-results' # TODO: Update this value if it was added as something different in the npm report script
+  CYPRESS_SCREENSHOTS: 'cypress/screenshots' # TODO: Update this value if it was added as something different in the npm report script
 
 jobs:
   run-cypress:
@@ -120,12 +121,29 @@ jobs:
           ignore-test-failures: true
           timezone: 'america/denver' # TODO: Verify timezone
 
+      - name: Pre-Zip Code Artifacts
+        # GitHub zips whatever we upload but they charge based on the pre-zip size.  
+        # The artifact will be double-zipped when downloaded but we will save on storage costs.
+        if: always() && steps.dotnet_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
+        working-directory: ${{ env.JS_TEST_DIR }}
+        shell: pwsh
+        run: |
+          if(Test-Path -Path "./${{ env.CYPRESS_SCREENSHOTS }}") {
+            Compress-Archive -Path ./${{ env.CYPRESS_SCREENSHOTS }}/* -DestinationPath "./${{ env.CYPRESS_SCREENSHOTS }}/screenshots.zip"
+          }
+          if(Test-Path -Path "./${{ env.CYPRESS_REPORT_DIR }}") {
+            Compress-Archive -Path ./${{ env.CYPRESS_REPORT_DIR }}/* -DestinationPath "./${{ env.CYPRESS_REPORT_DIR }}/report-directory.zip"
+          }
+          if(Test-Path -Path ./${{ env.CYPRESS_RESULTS_FILE }}) {
+            Compress-Archive -Path ./${{ env.CYPRESS_RESULTS_FILE }} -DestinationPath "./results-file.zip"
+          }
+
       - name: Upload cypress screenshots if there are test failures
         if: steps.cypress.outcome == 'failure'
         uses: actions/upload-artifact@v3
         with:
           name: Failed Cypress Test Screenshots
-          path: ${{ env.JS_TEST_DIR }}/cypress/screenshots/
+          path: ${{ env.JS_TEST_DIR }}/${{ env.CYPRESS_SCREENSHOTS }}/screenshots.zip
           retention-days: 15 # Cannot exceed 30 days.
 
       - name: Upload Cypress Results Report
@@ -133,8 +151,8 @@ jobs:
         with:
           name: Cypress Results ${{ github.run_number }}
           path: |
-            ${{ env.JS_TEST_DIR }}/${{ env.CYPRESS_REPORT_DIR }}/
-            ${{ env.JS_TEST_DIR }}/${{ env.CYPRESS_RESULTS_FILE }}
+            ${{ env.JS_TEST_DIR }}/${{ env.CYPRESS_REPORT_DIR }}/report-directory.zip
+            ${{ env.JS_TEST_DIR }}/results-file.zip
           retention-days: 15 # Cannot exceed 30 days.
 
       - name: Fail if cypress errors
