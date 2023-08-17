@@ -1,23 +1,22 @@
-# Workflow Code: PetrifiedMole_v4    DO NOT REMOVE
-# Purpose: 
-#    Compiles sass for projects that need it, compiles the solution, sets up ChromeDiver for 
-#    projects that need it then runs the specified StoryTeller tests when code is pushed to a 
+# Workflow Code: PetrifiedMole_v5    DO NOT REMOVE
+# Purpose:
+#    Compiles sass for projects that need it, compiles the solution, sets up ChromeDiver for
+#    projects that need it then runs the specified StoryTeller tests when code is pushed to a
 #    PR, someone manually kicks it off or when another workflow triggers it.
-#    
+#
 # NOTE:
 #    Storyteller should not be introduced for new projects.
 #
 # Frequency:
 #    - This workflow can be duplicated as many times as needed for each Storyteller Project in the solution
 #      or modified to run tests from multiple storyteller projects.
-#    
+#
 # Projects to use this Template with:
 #    -  On Prem Site    (Optional Template)
 #    -  On Prem Service (Optional Template)
 #
 # TODO Prerequisites:
 #    - If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
-
 
 name: Run StoryTeller
 
@@ -116,3 +115,4 @@ jobs:
         with:
           name: StoryTeller Results
           path: ${{ env.STORYTELLER_RESULTS_PATH }}
+          retention-days: 15 # Cannot exceed 30 days.

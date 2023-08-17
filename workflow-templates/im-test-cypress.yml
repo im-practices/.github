@@ -1,4 +1,4 @@
-# Workflow Code: SurprisedHedgehog_v16    DO NOT REMOVE
+# Workflow Code: SurprisedHedgehog_v17    DO NOT REMOVE
 # Purpose:
 #    Runs the Cypress script specified in the workflow when commits
 #    are pushed to the PR or when someone kicks it off manually.
@@ -126,6 +126,7 @@ jobs:
         with:
           name: Failed Cypress Test Screenshots
           path: ${{ env.JS_TEST_DIR }}/cypress/screenshots/
+          retention-days: 15 # Cannot exceed 30 days.
 
       - name: Upload Cypress Results Report
         uses: actions/upload-artifact@v3
@@ -134,6 +135,7 @@ jobs:
           path: |
             ${{ env.JS_TEST_DIR }}/${{ env.CYPRESS_REPORT_DIR }}/
             ${{ env.JS_TEST_DIR }}/${{ env.CYPRESS_RESULTS_FILE }}
+          retention-days: 15 # Cannot exceed 30 days.
 
       - name: Fail if cypress errors
         if: steps.cypress.outcome == 'failure'

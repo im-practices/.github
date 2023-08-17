@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v44    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v45    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -200,6 +200,7 @@ jobs:
 
     env:
       REF_TO_BUILD_AND_TAG: ${{ needs.setup-build-workflow.outputs.REF_TO_BUILD_AND_TAG }}
+      IS_DEPENDABOT_PR: ${{ needs.setup-build-workflow.outputs.IS_DEPENDABOT_PR }}
       CODE_COVERAGE_REPORT_NAME_DOTNET: '<project-name> .Net Code Coverage' # TODO: Replace <project-name>
       CODE_COVERAGE_CHECK_NAME_DOTNET: 'dotnet code coverage'
       CODE_COVERAGE_DIR_DOTNET: 'coverage-results/dotnet'
@@ -211,7 +212,7 @@ jobs:
       MOCK_DB_OBJ_URL: '' # TODO: The url to the nuget feed that contains your mock db obs.  Delete if not using mock db objects.
       DROP_DB_AFTER_STEP: '' # TODO: [true|false] Indicates whether the db should be dropped after the build step
       SQL_SERVER_PASSWORD: 'StrongPassword!1'
-      
+
     # TODO:  Remove this services block if you do not setup a database to run tests against during ci
     services:
       sqlserver:
@@ -301,7 +302,7 @@ jobs:
 
       - name: create code coverage report
         id: coverage_report
-        if: always() && steps.test.outcome == 'success'
+        if: always() && steps.test.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
         uses: im-open/code-coverage-report-generator@4.9
         with:
           reports: '*/**/coverage.opencover.xml'
@@ -316,7 +317,7 @@ jobs:
           classfilters: ''
 
       - name: create status check/comment for code coverage results
-        if: always() && steps.coverage_report.outcome == 'success'
+        if: always() && steps.coverage_report.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
         id: dotnet_coverage_check
         uses: im-open/process-code-coverage-summary@v2.2
         with:
@@ -335,11 +336,12 @@ jobs:
           branch-threshold: 0
 
       - name: upload dotnet code coverage report
-        if: always() && steps.dotnet_coverage_check.outcome == 'success'
+        if: always() && steps.dotnet_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
           path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
+          retention-days: 15 # Cannot exceed 30 days.
 
   # TODO: Remove this job if you do not have jest tests
 
@@ -358,6 +360,7 @@ jobs:
 
     env:
       REF_TO_BUILD_AND_TAG: ${{ needs.setup-build-workflow.outputs.REF_TO_BUILD_AND_TAG }}
+      IS_DEPENDABOT_PR: ${{ needs.setup-build-workflow.outputs.IS_DEPENDABOT_PR }}
       CODE_COVERAGE_REPORT_NAME_JEST: '<project-name> Jest Code Coverage' # TODO: Replace <project-name>
       CODE_COVERAGE_CHECK_NAME_JEST: 'jest code coverage'
       CODE_COVERAGE_DIR_JEST: 'coverage-results/jest'
@@ -410,7 +413,7 @@ jobs:
 
       - name: create code coverage report
         id: coverage_report
-        if: always() && steps.test.outcome == 'success'
+        if: always() && steps.test.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
         uses: im-open/code-coverage-report-generator@4.9
         with:
           reports: '*/**/lcov.info'
@@ -425,7 +428,7 @@ jobs:
           classfilters: ''
 
       - name: create status check/comment for code coverage results
-        if: always() && steps.coverage_report.outcome == 'success'
+        if: always() && steps.coverage_report.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
         id: jest_coverage_check
         uses: im-open/process-code-coverage-summary@v2.2
         with:
@@ -444,11 +447,12 @@ jobs:
           branch-threshold: 0
 
       - name: upload jest code coverage report
-        if: always() && steps.jest_coverage_check.outcome == 'success'
+        if: always() && steps.jest_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}
           path: ${{ env.CODE_COVERAGE_DIR_JEST }}
+          retention-days: 15 # Cannot exceed 30 days.
 
   build-deployment-artifacts:
     runs-on: [self-hosted, im-linux]
@@ -592,7 +596,7 @@ jobs:
   finish-build:
     if: always() && needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
     needs: [dotnet-test, jest, build-deployment-artifacts]
-    uses:  im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
     with:
       next-version: ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
       title-of-teams-post: '<project-name> CI Build' # TODO: Replace <project-name>

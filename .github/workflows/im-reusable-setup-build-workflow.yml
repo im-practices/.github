@@ -50,17 +50,20 @@ on:
       DIST_TAG:
         description: String containing the distribution reference.  Value set to 'latest' for merges to main, otherwise set to the source ref.  Primarily used with npm packages.
         value: ${{ jobs.setup-build-workflow.outputs.DIST_TAG }}
+      IS_DEPENDABOT_PR:
+        description: Flag indicating whether a PR was created by Dependabot.
+        value: ${{ jobs.setup-build-workflow.outputs.DIST_TAG }}
       NEXT_VERSION:
         description: The next version calculated by git-version-lite.
         value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION }}
       NEXT_VERSION_NO_PREFIX:
         description: The next version calculated by git-version-lite without a prefix.
         value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION_NO_PREFIX }}
-      
+
 jobs:
   setup-build-workflow:
     runs-on: im-linux
-    
+
     outputs:
       CONTINUE_WORKFLOW: ${{ steps.set-vars.outputs.CONTINUE_WORKFLOW }}
       CREATE_RELEASE: ${{ steps.set-vars.outputs.CREATE_RELEASE }}
@@ -68,6 +71,7 @@ jobs:
       IS_MERGE_TO_MAIN: ${{ steps.set-vars.outputs.IS_MERGE_TO_MAIN }}
       REF_TO_BUILD_AND_TAG: ${{ steps.set-vars.outputs.REF_TO_BUILD_AND_TAG }}
       DIST_TAG: ${{ steps.set-vars.outputs.DIST_TAG }}
+      IS_DEPENDABOT_PR: ${{ steps.actor_check.outputs.IS_DEPENDABOT_PR }}
       NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
       NEXT_VERSION_NO_PREFIX: ${{ steps.version.outputs.NEXT_VERSION_NO_PREFIX }}
 
@@ -85,7 +89,7 @@ jobs:
             const prClosed = '${{ github.event.action }}' === 'closed';
             const prMerged = prClosed && '${{ github.event.pull_request.merged }}' === 'true';
             const prMergedToMain = prMerged && targetRef === '${{ inputs.default-branch }}';
-            
+
             const isPreRelease = !prMergedToMain;
 
             // For a detailed explanation of why we use different refs for different scenarios 
@@ -107,9 +111,23 @@ jobs:
               core.setOutput(...pair);
               console.info(...pair);
             });
-      
+
+      - name: Check if Dependabot PR
+        id: actor_check
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const actor = '${{ github.actor}}';
+            const knownDependabotNames = [
+              'dependabot[bot]',
+              'dependabot'
+            ];
+            const isDependabotPR = knownDependabotNames.includes(actor);
+            core.info(`Is Dependabot PR: ${isDependabotPR}`);
+            core.setOutput('IS_DEPENDABOT_PR', isDependabotPR);
+
       - name: Construct Workflow Summary
-        id: summary  
+        id: summary
         uses: actions/github-script@v6
         with:
           script: |
@@ -127,7 +145,8 @@ jobs:
               | IS_PRERELEASE        | \`${{ steps.set-vars.outputs.IS_PRERELEASE }}\`         |
               | IS_MERGE_TO_MAIN     | \`${{ steps.set-vars.outputs.IS_MERGE_TO_MAIN }}\`      |
               | REF_TO_BUILD_AND_TAG | \`${{ steps.set-vars.outputs.REF_TO_BUILD_AND_TAG }}\`  |
-              | DIST_TAG             | \`${{ steps.set-vars.outputs.DIST_TAG }}\`              |`;
+              | DIST_TAG             | \`${{ steps.set-vars.outputs.DIST_TAG }}\`              |
+              | IS_DEPENDABOT_PR     | \`${{ steps.actor_check.outputs.IS_DEPENDABOT_PR }}\`   |`;
             } else {
               console.log('A workflow summary was provided and will be used instead of the default value.');
             }
@@ -136,7 +155,7 @@ jobs:
             core.setOutput('summary', summary);
         env:
           SUMMARY: ${{ inputs.workflow-summary }}
-      
+
       - run: echo '${{ steps.summary.outputs.summary }}' >> $GITHUB_STEP_SUMMARY
 
       - uses: actions/checkout@v3
@@ -144,7 +163,7 @@ jobs:
         with:
           ref: ${{ steps.set-vars.outputs.REF_TO_BUILD_AND_TAG }}
           fetch-depth: 0
-      
+
       - name: Calculate next version
         if: steps.set-vars.outputs.CONTINUE_WORKFLOW == 'true'
         id: version
