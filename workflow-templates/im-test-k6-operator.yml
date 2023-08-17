@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v25   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v26   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -28,25 +28,10 @@ on:
           - load
           - stage
           - demo
-      run-name: # Run name is used to separate load test runs from each other.
-        description: 'Run Name: Name of k6 test run in logs and kubernetes.'
-        required: true
-        default: 'Test-Check-Health' # TODO: Update Default k6 run name.
       test-file:
         description: 'Test Filename: K6 js test file to run. Please include .js extension'
         required: true
         default: 'check-health-simple.js' # TODO: Update default test file
-      upload-type:
-        description: 'Upload Type: Type of upload for configmap upload.'
-        required: true
-        default: test-file # TODO: Update to default upload type
-        type: choice
-        options:
-          - test-file # When running single test file
-          - single-folder # When your tests reside in a single folder without dependencies
-          - multiple-files # When you have multiple files even in different folders
-          - multiple-folders # When you have multiple folders such as config and test-file folders
-          - working-directory # Upload the whole directory you specified in the working directory input
       upload-files-folder:
         description: 'Upload Files or Folders: Comma separated list of files or folders to include in the upload. Specify full path from working-directory root.'
         required: false
@@ -73,6 +58,10 @@ on:
         description: 'Loop Count: Number of loops to wait for test to complete.'
         required: false
         default: '50'
+      maintenance-window-duration:
+        description: 'Maintenance Window Duration: Duration of maintenance window in minutes. This should match your loop count'
+        required: false
+        default: '50' # TODO: Set default maintenance windows duration
 
 permissions:
   # Required for secretless azure access and deploys
@@ -93,6 +82,14 @@ env:
 
   PAGERDUTY_WINDOW_IN_MIN: '60' # TODO: Set this to your longest running k6 test.
   PAGERDUTY_WINDOW_DESC: 'Running K6 Test on ${{ inputs.env }} from K6-Operator in AKS'
+
+  # TODO: Set upload type.  Valid options are:
+  # test-file # When running single test file
+  # single-folder # When your tests reside in a single folder without dependencies
+  # multiple-files # When you have multiple files even in different folders
+  # multiple-folders # When you have multiple folders such as config and test-file folders
+  # working-directory # Upload the whole directory you specified in the working directory input
+  UPLOAD_TYPE: 'multiple-folders'
 
   ###### DO NOT EDIT ######
   PRIVATE_CONTAINER_REGISTRY: 'bdaimdna26corecr1.azurecr.io'
@@ -128,18 +125,19 @@ jobs:
           | Input Name            | Value                    |
           | ---                   |  ---                     |
           | Environment           | `${{ inputs.env }}` |
-          | Workflow Branch/Tag    | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |
+          | Workflow Branch/Tag   | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |
           | Working Directory     | `${{ env.WORKING_DIRECTORY }}` |
           | Test File             | `${{ inputs.test-file }}` |
           | Parallelism           | `${{ inputs.parallelism }}` |
           | Separate-nodes        | `${{ inputs.separate-nodes }}` |
-          | Upload Type           | `${{ inputs.upload-type }}` |
-          | Upload File/Folders   | `${{ inputs.upload-files-folder}}` |
+          | Upload Type           | `${{ env.UPLOAD_TYPE }}` |
+          | Upload File/Folders   | `${{ inputs.upload-files-folder }}` |
           | K6 Parameters         | `${{ inputs.k6-parameters }}` |
           | K6 Default Parameters | `${{ env.K6_DEFAULT_PARAMETERS }}`  |
           | Loop Count            | `${{ inputs.loop-count }}` |
           | Loop Duration         | `${{ env.LOOP_DURATION }}` |
-          | Run NPM Build         | `${{ inputs.run-npm-build }}` |' >> $GITHUB_STEP_SUMMARY
+          | Run NPM Build         | `${{ inputs.run-npm-build }}` |
+          | Maintenance Window Duration | `${{ inputs.maintenance-window-duration }}` |' >> $GITHUB_STEP_SUMMARY
 
       - name: Set Cache Keys
         # As long as these files don't change the cache will remain in tact and the time
@@ -204,6 +202,22 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
+
+      - name: Clean Test File Name for K6 Tag and Ouput Run Name
+        id: test-tag
+        run: |
+          k6_test_file_tag="--tag test=${{ inputs.test-file }}"
+          # Removing slashes from k6_test_file_tag
+          k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
+          echo "test-tag=$k6_test_file_tag" >> $GITHUB_OUTPUT
+
+          # Creating RunName
+          k6_test_file="${{ inputs.test-file }}"
+          k6_run_name="${k6_test_file/.js/''}"
+          k6_run_name=$(echo $k6_run_name  | tr '/' '-')
+          k6_run_name=$(echo $k6_run_name  | tr '.' '_')
+          k6_run_name=$(echo $k6_run_name  | tr '_' '-')
+          echo "run-name=$k6_run_name" >> $GITHUB_OUTPUT
 
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
@@ -291,7 +305,7 @@ jobs:
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.3
         with:
-          title: 'K6 Test Starting Shortly in AKS - ${{ inputs.run-name }}'
+          title: 'K6 Test Starting Shortly in AKS - ${{ steps.test-tag.outputs.run-name }}'
           workflow-status: started
           workflow-type: Runbook
           teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -312,22 +326,14 @@ jobs:
               }
             ]
 
-      - name: Clean Test File Name for K6 Tag
-        id: test-tag
-        run: |
-          k6_test_file_tag="--tag test=${{ inputs.test-file }}"
-          # Removing slashes from k6_test_file_tag
-          k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
-          echo "test-tag=$k6_test_file_tag" >> $GITHUB_OUTPUT
-
       - name: Run K6-Operator Test
         uses: im-practices/run-k6-operator-test@latest
         id: run-k6-operator-test
         with:
           working-directory: ${{ env.WORKING_DIRECTORY }}
           test-file: ${{ inputs.test-file }}
-          run-name: ${{ inputs.run-name }}
-          upload-type: ${{ inputs.upload-type}}
+          run-name: ${{ steps.test-tag.outputs.run-name }}
+          upload-type: ${{ env.UPLOAD_TYPE}}
           upload-files-folder: ${{ inputs.upload-files-folder }}
           k6-parameters: '${{ inputs.k6-parameters }}'
           k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }} ${{ steps.test-tag.outputs.test-tag }}'
@@ -353,27 +359,23 @@ jobs:
           path: ${{ env.WORKING_DIRECTORY }}/${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
           retention-days: ${{ env.RETENTION_IN_DAYS }}
 
-      - name: Stop Test and Cleanup if Workflow is Cancelled
+      - name: Stop Test if Workflow is Cancelled
         if: cancelled()
         continue-on-error: true
         shell: bash
-        working-directory: ${{ env.WORKING_DIRECTORY }}
         run: |
-          #  Cleanup Test Deploy and Configmap
+          kubectl delete k6s.k6.io/${{ steps.run-k6-operator-test.outputs.run-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
+
+      - name: Cleanup Test Configmap if Workflow is Cancelled
+        if: cancelled()
+        continue-on-error: true
+        shell: bash
+        run: |
+          #  Cleanup Test Configmap
 
           echo ""
           echo "Deleting configmap: ${{ steps.run-k6-operator-test.outputs.config-map-name }}"
           kubectl delete configmap ${{ steps.run-k6-operator-test.outputs.config-map-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
-
-          echo ""
-          echo "Listing folder contents to validate that ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml exists"
-          ls -la ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
-
-          echo ""
-          echo "Deleting runner pods for ${{ steps.run-k6-operator-test.outputs.run-name }}"
-          kubectl delete --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
-
-          rm -f ${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
       - name: Azure logout
@@ -406,7 +408,7 @@ jobs:
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.3
         with:
-          title: 'K6 Test in AKS Complete - ${{ inputs.run-name }}'
+          title: 'K6 Test in AKS Complete - ${{ steps.run-k6-operator-test.outputs.run-name }}'
           workflow-status: ${{ steps.run-k6-operator-test.outcome }}
           workflow-type: Runbook
           teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)

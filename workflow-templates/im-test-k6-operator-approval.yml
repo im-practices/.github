@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v3   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v4   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -29,25 +29,10 @@ on:
           - load
           - stage
           - demo
-      run-name: # Run name is used to separate load test runs from each other.
-        description: 'Run Name: Name of k6 test run in logs and kubernetes.'
-        required: true
-        default: 'Test-Check-Health' # TODO: Update Default k6 run name.
       test-file:
         description: 'Test Filename: K6 js test file to run. Please include .js extension'
         required: true
         default: 'check-health-simple.js' # TODO: Update default test file
-      upload-type:
-        description: 'Upload Type: Type of upload for configmap upload.'
-        required: true
-        default: test-file # TODO: Update to default upload type
-        type: choice
-        options:
-          - test-file # When running single test file
-          - single-folder # When your tests reside in a single folder without dependencies
-          - multiple-files # When you have multiple files even in different folders
-          - multiple-folders # When you have multiple folders such as config and test-file folders
-          - working-directory # Upload the whole directory you specified in the working directory input
       upload-files-folder:
         description: 'Upload Files or Folders: Comma separated list of files or folders to include in the upload. Specify full path from working-directory root.'
         required: false
@@ -71,9 +56,9 @@ on:
         type: boolean
         default: false # TODO: Set true if you require npm build to run for your k6 bundle to be created
       maintenance-window-duration:
-        description: 'Maintenance Window Duration: Duration of maintenance window in minutes.'
+        description: 'Maintenance Window Duration: Duration of maintenance window in minutes. This should match your loop count'
         required: false
-        default: '60'
+        default: '50' # TODO: Set default maintenance windows duration
 
 permissions:
   # Required for secretless azure access and deploys
@@ -93,6 +78,8 @@ env:
 
   PAGERDUTY_WINDOW_IN_MIN: ${{ inputs.maintenance-window-duration }}
   PAGERDUTY_WINDOW_DESC: 'Running K6 Test on ${{ inputs.env }} from K6-Operator in AKS'
+
+  UPLOAD_TYPE: 'multiple-folders'
 
   ###### DO NOT EDIT ######
   PRIVATE_CONTAINER_REGISTRY: 'bdaimdna26corecr1.azurecr.io'
@@ -133,8 +120,8 @@ jobs:
           | Test File             | `${{ inputs.test-file }}` |
           | Parallelism           | `${{ inputs.parallelism }}` |
           | Separate-nodes        | `${{ inputs.separate-nodes }}` |
-          | Upload Type           | `${{ inputs.upload-type }}` |
-          | Upload File/Folders   | `${{ inputs.upload-files-folder}}` |
+          | Upload Type           | `${{ env.UPLOAD_TYPE }}` |
+          | Upload File/Folders   | `${{ inputs.upload-files-folder }}` |
           | K6 Parameters         | `${{ inputs.k6-parameters }}` |
           | K6 Default Parameters | `${{ env.K6_DEFAULT_PARAMETERS }}`  |
           | Run NPM Build         | `${{ inputs.run-npm-build }}` |
@@ -209,6 +196,22 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
+
+      - name: Clean Test File Name for K6 Tag and Ouput Run Name
+        id: test-tag
+        run: |
+          k6_test_file_tag="--tag test=${{ inputs.test-file }}"
+          # Removing slashes from k6_test_file_tag
+          k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
+          echo "test-tag=$k6_test_file_tag" >> $GITHUB_OUTPUT
+
+          # Creating RunName
+          k6_test_file="${{ inputs.test-file }}"
+          k6_run_name="${k6_test_file/.js/''}"
+          k6_run_name=$(echo $k6_run_name  | tr '/' '-')
+          k6_run_name=$(echo $k6_run_name  | tr '.' '-')
+          k6_run_name=$(echo $k6_run_name  | tr '_' '-')
+          echo "run-name=$k6_run_name" >> $GITHUB_OUTPUT
 
       - name: Show Input Variables
         run: |
@@ -298,6 +301,23 @@ jobs:
         if: steps.kube-config.outputs.cluster-powerstate != 'Running'
         run: exit 1
 
+      - name: Start K6-Operator Test
+        uses: im-practices/run-k6-operator-test/start@latest
+        id: start-k6-test
+        with:
+          working-directory: ${{ env.WORKING_DIRECTORY }}
+          test-file: ${{ inputs.test-file }}
+          run-name: ${{ steps.test-tag.outputs.run-name }}
+          upload-type: ${{ env.UPLOAD_TYPE}}
+          upload-files-folder: ${{ inputs.upload-files-folder }}
+          k6-parameters: '${{ inputs.k6-parameters }}'
+          k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }} ${{ steps.test-tag.outputs.test-tag }}'
+          parallelism: ${{ inputs.parallelism }}
+          separate-nodes: ${{ inputs.separate-nodes }}
+          kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
+          retention-in-days: ${{ env.RETENTION_IN_DAYS }}
+          # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: uncomment to use custom k6 binary with k6 extensions installed
+
       - name: Open a PagerDuty Maintenance Window
         id: open-window
         uses: im-open/open-pagerduty-maintenance-window@v1.2
@@ -312,7 +332,7 @@ jobs:
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.3
         with:
-          title: 'K6 Test Starting Shortly in AKS - ${{ inputs.run-name }}'
+          title: 'K6 Test Starting Shortly in AKS - ${{ steps.start-k6-test.outputs.run-name }}'
           workflow-status: started
           workflow-type: Runbook
           teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
@@ -333,30 +353,6 @@ jobs:
               }
             ]
 
-      - name: Clean Test File Name for K6 Tag
-        id: test-tag
-        run: |
-          k6_test_file_tag="--tag test=${{ inputs.test-file }}"
-          # Removing slashes from k6_test_file_tag
-          k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
-          echo "test-tag=$k6_test_file_tag" >> $GITHUB_OUTPUT
-
-      - name: Start K6-Operator Test
-        uses: im-practices/run-k6-operator-test/start@latest
-        id: start-k6-test
-        with:
-          working-directory: ${{ env.WORKING_DIRECTORY }}
-          test-file: ${{ inputs.test-file }}
-          run-name: ${{ inputs.run-name }}
-          upload-type: ${{ inputs.upload-type}}
-          upload-files-folder: ${{ inputs.upload-files-folder }}
-          k6-parameters: '${{ inputs.k6-parameters }}'
-          k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }} ${{ steps.test-tag.outputs.test-tag }}'
-          parallelism: ${{ inputs.parallelism }}
-          separate-nodes: ${{ inputs.separate-nodes }}
-          kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
-          retention-in-days: ${{ env.RETENTION_IN_DAYS }}
-          # k6-extension-image: '${{ env.PRIVATE_CONTAINER_REGISTRY }}/${{ env.K6_CONTAINER_IMAGE }}' # TODO: uncomment to use custom k6 binary with k6 extensions installed
       ### Cleanup K6-Operator test if workflow is cancelled ###
 
       # Due to composite actions not supporting post steps, the following workflow steps are required to stop a k6-operator mid stream.
@@ -368,28 +364,6 @@ jobs:
           name: ${{ steps.start-k6-test.outputs.deploy-yaml-artifact }}-bk
           path: ${{ env.WORKING_DIRECTORY }}/${{ steps.start-k6-test.outputs.run-name }}.yaml
           retention-days: ${{ env.RETENTION_IN_DAYS }}
-
-      - name: Stop Test and Cleanup if Workflow is Cancelled
-        if: cancelled()
-        continue-on-error: true
-        shell: bash
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: |
-          #  Cleanup Test Deploy and Configmap
-
-          echo ""
-          echo "Deleting configmap: ${{ steps.start-k6-test.outputs.config-map-name }}"
-          kubectl delete configmap ${{ steps.start-k6-test.outputs.config-map-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
-
-          echo ""
-          echo "Listing folder contents to validate that ${{ steps.start-k6-test.outputs.run-name }}.yaml exists"
-          ls -la ${{ steps.start-k6-test.outputs.run-name }}.yaml
-
-          echo ""
-          echo "Deleting runner pods for ${{ steps.start-k6-test.outputs.run-name }}"
-          kubectl delete --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} -f ${{ steps.start-k6-test.outputs.run-name }}.yaml
-
-          rm -f ${{ steps.start-k6-test.outputs.run-name }}.yaml
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
       - name: Azure logout
@@ -428,6 +402,9 @@ jobs:
     defaults:
       run:
         shell: bash
+
+    outputs:
+      stop-k6-test-outcome: ${{ steps.stop-k6-test.outcome }}
 
     steps:
       - name: Checkout Repository
@@ -476,38 +453,6 @@ jobs:
           # pod-log-lines-gha-output: 500 # TODO: uncomment if you want to change the number of lines in github actions that the pod logs output.
           # pod-log-lines-file-output: 3000 # TODO: uncomment if you want to change the number of lines to file that the pod logs output.
 
-      ### Cleanup K6-Operator test if workflow is cancelled ###
-      - name: Download K6 Deployment Yaml
-        if: cancelled() || steps.stop-k6-test.outcome == 'failure'
-        continue-on-error: true
-        uses: actions/download-artifact@v3.0.2
-        with:
-          name: ${{ needs.start-k6-operator-test.outputs.deploy-yaml-artifact }}
-          path: ${{ env.WORKING_DIRECTORY }}/${{ needs.start-k6-operator-test.outputs.run-name }}.yaml
-
-      - name: Stop Test and Cleanup if Workflow is Cancelled
-        if: cancelled() || steps.stop-k6-test.outcome == 'failure'
-        continue-on-error: true
-        shell: bash
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: |
-          #  Cleanup Test Deploy and Configmap
-
-          echo ""
-          echo "Deleting configmap: ${{ needs.start-k6-operator-test.outputs.config-map-name }}"
-          kubectl delete configmap ${{ needs.start-k6-operator-test.outputs.config-map-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
-
-          echo ""
-          echo "Listing folder contents to validate that ${{ needs.start-k6-operator-test.outputs.run-name }}.yaml exists"
-          ls -la ${{ needs.start-k6-operator-test.outputs.run-name }}.yaml
-
-          echo ""
-          echo "Deleting runner pods for ${{ needs.start-k6-operator-test.outputs.run-name }}"
-          kubectl delete --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} -f ${{ needs.start-k6-operator-test.outputs.run-name }}.yaml
-
-          rm -f ${{ needs.start-k6-operator-test.outputs.run-name }}.yaml
-
-      ### Cleanup K6-Operator test if workflow is cancelled ###
       - name: Azure logout
         if: always()
         continue-on-error: true
@@ -525,6 +470,94 @@ jobs:
           # Remove kubectl config
           rm -rf ${{ steps.kube-config.outputs.kube-config-file }}
 
+  send-teams-notification:
+    runs-on: [self-hosted, im-linux]
+    needs: [start-k6-operator-test, stop-k6-operator-test]
+    environment: ${{ inputs.env }}
+    if: always()
+    steps:
+      - uses: im-open/workflow-conclusion@v2.1
+        id: conclusion
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+
+      ### Cleanup K6-Operator test if workflow is cancelled ###
+      # TODO: Delete if your runner has kubelogin and kubectl already installed
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3.2
+        with:
+          version: latest
+
+      # TODO: Delete if your runner has kubelogin and kubectl already installed
+      - name: Setup Kubelogin
+        uses: azure/use-kubelogin@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          kubelogin-version: 'latest'
+
+      - name: AZ Login
+        if: steps.conclusion.outputs.workflow_conclusion == 'cancelled' || needs.stop-k6-operator-test.outputs.stop-k6-test-outcome == 'failure'
+        uses: azure/login@v1
+        with:
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
+
+      - name: Setup kubectl config
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        id: kube-config
+        if: steps.conclusion.outputs.workflow_conclusion == 'cancelled' || needs.stop-k6-operator-test.outputs.stop-k6-test-outcome == 'failure'
+        run: |
+          base_path=$(pwd)
+          kube_config_file_path="$base_path/.kube/config-sp"
+          export KUBECONFIG=$kube_config_file_path
+          az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --format exec --overwrite-existing --public-fqdn --file $kube_config_file_path
+          kubelogin convert-kubeconfig --login azurecli --kubeconfig $kube_config_file_path
+
+          echo "kube-config-file=$kube_config_file_path" >> $GITHUB_OUTPUT
+
+          powerstate=$(az aks show --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --query 'powerState.code' --out tsv)
+          echo "cluster-powerstate=$powerstate" >> $GITHUB_OUTPUT
+          echo "::notice title=Cluster Power State::Cluster Power State - $powerstate"
+
+      - name: Stop Test if Workflow is Cancelled
+        if: steps.conclusion.outputs.workflow_conclusion == 'cancelled' || needs.stop-k6-operator-test.outputs.stop-k6-test-outcome == 'failure'
+        continue-on-error: true
+        shell: bash
+        run: |
+          kubectl delete k6s.k6.io/${{ needs.start-k6-operator-test.outputs.run-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
+
+      - name: Cleanup Test Configmap if Workflow is Cancelled
+        if: steps.conclusion.outputs.workflow_conclusion == 'cancelled' || needs.stop-k6-operator-test.outputs.stop-k6-test-outcome == 'failure'
+        continue-on-error: true
+        shell: bash
+        run: |
+          #  Cleanup Test Configmap
+
+          echo ""
+          echo "Deleting configmap: ${{ needs.start-k6-operator-test.outputs.config-map-name }}"
+          kubectl delete configmap "${{ needs.start-k6-operator-test.outputs.config-map-name }}" --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
+
+      - name: Azure logout
+        if: steps.conclusion.outputs.workflow_conclusion == 'cancelled' || needs.stop-k6-operator-test.outputs.stop-k6-test-outcome == 'failure'
+        continue-on-error: true
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
+      - name: Remove kubectl config
+        if: steps.conclusion.outputs.workflow_conclusion == 'cancelled' || needs.stop-k6-operator-test.outputs.stop-k6-test-outcome == 'failure'
+        shell: bash
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        continue-on-error: true
+        run: |
+          # Remove kubectl config
+          rm -rf ${{ steps.kube-config.outputs.kube-config-file }}
+      ### Cleanup K6-Operator test if workflow is cancelled ###
       - name: Close the PagerDuty Maintenance Window
         if: always()
         continue-on-error: true
@@ -538,8 +571,8 @@ jobs:
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.3
         with:
-          title: 'K6 Test in AKS Complete - ${{ inputs.run-name }}'
-          workflow-status: ${{ steps.stop-k6-test.outcome }}
+          title: 'K6 Test in AKS Complete - ${{ needs.start-k6-operator-test.outputs.run-name }}'
+          workflow-status: ${{ needs.stop-k6-operator-test.outputs.stop-k6-test-outcome && needs.stop-k6-operator-test.outputs.stop-k6-test-outcome || steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Runbook
           teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
           timezone: ${{ env.TIMEZONE }}
