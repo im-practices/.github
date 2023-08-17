@@ -601,8 +601,7 @@ jobs:
       next-version: ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
       title-of-teams-post: '<project-name> CI Build' # TODO: Replace <project-name>
       is-merge-to-main: ${{ needs.setup-build-workflow.outputs.IS_MERGE_TO_MAIN }}
-      additional-conclusions:
-        | # TODO: Determine if there are any additional step outcomes/outputs you want considered or remove some items if they do not apply (like jest)
+      additional-conclusions: | # TODO: Determine if there are any additional step outcomes/outputs you want considered or remove some items if they do not apply (like jest)
         [
           { "name": "dotnet test", "conclusion" : "${{ needs.dotnet-test.outputs.test }}" },
           { "name": "dotnet coverage", "conclusion" : "${{ needs.dotnet-test.outputs.coverage }}" },
