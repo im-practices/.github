@@ -32,10 +32,6 @@ on:
         description: 'Test Filename: K6 js test file to run. Please include .js extension'
         required: true
         default: 'check-health-simple.js' # TODO: Update default test file
-        type: choice
-        options:
-          - shop.simple.test.js
-          - shopMfe.bundle.js
       upload-files-folder:
         description: 'Upload Files or Folders: Comma separated list of files or folders to include in the upload. Specify full path from working-directory root.'
         required: false
