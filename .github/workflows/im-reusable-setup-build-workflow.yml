@@ -52,7 +52,7 @@ on:
         value: ${{ jobs.setup-build-workflow.outputs.DIST_TAG }}
       IS_DEPENDABOT_PR:
         description: Flag indicating whether a PR was created by Dependabot.
-        value: ${{ jobs.setup-build-workflow.outputs.DIST_TAG }}
+        value: ${{ jobs.setup-build-workflow.outputs.IS_DEPENDABOT_PR }}
       NEXT_VERSION:
         description: The next version calculated by git-version-lite.
         value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION }}
