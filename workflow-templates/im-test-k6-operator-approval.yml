@@ -197,7 +197,7 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
-      - name: Clean Test File Name for K6 Tag
+      - name: Clean Test File Name for K6 Tag and Ouput Run Name
         id: test-tag
         run: |
           k6_test_file_tag="--tag test=${{ inputs.test-file }}"
