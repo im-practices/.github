@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v4   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v5   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -507,7 +507,6 @@ jobs:
           client-id: ${{ vars.ARM_CLIENT_ID }}
 
       - name: Setup kubectl config
-        working-directory: ${{ env.WORKING_DIRECTORY }}
         id: kube-config
         if: steps.conclusion.outputs.workflow_conclusion == 'cancelled' || needs.stop-k6-operator-test.outputs.stop-k6-test-outcome == 'failure'
         run: |
