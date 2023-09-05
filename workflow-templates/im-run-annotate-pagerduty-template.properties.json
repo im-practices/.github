@@ -1,5 +1,5 @@
 {
-    "name": "Runbook - Annotate PagerDuty",
+    "name": "Run - Annotate PagerDuty",
     "description": "Template that can be used to create an ad hoc PagerDuty event annotation",
     "iconName": "im_run"
 }
