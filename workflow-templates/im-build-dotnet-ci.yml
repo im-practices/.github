@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v46    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v47    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -88,38 +88,41 @@ jobs:
 
       - name: Check for an npm cache
         id: has-cache
-        uses: im-open/check-for-cache@v1.1
+        uses: actions/cache@v3
         with:
           path: '**/node_modules'
           key: ${{ env.NPM_CACHE_KEY }}
+          lookup-only: true
+          enableCrossOsArchive: true
 
       # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
 
-      # This action creates a post-job step that will upload the node_modules dir to the cache if the job
-      # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
-      # folder if the package-lock.json hasn't changed and it uses a im-linux runner to restore the cache from.
-      - name: Setup caching for node_modules directory
-        if: steps.has-cache.outputs.cache-hit == 'false'
+      # This action creates a post-job step that will upload the node_modules dir to the cache if the job completes successfully
+      - name: Setup caching for node_modules directory if cache does not exist
+        if: steps.has-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v3
         with:
           key: ${{ env.NPM_CACHE_KEY }}
           path: '**/node_modules'
+          enableCrossOsArchive: true
 
-      - uses: actions/setup-node@v3
-        if: steps.has-cache.outputs.cache-hit == 'false'
+      - name: Setup node if cache does not exist
+        uses: actions/setup-node@v3
+        if: steps.has-cache.outputs.cache-hit != 'true'
         with:
           node-version: '16'
 
       # TODO:  If the project contains internal npm packages, uncomment and update the orgs with the needed organizations
-      # - name: Authenticate with GitHub Packages
-      #   if: steps.has-cache.outputs.cache-hit == 'false'
+      # - name: Authenticate with GitHub Packages if cache does not exist
+      #   if: steps.has-cache.outputs.cache-hit != 'true'
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: ''
 
-      - run: npm ci
-        if: steps.has-cache.outputs.cache-hit == 'false'
+      - name: npm install if cache does not exist
+        run: npm ci
+        if: steps.has-cache.outputs.cache-hit != 'true'
 
   nuget-cache:
     runs-on: [self-hosted, im-linux]
@@ -149,25 +152,26 @@ jobs:
 
       - name: Check for a nuget cache
         id: has-cache
-        uses: im-open/check-for-cache@v1.1
+        uses: actions/cache@v3
         with:
           path: '~/.nuget/packages'
           key: ${{ env.NUGET_CACHE_KEY }}
+          lookup-only: true
+          enableCrossOsArchive: true
 
       # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
 
-      # This action creates a post-job step that will upload the ./.nuget/packages dir to the cache if the job
-      # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the ./.nuget/packages
-      # folder if the csproj files haven't changed and it uses a im-linux runner to restore the cache from.
-      - name: Setup caching for nuget packages
-        if: steps.has-cache.outputs.cache-hit == 'false'
+      # This action creates a post-job step that will upload the ./.nuget/packages dir to the cache if the job completes successfully
+      - name: Setup caching for nuget packages if cache does not exist
+        if: steps.has-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v3
         with:
           key: ${{ env.NUGET_CACHE_KEY }}
           path: ~/.nuget/packages
+          enableCrossOsArchive: true
 
-      - name: Setup .NET Core
-        if: steps.has-cache.outputs.cache-hit == 'false'
+      - name: Setup .NET Core if cache does not exist
+        if: steps.has-cache.outputs.cache-hit != 'true'
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
@@ -175,15 +179,16 @@ jobs:
           DOTNET_INSTALL_DIR: './.dotnet'
 
       # TODO:  If the project contains internal nuget packages, uncomment and update the orgs with the needed organizations
-      # - name: Authenticate with GitHub Packages
-      #   if: steps.has-cache.outputs.cache-hit == 'false'
+      # - name: Authenticate with GitHub Packages if cache does not exist
+      #   if: steps.has-cache.outputs.cache-hit != 'true'
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: ''
 
-      - run: dotnet restore ${{ env.SOLUTION_FILE }}
-        if: steps.has-cache.outputs.cache-hit == 'false'
+      - name: dotnet restore if cache does not exist
+        run: dotnet restore ${{ env.SOLUTION_FILE }}
+        if: steps.has-cache.outputs.cache-hit != 'true'
 
   dotnet-test:
     runs-on: [self-hosted, im-linux]

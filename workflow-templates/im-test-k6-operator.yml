@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v26   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v27   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -148,10 +148,12 @@ jobs:
 
       - name: Check for an npm cache
         id: has-cache
-        uses: im-open/check-for-cache@v1.1.2
+        uses: actions/cache@v3.2.6
         with:
           path: '**/k6/node_modules'
           key: ${{ env.NPM_CACHE_KEY }}
+          lookup-only: true
+          enableCrossOsArchive: true
 
       # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
 
@@ -159,14 +161,14 @@ jobs:
       # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
       # folder if the package-lock.json hasn't changed and it uses a im-linux runner to restore the cache from.
       # TODO: Delete if you don't build your k6 tests
-      - name: Install Node ${{ env.NODE_VERSION }}
-        if: steps.has-cache.outputs.cache-hit == 'false'
+      - name: Install Node ${{ env.NODE_VERSION }} if cache does not exist
+        if: steps.has-cache.outputs.cache-hit != 'true'
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Setup caching for node_modules directory
-        if: steps.has-cache.outputs.cache-hit == 'false'
+      - name: Setup caching for node_modules directory if cache does not exist
+        if: steps.has-cache.outputs.cache-hit != 'true
         uses: actions/cache@v3.2.6
         with:
           key: ${{ env.NPM_CACHE_KEY }}
@@ -174,15 +176,15 @@ jobs:
           enableCrossOsArchive: true
 
       # TODO:  If the project contains internal npm packages, uncomment and update the orgs with the needed organizations
-      # - name: Authenticate with GitHub Packages
-      #   if: steps.has-cache.outputs.cache-hit == 'false'
+      # - name: Authenticate with GitHub Packages if cache does not exist
+      #   if: steps.has-cache.outputs.cache-hit != 'true
       #   uses: im-open/authenticate-with-gh-package-registries@v1.0
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: ''
 
-      - name: NPM Install
-        if: steps.has-cache.outputs.cache-hit == 'false'
+      - name: NPM Install if cache does not exist
+        if: steps.has-cache.outputs.cache-hit != 'true
         working-directory: ${{ env.WORKING_DIRECTORY }}
         run: |
           echo "Installing NPM"
