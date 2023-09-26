@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v47    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v48    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -340,19 +340,12 @@ jobs:
           line-threshold: 0
           branch-threshold: 0
 
-      - name: Pre-Zip Code Coverage Artifacts
-        # GitHub zips whatever we upload but they charge based on the pre-zip size.  
-        # The artifact will be double-zipped when downloaded but we will save on storage costs.
+      - name: zip and upload dotnet code coverage report
         if: always() && steps.dotnet_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
-        shell: pwsh
-        run: Compress-Archive -Path ./${{ env.CODE_COVERAGE_DIR_DOTNET }}/* -DestinationPath "./${{ env.CODE_COVERAGE_DIR_DOTNET }}/${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}.zip"
-        
-      - name: upload dotnet code coverage report
-        if: always() && steps.dotnet_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
-        uses: actions/upload-artifact@v3
+        uses: im-open/zip-upload-artifact@v1.1.5
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
-          path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}/${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}.zip
+          path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
           retention-days: 15 # Cannot exceed 30 days.
 
   # TODO: Remove this job if you do not have jest tests
@@ -458,19 +451,12 @@ jobs:
           line-threshold: 0
           branch-threshold: 0
 
-      - name: Pre-Zip Code Coverage Artifacts
-        # GitHub zips whatever we upload but they charge based on the pre-zip size.  
-        # The artifact will be double-zipped when downloaded but we will save on storage costs.
+      - name: zip and upload jest code coverage report
         if: always() && steps.jest_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
-        shell: pwsh
-        run: Compress-Archive -Path ./${{ env.CODE_COVERAGE_DIR_JEST }}/* -DestinationPath "./${{ env.CODE_COVERAGE_DIR_JEST }}/${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}.zip"
-        
-      - name: upload jest code coverage report
-        if: always() && steps.jest_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
-        uses: actions/upload-artifact@v3
+        uses: im-open/zip-upload-artifact@v1.1.5
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}
-          path: ${{ env.CODE_COVERAGE_DIR_JEST }}/${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}.zip
+          path: ${{ env.CODE_COVERAGE_DIR_JEST }}
           retention-days: 15 # Cannot exceed 30 days.
 
   build-deployment-artifacts:
