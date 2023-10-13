@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v48    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v49    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -600,10 +600,10 @@ jobs:
   #   3 - Check for workflow failures
   finish-build:
     if: always() && needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
-    needs: [dotnet-test, jest, build-deployment-artifacts]
+    needs: [setup-build-workfow, dotnet-test, jest]
     uses: im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
     with:
-      next-version: ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
+      next-version: ${{ needs.setup-build-workflow.outputs.NEXT_VERSION }}
       title-of-teams-post: '<project-name> CI Build' # TODO: Replace <project-name>
       is-merge-to-main: ${{ needs.setup-build-workflow.outputs.IS_MERGE_TO_MAIN }}
       additional-conclusions: | # TODO: Determine if there are any additional step outcomes/outputs you want considered or remove some items if they do not apply (like jest)
@@ -620,7 +620,7 @@ jobs:
       #     { "name": "Workflow", "value": "${{ github.workflow }}" },
       #     { "name": "Run", "value": "${{ github.run_id }}" },
       #     { "name": "Actor", "value": "${{ github.actor }}" },
-      #     { "name": "Version", "value": "${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}" }
+      #     { "name": "Version", "value": "${{ needs.setup-build-workflow.outputs.NEXT_VERSION }}" }
       #   ]
     secrets:
       MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
