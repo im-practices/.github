@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v31    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v32    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures tags
 #    are valid for production deployments and runs the migrations against an on-prem
@@ -184,7 +184,7 @@ jobs:
             database/static-creds/<role-name> password | SQL_AUTH_PASSWORD
 
       - name: Deploy migrations
-        uses: im-open/run-flyway-command@v1.4
+        uses: im-open/run-flyway-command@v1.5
         with:
           db-server-name: '${{ steps.environment-specific-vars.outputs.DB_SERVER_NAME }}'
           db-server-port: '${{ env.DB_SERVER_PORT }}'

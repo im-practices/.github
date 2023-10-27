@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v27   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v28   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -178,7 +178,7 @@ jobs:
       # TODO:  If the project contains internal npm packages, uncomment and update the orgs with the needed organizations
       # - name: Authenticate with GitHub Packages if cache does not exist
       #   if: steps.has-cache.outputs.cache-hit != 'true
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: ''

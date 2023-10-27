@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v30    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v31    DO NOT REMOVE
 # Purpose:
 #    Automatically calculates the next semantic version, runs an npm ci, an npm run tests
 #    if there is one, an npm publish and then pushes a latest tag for main builds. When the
@@ -77,7 +77,7 @@ jobs:
 
       # TODO: If the project contains dependencies to other npm packages in GitHub's npm package registry, uncomment this step, otherwise delete
       # - name: Authenticate with GitHub Packages for Restoring Packages
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
@@ -115,14 +115,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Cleanup the branch pre-releases for all closed PRs
-        uses: im-open/delete-prereleases-for-branch@v1.1
+        uses: im-open/delete-prereleases-for-branch@v1.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           branch-name: ${{ github.head_ref }}
 
       - name: Cleanup pre-release packages
         if: always()
-        uses: im-open/delete-branch-package-versions@v2.2
+        uses: im-open/delete-branch-package-versions@v3.1
         with:
           github-token: ${{ secrets.GH_PACKAGES_TOKEN }} # This is a special org-level secret that needs to be authorized for this repo
           organization: ${{ github.repository_owner }}
