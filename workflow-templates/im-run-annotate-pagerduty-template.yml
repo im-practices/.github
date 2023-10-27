@@ -1,4 +1,4 @@
-# Workflow Code: FierceRabbit_v1    DO NOT REMOVE
+# Workflow Code: FierceRabbit_v2    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc PagerDuty event annotation for a specified
 #    service when someone kicks it off manually.
@@ -55,7 +55,7 @@ jobs:
               
 
       - name: Create a change event
-        uses: im-open/pagerduty-change-events-action@v5
+        uses: im-open/pagerduty-change-events-action@v1
         with:
           integration-key: ${{ secrets.PAGERDUTY_EVENT_INTEGRATION_KEY }}
           custom-event: ${{ github.event.inputs.event }}

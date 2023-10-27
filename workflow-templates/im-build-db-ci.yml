@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v16    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v17    DO NOT REMOVE
 # Purpose:
 #    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #    In addition to that, however, there are three other things this workflow template is set up to do.
@@ -131,7 +131,7 @@ jobs:
           version: 7.2.0 # This version works with the current version of build-database-ci-action. Newer versions might, but they should be tested.
 
       - name: Build Database
-        uses: im-open/build-database-ci-action@v3.2
+        uses: im-open/build-database-ci-action@v3.3
         with:
           # TODO: These parameters are the most commonly used. They tell the action to create the repo's database on the Action Runner,
           #       validate and run the repo's migration scripts, run tests, and seed data into the database for future needs (like integration tests).
@@ -224,7 +224,7 @@ jobs:
       # This allows the next steps to authenticate with and push to GitHub Packages.
       # If you aren't using the steps below you can remove this one.
       # - name: Authenticate with GitHub Packages
-      #   uses: im-open/authenticate-with-gh-package-registries@v1.0
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }}  # This is an org-level secret
       #     orgs: 'im-practices,im-client' # TODO: Verify list of orgs packages will be pulled from

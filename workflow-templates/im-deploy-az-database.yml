@@ -1,4 +1,4 @@
-# Workflow Code: BetrayedCod_v30    DO NOT REMOVE
+# Workflow Code: BetrayedCod_v31    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures
 #    tags are valid for production deployments and runs the migrations against
@@ -234,7 +234,7 @@ jobs:
       #       instead of using the username and password of an account stored in Key Vault.
       #       See https://github.com/im-open/run-flyway-command for details.
       - name: Deploy migrations
-        uses: im-open/run-flyway-command@v1.4
+        uses: im-open/run-flyway-command@v1.5
         with:
           db-server-name: '${{ steps.db-vars.outputs.DB_SERVER_NAME }}'
           db-server-port: '${{ env.DB_SERVER_PORT }}'

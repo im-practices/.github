@@ -40,9 +40,8 @@ jobs:
       # major/minor/patch through commit messages
       - name: Increment the version
         id: version
-        uses: im-open/git-version-lite@v2
+        uses: im-open/git-version-lite@v3.0
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           default-release-type: major
       
       - name: Create version tag, create or update major, and minor tags
