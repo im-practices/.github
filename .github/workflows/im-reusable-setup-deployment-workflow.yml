@@ -9,6 +9,7 @@
 #  setup-deployment-workflow:
 #    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
 #    with:
+#      runs-on: im-linux
 #      ref-to-deploy: v1.2.3
 #      deployment-environment: prod
 #      production-environments: 'prod,prod-secondary'
@@ -17,6 +18,11 @@
 on:
   workflow_call:
     inputs:
+      runs-on:
+        description: 'The runner that this workflow will run on.'
+        required: false
+        type: string
+        default: 'im-linux'
       ref-to-deploy:
         description: The branch, tag or sha that will be deployed.
         type: string
@@ -47,7 +53,7 @@ on:
       
 jobs:
   setup-deployment-workflow:
-    runs-on: im-linux
+    runs-on: ${{ inputs.runs-on}}
 
     steps:
       - name: Construct Workflow Summary

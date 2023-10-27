@@ -7,6 +7,7 @@
 #  setup-deployment-workflow:
 #    uses: im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
 #    with:
+#      runs-on: im-linux
 #      next-version: ${{ needs.build-deployment-artifacts.outputs.NEXT_VERSION }}
 #      title-of-teams-post: 'My CI Build'
 #      is-merge-to-main: ${{ needs.examine-triggers.outputs.IS_MERGE_TO_MAIN }}
@@ -32,6 +33,11 @@
 on:
   workflow_call:
     inputs:
+      runs-on:
+        description: 'The runner that this workflow will run on.'
+        required: false
+        type: string
+        default: 'im-linux'
       next-version:
         description: The next generated version
         type: string
@@ -72,7 +78,7 @@ on:
 
 jobs:
   finish-build:
-    runs-on: im-linux
+    runs-on: ${{ inputs.runs-on }}
     
     steps:
       - uses: im-open/workflow-conclusion@v2.1

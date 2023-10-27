@@ -17,6 +17,11 @@
 on:
   workflow_call:
     inputs:
+      runs-on:
+        description: 'The runner that this workflow will run on.'
+        required: false
+        type: string
+        default: 'im-linux'
       default-branch:
         description: Default branch of which contains the tag
         required: false
@@ -62,7 +67,7 @@ on:
 
 jobs:
   setup-build-workflow:
-    runs-on: im-linux
+    runs-on: ${{ inputs.runs-on }}
 
     outputs:
       CONTINUE_WORKFLOW: ${{ steps.set-vars.outputs.CONTINUE_WORKFLOW }}
