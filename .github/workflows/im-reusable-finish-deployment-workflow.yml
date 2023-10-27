@@ -6,6 +6,7 @@
 #  finish-deployment-workflow:
 #    uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2
 #    with:
+#      runs-on: im-linux
 #      gh-secrets-environment: ${{ inputs.environment-or-target }}
 #      deployment-environment: ${{ needs.set-vars.outputs.GH_SECRETS_ENVIRONMENT}}
 #      release-tag: ${{ inputs.tag }}
@@ -52,6 +53,11 @@ on:
         required: true
         type: string
       # Optional Inputs
+      runs-on:
+        description: 'The runner that this workflow will run on.'
+        required: false
+        type: string
+        default: 'im-linux'
       post-status-in-deployment-notifications-channel:
         description: 'Flag indicating whether a post should be made to the Deployment Notifications channel.'
         required: false
@@ -72,6 +78,11 @@ on:
         required: false
         type: string
         default: ''
+      deployable-label:
+        description: 'Deployment board additional label for delete, destroy, or custom label.'
+        required: false
+        type: string
+        default: null
       custom-facts-for-team-channel:
         description: The custom facts that will be included in the post in the team's channel.  By default Workflow, Run, Actor and Version are included.
         required: false
@@ -90,7 +101,7 @@ on:
 
 jobs:
   finish-deployment-workflow:
-    runs-on: im-linux
+    runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.gh-secrets-environment }}
     steps:
       - uses: im-open/workflow-conclusion@v2.1
@@ -100,7 +111,7 @@ jobs:
 
       - name: Update deployment board
         if: always()
-        uses: im-open/update-deployment-board@v1.5
+        uses: im-open/update-deployment-board@v1.6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ inputs.deployment-environment }}
@@ -108,6 +119,7 @@ jobs:
           ref: ${{ inputs.release-tag }}
           ref-type: 'tag'
           deployable-type: ${{ inputs.deployable-type }}
+          deploy-label: ${{ inputs.deployable-label }}
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           timezone: ${{ inputs.timezone }}
 
