@@ -131,7 +131,7 @@ jobs:
 
       - name: Update deployment board
         if: always()
-        uses: im-open/update-deployment-board@EN-20312-Slot-Support
+        uses: im-open/update-deployment-board@v1.7.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ inputs.deployment-environment }}
