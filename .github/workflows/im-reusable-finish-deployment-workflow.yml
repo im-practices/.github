@@ -83,6 +83,26 @@ on:
         required: false
         type: string
         default: null
+      enable-deployment-slot-tracking:
+        description: 'Enable App Service deployment slot tracking on deployment board? [true|false]'
+        required: false
+        type: boolean
+        default: false
+      slot-swapped-with-production-slot:
+        description: 'Did this deployment swap slots with production slot? Set to true for swapping slot immediately with production slot. [true|false]'
+        required: false
+        type: boolean
+        default: false
+      target-slot:
+        description: 'The target slot that was deployed to [production|blue|yellow|canary|red|loadtest|predeploy|your-custom-slot]'
+        type: string
+        required: false
+        default: 'production'
+      source-slot:
+        description: 'The source slot that was deployed to [production|blue|yellow|canary|red|loadtest|predeploy|your-custom-slot]'
+        type: string
+        required: false
+        default: 'production'
       custom-facts-for-team-channel:
         description: The custom facts that will be included in the post in the team's channel.  By default Workflow, Run, Actor and Version are included.
         required: false
@@ -111,7 +131,7 @@ jobs:
 
       - name: Update deployment board
         if: always()
-        uses: im-open/update-deployment-board@v1.6
+        uses: im-open/update-deployment-board@v1.7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ inputs.deployment-environment }}
@@ -121,6 +141,10 @@ jobs:
           deployable-type: ${{ inputs.deployable-type }}
           deploy-label: ${{ inputs.deployable-label }}
           deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          enable-deployment-slot-tracking: ${{ inputs.enable-deployment-slot-tracking }}
+          slot-swapped-with-production-slot: ${{ inputs.slot-swapped-with-production-slot }}
+          target-slot: ${{ inputs.target-slot }}
+          source-slot: ${{ inputs.source-slot }}
           timezone: ${{ inputs.timezone }}
 
       - name: Configure facts for team's notification channel
