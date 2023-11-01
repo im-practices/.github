@@ -131,7 +131,7 @@ jobs:
 
       - name: Update deployment board
         if: always()
-        uses: im-open/update-deployment-board@v1.7.0
+        uses: im-open/update-deployment-board@v1.7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           environment: ${{ inputs.deployment-environment }}
