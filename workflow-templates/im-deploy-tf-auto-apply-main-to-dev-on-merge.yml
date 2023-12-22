@@ -74,12 +74,48 @@ jobs:
         uses: im-open/setup-deploy-keys@v1.1
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
-          
+
+      - name: Install PS Modules
+        shell: pwsh
+        run: |
+          Install-Module -Name SqlServer -Force
+          Install-Module -Name Az -Force
+          Install-Module -Name Az.Accounts -MinimumVersion 2.2.0 -Force
+
+      - name: Confirm PS Modules
+        shell: pwsh
+        run: |
+          $modules = @("SqlServer", "Az", "Az.Accounts")
+          foreach ($module in $modules) {
+            if (Get-Module -ListAvailable -Name $module) {
+              Write-Host "$module Module exists"
+            }
+            else {
+              Write-Host "$module Module does not exist"
+            }
+          }
+
+      - name: AZ Login
+        uses: azure/login@v1
+        with:
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
+          enable-AzPSSession: true
+
       - name: Setup Terraform
         id: setup
         uses: hashicorp/setup-terraform@v2.0.3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
+
+      - name: Get/Set Token
+        shell: pwsh
+        run: |
+          Write-Output "Getting Azure Access Token"
+          $AZ_ACCESS_TOKEN = (Get-AzAccessToken -ResourceUrl "https://database.windows.net").Token
+          echo "AZ_ACCESS_TOKEN=$AZ_ACCESS_TOKEN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Output "Access Token Set"
 
       - name: Terraform Init
         id: init
