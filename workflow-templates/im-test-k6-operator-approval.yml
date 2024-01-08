@@ -360,7 +360,7 @@ jobs:
       - name: Upload K6 Deployment Yaml if Cancelled
         if: cancelled()
         continue-on-error: true
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.start-k6-test.outputs.deploy-yaml-artifact }}-bk
           path: ${{ env.WORKING_DIRECTORY }}/${{ steps.start-k6-test.outputs.run-name }}.yaml
