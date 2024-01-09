@@ -101,21 +101,12 @@ jobs:
           tenant-id: ${{ vars.ARM_TENANT_ID }}
           subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
           client-id: ${{ vars.ARM_CLIENT_ID }}
-          enable-AzPSSession: true
 
       - name: Setup Terraform
         id: setup
         uses: hashicorp/setup-terraform@v2.0.3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
-
-      - name: Get/Set Token
-        shell: pwsh
-        run: |
-          Write-Output "Getting Azure Access Token"
-          $AZ_ACCESS_TOKEN = (Get-AzAccessToken -ResourceUrl "https://database.windows.net").Token
-          echo "AZ_ACCESS_TOKEN=$AZ_ACCESS_TOKEN" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Output "Access Token Set"
 
       - name: Terraform Init
         id: init
