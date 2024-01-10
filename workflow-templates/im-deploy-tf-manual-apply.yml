@@ -307,25 +307,10 @@ jobs:
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
-      - name: Install PS Modules
+      - name: Install SqlServer Module
         shell: pwsh
         run: |
           Install-Module -Name SqlServer -Force
-          Install-Module -Name Az -Force
-          Install-Module -Name Az.Accounts -MinimumVersion 2.2.0 -Force
-
-      - name: Confirm PS Modules
-        shell: pwsh
-        run: |
-          $modules = @("SqlServer", "Az", "Az.Accounts")
-          foreach ($module in $modules) {
-            if (Get-Module -ListAvailable -Name $module) {
-              Write-Host "$module Module exists"
-            }
-            else {
-              Write-Host "$module Module does not exist"
-            }
-          }
 
       - name: AZ Login
         uses: azure/login@v1
