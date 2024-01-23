@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v45    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v46    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -267,7 +267,7 @@ jobs:
           az storage blob upload --no-progress --auth-mode login --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $terraformPlanName --name $terraformBlobName
           echo "The plan was successfully uploaded"
 
-          echo "tf_plan_name=$terraformPlanName" >> $env:GITHUB_OUTPUT
+          "tf_plan_name=$terraformPlanName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Azure logout
         run: |
