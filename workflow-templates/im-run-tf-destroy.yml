@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v23    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v24   DO NOT REMOVE
 # Purpose:
 #    Destroys the resources created by a terraform configuration when someone kicks it off manually.
 #
@@ -246,7 +246,7 @@ jobs:
           az storage blob upload --no-progress --auth-mode login --account-name ${{ needs.set-vars.outputs.STORAGE_ACCOUNT }} --container-name ${{ env.PLAN_STORAGE_CONTAINER }} --file $terraformPlanName --name $terraformBlobName
           echo "The plan was successfully uploaded"
 
-          echo "tf_plan_name=$terraformPlanName" >> $env:GITHUB_OUTPUT
+          "tf_plan_name=$terraformPlanName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Azure logout
         run: |
