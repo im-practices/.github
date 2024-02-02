@@ -1,7 +1,5 @@
 {
-    "AllRepositories": [
-        "im-deploy-cleanup-automated-board.yml"
-    ],
+    "AllRepositories": [],
     "bff-with-react": {
         "coreTemplates": [ 
             { "name": "im-deploy-az-app-manually.yml", "canHaveMultiples": true}
