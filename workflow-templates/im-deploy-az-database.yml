@@ -1,4 +1,4 @@
-# Workflow Code: BetrayedCod_v31    DO NOT REMOVE
+# Workflow Code: BetrayedCod_v32    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures
 #    tags are valid for production deployments and runs the migrations against
@@ -61,10 +61,8 @@ permissions:
   # Required for secretless azure access and deploys
   id-token: write
   contents: read
-  # Required for update-deployment-board
-  repository-projects: write
-  issues: write
-  actions: read
+  # Required for create-github-deployment
+  deployments: write
 
 env:
   RELEASE_TAG: ${{ inputs.tag == 0 && github.ref_name || inputs.tag }} # This is the tag that we'll be deploying
@@ -276,11 +274,14 @@ jobs:
     uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2
     with:
       # Required Inputs
-      deployment-environment: ${{ inputs.environment-or-target }}                      # The environment/target that was deployed to (dev, qa, stage, stage-secondary, uat, demo, prod, prod-secondary)
+      deployment-environment: ${{ inputs.environment-or-target }} # The environment/target that was deployed to (dev, qa, stage, stage-secondary, uat, demo, prod, prod-secondary)
       gh-secrets-environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} # The GitHub environment that secrets are pulled from
       release-tag: ${{ inputs.tag == 0 && github.ref_name || inputs.tag }}
       title-of-teams-post: 'Deploy ${{ needs.deploy-az-db.outputs.DB_NAME }} ${{ inputs.tag == 0 && github.ref_name || inputs.tag }} to ${{ inputs.environment-or-target }}' # TODO:  Verify title to ensure it is descriptive/readable.
-      
+      # Inputs for Tech Hub deployment tracking
+      # entity: '' # TODO: This the catalog-info.yml value in metadata.name value
+      # instance: '' # TODO: This the specific target deployment location, i.e., testing-slot-1, primary-app-service, failover-slot-2, NA26-production-slot
+
       # Optional Inputs with their default values.  These items can be removed if the default value does not need to be adjusted.
       # post-status-in-deployment-notifications-channel: true # TODO:  Include this arg and set to false if you do not want a status post in the Deployment Notifications channel for prod deploys
       # timezone: 'america/denver'                            # TODO:  Include this argument and update if your timezone is not america/denver
@@ -301,4 +302,4 @@ jobs:
       #   ]
     secrets:
       MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}    
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}
