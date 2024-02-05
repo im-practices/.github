@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v50    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v51    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -342,7 +342,7 @@ jobs:
 
       - name: zip and upload dotnet code coverage report
         if: always() && steps.dotnet_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
-        uses: im-open/zip-upload-artifact@v1.1
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
           path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
@@ -453,7 +453,7 @@ jobs:
 
       - name: zip and upload jest code coverage report
         if: always() && steps.jest_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
-        uses: im-open/zip-upload-artifact@v1.1
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_JEST }}
           path: ${{ env.CODE_COVERAGE_DIR_JEST }}

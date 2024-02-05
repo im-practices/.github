@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v40    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v41    DO NOT REMOVE
 # Purpose:
 #    Automatically builds the project and runs tests with code coverage. If
 #    everything is green, a new semantic version is calculated and a new package
@@ -163,7 +163,7 @@ jobs:
 
       - name: zip and upload dotnet code coverage report
         if: always() && steps.dotnet_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
-        uses: im-open/zip-upload-artifact@v1.1
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CODE_COVERAGE_REPORT_NAME_DOTNET }}
           path: ${{ env.CODE_COVERAGE_DIR_DOTNET }}
