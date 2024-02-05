@@ -217,7 +217,7 @@ jobs:
   #  1 - Update the deployment board based on the workflow conclusion
   #  2 - Post a deployment status in the repo owner's Teams channel (connected to the MS_TEAMS_URI secret)
   #  3 - Post a deployment status in the Deployment Notifications Teams channel if the deploy is for prod, is successful and the flag to do so is not set to false
-  update-deployment-board-and-send-teams-notification:
+  update-github-deployments-and-send-teams-notification:
     needs: [setup-deployment-workflow, deploy-files]
     if: always()
     uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2

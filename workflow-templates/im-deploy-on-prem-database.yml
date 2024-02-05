@@ -53,7 +53,7 @@ on:
   #       7. Delete the 'validate-tag-is-in-main-for-prod-deploys' job
   #       8. Replace all instances of "${{ env.ENVIRONMENT }}" with "${{ github.event.client_payload.environment }}"
   #       9. Under the 'deploy-on-prem-db' job, delete the needs property
-  #       10. Under the 'update-deployment-board-and-send-teams-notification' job, update the needs property to be: "needs: [deploy-on-prem-db]"
+  #       10. Under the 'update-github-deployments-and-send-teams-notification' job, update the needs property to be: "needs: [deploy-on-prem-db]"
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
@@ -207,7 +207,7 @@ jobs:
   #  1 - Update the deployment board based on the workflow conclusion
   #  2 - Post a deployment status in the repo owner's Teams channel (connected to the MS_TEAMS_URI secret)
   #  3 - Post a deployment status in the Deployment Notifications Teams channel if the deploy is for prod, is successful and the flag to do so is not set to false
-  update-deployment-board-and-send-teams-notification:
+  update-github-deployments-and-send-teams-notification:
     needs: [deploy-on-prem-db]
     if: always()
     uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2
