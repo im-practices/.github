@@ -108,6 +108,7 @@ jobs:
           environment: ${{ env.ENVIRONMENT }}
           release-ref: ${{ env.GITHUB_REF }}
           deployment-status: ${{ job.status }}
+          deployment-description: 'Deployment to the ${{ env.ENVIRONMENT }} environment of ${{ env.GITHUB_REF }}'
           entity: '' # TODO: Fill this out with the catalog-info.yml's metadata.name value
           instance: file-storage
 
