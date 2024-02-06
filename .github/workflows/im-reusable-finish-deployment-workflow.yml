@@ -67,6 +67,11 @@ on:
         required: false
         type: string
         default: 'america/denver'
+      deployment-board-number:
+        description: 'The number of the deployment board that should be updated.  Defaults to 1.'
+        required: false
+        type: number
+        default: 1
       deployable-type:
         description: 'Identifier if there are multiple deployables in the repo, like MFE, DB, API.  Defaults to an empty string for single deployables.'
         required: false
@@ -132,6 +137,24 @@ jobs:
         id: conclusion
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update deployment board
+        if: always()
+        uses: im-open/update-deployment-board@v1.7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          environment: ${{ inputs.deployment-environment }}
+          board-number: ${{ inputs.deployment-board-number }}
+          ref: ${{ inputs.release-tag }}
+          ref-type: 'tag'
+          deployable-type: ${{ inputs.deployable-type }}
+          deploy-label: ${{ inputs.deployable-label }}
+          deploy-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          enable-deployment-slot-tracking: ${{ inputs.enable-deployment-slot-tracking }}
+          slot-swapped-with-production-slot: ${{ inputs.slot-swapped-with-production-slot }}
+          target-slot: ${{ inputs.target-slot }}
+          source-slot: ${{ inputs.source-slot }}
+          timezone: ${{ inputs.timezone }}
 
       # Only run this step if Tech Hub metadata.name value is passed in
       - name: Create GitHub Deployment
