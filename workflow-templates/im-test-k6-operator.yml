@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v28   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v29   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -355,7 +355,7 @@ jobs:
       - name: Upload K6 Deployment Yaml if Cancelled
         if: cancelled()
         continue-on-error: true
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.run-k6-operator-test.outputs.deploy-yaml-artifact }}-bk
           path: ${{ env.WORKING_DIRECTORY }}/${{ steps.run-k6-operator-test.outputs.run-name }}.yaml
