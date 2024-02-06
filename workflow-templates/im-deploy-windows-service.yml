@@ -1,4 +1,4 @@
-# Workflow Code: MaterialVolcano_v38    DO NOT REMOVE
+# Workflow Code: MaterialVolcano_v39    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -66,6 +66,10 @@ on:
   # repository_dispatch:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
+permissions:
+  # Required for create-github-deployment
+  deployments: write
+
 env:
   ENVIRONMENT: ${{ inputs.environment }}
   RELEASE_TAG: ${{ inputs.tag }}
@@ -74,7 +78,7 @@ env:
 jobs:
   # This job utilizes a reusable workflow which will:
   #   1 - Verify the tag provided is a valid ref.
-  #   2 - If deploying to a production environment, verify the tag is reachable from the default branch 
+  #   2 - If deploying to a production environment, verify the tag is reachable from the default branch
   #       and that the corresponding release is production ready (not pre-release or a draft).
   setup-deployment-workflow:
     uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
@@ -223,7 +227,7 @@ jobs:
 
       # TODO: Use this for any variables that change per environment
       # With the Variables feature available now in GitHub this action may not be necessary.  If values are populated
-      # as env-level variables, they can be used directly inside of subsequent actions (octostache and var-substitution) 
+      # as env-level variables, they can be used directly inside of subsequent actions (octostache and var-substitution)
       # like secrets are.  The choice of which to use is up to the team and what works best for the project.
       # Variables - pros & cons
       #   - Pros: streamlined workflow, ability to change values without creating a new release/build (helpful for values that change a lot)
@@ -347,12 +351,12 @@ jobs:
           rm -f ${{ env.ASSET_ZIP }}
           rm -f ${{ env.DEPLOY_ZIP }}
           rm -rf ${{ env.UNZIPPED_ASSET }}
-  
+
   # This job utilizes a reusable workflow which will:
   #  1 - Update the deployment board based on the workflow conclusion
   #  2 - Post a deployment status in the repo owner's Teams channel (connected to the MS_TEAMS_URI secret)
   #  3 - Post a deployment status in the Deployment Notifications Teams channel if the deploy is for prod, is successful and the flag to do so is not set to false
-  update-deployment-board-and-send-teams-notification:
+  update-github-deployments-and-send-teams-notification:
     needs: [set-vars, deploy-service-to-machine]
     if: always()
     uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2
@@ -362,7 +366,10 @@ jobs:
       gh-secrets-environment: ${{ inputs.environment }} # The GitHub environment that secrets are pulled from
       release-tag: ${{ inputs.tag }}
       title-of-teams-post: 'Deploy ${{ needs.set-vars.outputs.SERVICE_NAME }} ${{ inputs.tag }} to ${{ inputs.environment }}' # TODO:  Verify title to ensure it is descriptive/readable.
-      
+      # Inputs for Tech Hub deployment tracking
+      # entity: '' # TODO: This the catalog-info.yml value in metadata.name value
+      # instance: '' # TODO: This the specific target deployment location, i.e., testing-slot-1, primary-app-service, failover-slot-2, NA26-production-slot
+
       # Optional Inputs with their default values.  These items can be removed if the default value does not need to be adjusted.
       # post-status-in-deployment-notifications-channel: true # TODO:  Include this arg and set to false if you do not want a status post in the Deployment Notifications channel for prod deploys
       # timezone: 'america/denver'                            # TODO:  Include this argument and update if your timezone is not america/denver
@@ -383,4 +390,4 @@ jobs:
       #   ]
     secrets:
       MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}    
+      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}
