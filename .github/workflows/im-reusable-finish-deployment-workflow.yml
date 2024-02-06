@@ -143,6 +143,7 @@ jobs:
           environment: ${{ inputs.deployment-environment }}
           release-ref: ${{ inputs.release-tag }}
           deployment-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
+          deployment-description: 'Deployment to the ${{ inputs.deployment-environment }} environment of ${{ inputs.release-tag }}'
           entity: ${{ inputs.entity }}
           instance: ${{ inputs.instance || inputs.target-slot }}
 

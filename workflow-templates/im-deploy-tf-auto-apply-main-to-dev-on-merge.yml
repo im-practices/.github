@@ -146,5 +146,6 @@ jobs:
           environment: 'Dev'
           release-ref: 'main'
           deployment-status: ${{ job.status }}
+          deployment-description: 'Deployment to the Dev environment of the main branch'
           entity: '' # TODO: Fill this out with the catalog-info.yml's metadata.name value
           instance: ${{ inputs.instance }}
