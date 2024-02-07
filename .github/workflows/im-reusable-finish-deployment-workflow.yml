@@ -169,7 +169,7 @@ jobs:
           deployment-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           deployment-description: 'Deployment to the ${{ inputs.deployment-environment }} environment of ${{ inputs.release-tag }}'
           entity: ${{ inputs.entity }}
-          instance: ${{ inputs.instance != null ? inputs.instance : inputs.target-slot }}
+          instance: ${{ inputs.instance || inputs.target-slot }}
 
       - name: Configure facts for team's notification channel
         if: always()
