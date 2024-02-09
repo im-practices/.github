@@ -67,6 +67,11 @@ on:
         required: false
         type: string
         default: 'america/denver'
+      udpate-deployment-board:
+        description: 'Whether or not to update a deployment board. Defaults to true'
+        required: false
+        type: boolean
+        default: true
       deployment-board-number:
         description: 'The number of the deployment board that should be updated.  Defaults to 1.'
         required: false
@@ -139,7 +144,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update deployment board
-        if: always()
+        if: always() && inputs.update-deployment-board
         uses: im-open/update-deployment-board@v1.7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
