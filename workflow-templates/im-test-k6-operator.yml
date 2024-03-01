@@ -176,7 +176,7 @@ jobs:
 
       # TODO:  If the project contains internal npm packages, uncomment and update the orgs with the needed organizations
       # - name: Authenticate with GitHub Packages if cache does not exist
-      #   if: steps.has-cache.outputs.cache-hit != 'true
+      #   if: steps.has-cache.outputs.cache-hit != 'true'
       #   uses: im-open/authenticate-with-gh-package-registries@v1.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
