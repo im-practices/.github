@@ -140,12 +140,11 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.gh-secrets-environment }}
     steps:
-      - name: Check and print inputs
+      - name: Check for missing inputs
         uses: actions/github-script@v7
         with:
           script: |
-            // Some teams have this as a secret and some as a var, allow both ways
-            // but check at least one is provided
+            // Some teams have these as a secret and some as a var, allow both ways but check at least one is present
             const teamsUri = '${{ inputs.ms-teams-uri || secrets.MS_TEAMS_URI }}';
             if (!teamsUri || teamsUri.trim().length === 0){
               core.setFailed('The MS_TEAMS_URI secret or the ms-teams-uri input (preferred) must be provided.');
@@ -155,40 +154,49 @@ jobs:
               core.setFailed('The DEPLOY_NOTIFICATIONS_CHANNEL secret or the deploy-notifications-channel input (preferred) must be provided.');
             }
 
-            core.info('Reusable workflow inputs:');
-            const inputs = [
-              { name: 'deployment-environment', value: '${{ inputs.deployment-environment }}'},
-              { name: 'gh-secrets-environment', value: '${{ inputs.gh-secrets-environment }}'},
-              { name: 'release-tag', value: '${{ inputs.release-tag }}'},
-              { name: 'title-of-teams-post', value: '${{ inputs.title-of-teams-post }}'},
-              { name: 'runs-on', value: '${{ inputs.runs-on }}'},
-              { name: 'post-status-in-deployment-notifications-channel', value: '${{ inputs.post-status-in-deployment-notifications-channel }}'},
-              { name: 'timezone', value: '${{ inputs.timezone }}'},
-              { name: 'deployment-board-number', value: '${{ inputs.deployment-board-number }}'},
-              { name: 'deployable-type', value: '${{ inputs.deployable-type }}'},
-              { name: 'deployable-label', value: '${{ inputs.deployable-label }}'},
-              { name: 'enable-deployment-slot-tracking', value: '${{ inputs.enable-deployment-slot-tracking }}'},
-              { name: 'slot-swapped-with-production-slot', value: '${{ inputs.slot-swapped-with-production-slot }}'},
-              { name: 'target-slot', value: '${{ inputs.target-slot }}'},
-              { name: 'source-slot', value: '${{ inputs.source-slot }}'},
-              { name: 'instance', value: '${{ inputs.instance }}'},
-              { name: 'custom-facts-for-team-channel', value: '${{ inputs.custom-facts-for-team-channel }}'},
-              { name: 'custom-facts-for-deployment-notifications-channel', value: '${{ inputs.custom-facts-for-deployment-notifications-channel }}'},
-              { name: 'ms-teams-uri', value: '${{ inputs.ms-teams-uri }}'},
-              { name: 'deploy-notifications-channel', value: '${{ inputs.deploy-notifications-channel }}'}
-            ];
-            for (const input of inputs){
-              console.log(`\n\t${input.name}: '${input.value}'`);
+      - name: Print inputs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            function printInput(inputName, inputValue, isMultilineInput){
+               if (!inputValue || inputValue.trim().length === 0){
+                core.info(`${inputName}: Not Provided`);
+              } else if (isMultilineInput){
+                console.log(`\n${inputName}:\n${inputValue}`);
+              }
+              else {
+                core.info(`${inputName}: ${inputValue}`);
+              }
             }
+            core.startGroup('Reusable workflow inputs');
+            printInput('deployment-environment', '${{ inputs.deployment-environment }}');
+            printInput('gh-secrets-environment', '${{ inputs.gh-secrets-environment }}');
+            printInput('release-tag', '${{ inputs.release-tag }}');
+            printInput('title-of-teams-post', '${{ inputs.title-of-teams-post }}');
+            printInput('runs-on', '${{ inputs.runs-on }}');
+            printInput('post-status-in-deployment-notifications-channel', '${{ inputs.post-status-in-deployment-notifications-channel }}');
+            printInput('timezone', '${{ inputs.timezone }}');
+            printInput('deployment-board-number', '${{ inputs.deployment-board-number }}');
+            printInput('deployable-type', '${{ inputs.deployable-type }}');
+            printInput('deployable-label', '${{ inputs.deployable-label }}');
+            printInput('enable-deployment-slot-tracking', '${{ inputs.enable-deployment-slot-tracking }}');
+            printInput('slot-swapped-with-production-slot', '${{ inputs.slot-swapped-with-production-slot }}');
+            printInput('target-slot', '${{ inputs.target-slot }}');
+            printInput('source-slot', '${{ inputs.source-slot }}');
+            printInput('instance', '${{ inputs.instance }}');
+            printInput('ms-teams-uri', '${{ inputs.ms-teams-uri }}');
+            printInput('deploy-notifications-channel', '${{ inputs.deploy-notifications-channel }}');
+            printInput('custom-facts-for-team-channel', process.env.CUSTOM_FACTS_TEAMS, true);
+            printInput('custom-facts-for-deployment-notifications-channel', process.env.CUSTOM_FACTS_DEPLOY, true);
+            core.endGroup();
 
-            core.info('\n\nReusable workflow secrets:');
-            const secrets = [
-              { name: 'MS_TEAMS_URI', value: '${{ secrets.MS_TEAMS_URI }}'},
-              { name: 'DEPLOY_NOTIFICATIONS_CHANNEL', value: '${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}'}
-            ];
-            for (const secret of secrets){
-              console.log(`\n\t${secret.name}: '${secret.value}'`);
-            }
+            core.startGroup('Reusable workflow secrets');
+            printInput('MS_TEAMS_URI', '${{ secrets.MS_TEAMS_URI }}');
+            printInput('DEPLOY_NOTIFICATIONS_CHANNEL', '${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}');
+            core.endGroup();
+        env:
+          CUSTOM_FACTS_TEAMS: ${{ inputs.custom-facts-for-team-channel }}
+          CUSTOM_FACTS_DEPLOY: ${{ inputs.custom-facts-for-deployment-notifications-channel }}
 
       - uses: im-open/workflow-conclusion@v2.2
         id: conclusion

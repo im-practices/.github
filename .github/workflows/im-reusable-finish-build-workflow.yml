@@ -85,40 +85,50 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
 
     steps:
-      - name: Check and print inputs
+      - name: Check for missing inputs
         uses: actions/github-script@v7
         with:
           script: |
-            // Some teams have this as a secret and some as a var, allow both ways
-            // but check at least one is provided
+            // Some teams have these as a secret and some as a var, allow both ways but check at least one is present
             const teamsUri = '${{ inputs.ms-teams-uri || secrets.MS_TEAMS_URI }}';
             if (!teamsUri || teamsUri.trim().length === 0){
               core.setFailed('The MS_TEAMS_URI secret or the ms-teams-uri input (preferred) must be provided.');
             }
 
-            core.info('Reusable workflow inputs:');
-            const inputs = [
-              { name: 'runs-on', value: '${{ inputs.runs-on }}'},
-              { name: 'next-version', value: '${{ inputs.next-version }}'},
-              { name: 'title-of-teams-post', value: '${{ inputs.title-of-teams-post }}'},
-              { name: 'is-merge-to-main', value: '${{ inputs.is-merge-to-main }}'},
-              { name: 'timezone', value: '${{ inputs.timezone }}'},
-              { name: 'additional-conclusions', value: '${{ inputs.additional-conclusions }}'},
-              { name: 'additional-pr-comment-content', value: '${{ inputs.additional-pr-comment-content }}'},
-              { name: 'custom-facts-for-team-channel', value: '${{ inputs.custom-facts-for-team-channel }}'},
-              { name: 'ms-teams-uri', value: '${{ inputs.ms-teams-uri }}'}
-            ];
-            for (const input of inputs){
-              console.log(`\n\t${input.name}: '${input.value}'`);
+      - name: Print inputs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            function printInput(inputName, inputValue, isMultilineInput){
+               if (!inputValue || inputValue.trim().length === 0){
+                core.info(`${inputName}: Not Provided`);
+              } else if (isMultilineInput){
+                console.log(`\n${inputName}:\n${inputValue}`);
+              }
+              else {
+                core.info(`${inputName}: ${inputValue}`);
+              }
             }
 
-            core.info('\n\nReusable workflow secrets:');
-            const secrets = [
-              { name: 'MS_TEAMS_URI', value: '${{ secrets.MS_TEAMS_URI }}'}
-            ];
-            for (const secret of secrets){
-              console.log(`\n\t${secret.name}: '${secret.value}'`);
-            }
+            core.startGroup('Reusable workflow inputs');
+            printInput('runs-on', '${{ inputs.runs-on }}');
+            printInput('next-version', '${{ inputs.next-version }}');
+            printInput('title-of-teams-post', '${{ inputs.title-of-teams-post }}');
+            printInput('is-merge-to-main', '${{ inputs.is-merge-to-main }}');
+            printInput('timezone', '${{ inputs.timezone }}');
+            printInput('ms-teams-uri', '${{ inputs.ms-teams-uri }}');
+            printInput('custom-facts-for-team-channel', process.env.FACTS, true);
+            printInput('additional-pr-comment-content', process.env.ADDITIONAL_CONTENT, true);
+            printInput('additional-conclusions', process.env.ADDITIONAL_CONCLUSIONS, true);
+            core.endGroup();
+
+            core.startGroup('Reusable workflow secrets');
+            printInput('MS_TEAMS_URI', '${{ secrets.MS_TEAMS_URI }}');
+            core.endGroup();
+        env:
+          FACTS: ${{ inputs.custom-facts-for-team-channel }}
+          ADDITIONAL_CONTENT: ${{ inputs.additional-pr-comment-content }}
+          ADDITIONAL_CONCLUSIONS: ${{ inputs.additional-conclusions }}
 
       - uses: im-open/workflow-conclusion@v2.2
         id: conclusion

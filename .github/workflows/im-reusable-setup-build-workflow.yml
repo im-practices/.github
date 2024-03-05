@@ -85,16 +85,22 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            core.info('Reusable workflow inputs:');
-            const inputs = [
-              { name: 'runs-on', value: '${{ inputs.runs-on }}'},
-              { name: 'default-branch', value: '${{ inputs.default-branch }}'},
-              { name: 'tag-prefix', value: '${{ inputs.tag-prefix }}'},
-              { name: 'workflow-summary', value: '${{ inputs.workflow-summary }}'}
-            ];
-            for (const input of inputs){
-              console.log(`\n\t${input.name}: '${input.value}'`);
+            function printInput(inputName, inputValue, isMultilineInput){
+               if (!inputValue || inputValue.trim().length === 0){
+                core.info(`${inputName}: Not Provided`);
+              } else if (isMultilineInput){
+                console.log(`\n${inputName}:\n${inputValue}`);
+              }
+              else {
+                core.info(`${inputName}: ${inputValue}`);
+              }
             }
+            printInput('runs-on', '${{ inputs.runs-on }}');
+            printInput('default-branch', '${{ inputs.default-branch }}');
+            printInput('tag-prefix', '${{ inputs.tag-prefix }}');
+            printInput('workflow-summary', process.env.SUMMARY, true);
+        env:
+          SUMMARY: ${{ inputs.workflow-summary }}
 
       - name: Set default env variables
         id: set-vars

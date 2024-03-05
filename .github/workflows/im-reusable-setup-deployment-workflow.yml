@@ -59,19 +59,26 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            core.info('Reusable workflow inputs:');
-            const inputs = [
-              { name: 'runs-on', value: '${{ inputs.runs-on }}'},
-              { name: 'ref-to-deploy', value: '${{ inputs.ref-to-deploy }}'},
-              { name: 'deployment-environment', value: '${{ inputs.deployment-environment }}'},
-              { name: 'production-environments', value: '${{ inputs.production-environments }}'},
-              { name: 'verify-release-production-ready', value: '${{ inputs.verify-release-production-ready }}'},
-              { name: 'default-branch', value: '${{ inputs.default-branch }}'},
-              { name: 'workflow-summary', value: '${{ inputs.workflow-summary }}'}
-            ];
-            for (const input of inputs){
-              console.log(`\n\t${input.name}: '${input.value}'`);
+            function printInput(inputName, inputValue, isMultilineInput){
+               if (!inputValue || inputValue.trim().length === 0){
+                core.info(`${inputName}: Not Provided`);
+              } else if (isMultilineInput){
+                console.log(`\n${inputName}:\n${inputValue}`);
+              }
+              else {
+                core.info(`${inputName}: ${inputValue}`);
+              }
             }
+            printInput('runs-on', '${{ inputs.runs-on }}');
+            printInput('ref-to-deploy', '${{ inputs.ref-to-deploy }}');
+            printInput('deployment-environment', '${{ inputs.deployment-environment }}');
+            printInput('production-environments', '${{ inputs.production-environments }}');
+            printInput('verify-release-production-ready', '${{ inputs.verify-release-production-ready }}');
+            printInput('default-branch', '${{ inputs.default-branch }}');
+            printInput('workflow-summary', process.env.SUMMARY, true);
+            
+        env:
+          SUMMARY: ${{ inputs.workflow-summary }}
 
       - name: Construct Workflow Summary
         id: summary
