@@ -27,9 +27,8 @@
 #        { "name": "Actor", "value": "${{ github.actor }}" },
 #        { "name": "Version", "value": "${{ inputs.tag }}" }
 #      ]
-#    secrets:
-#      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
-#      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL}}
+#      ms-teams-uri: ${{ vars.MS_TEAMS_URI }}  # Use this input (preferred) or the secret
+#      deploy-notifications-channel: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}  # The input is the preferred way to provide the URI.  The secret is deprecated.
 
 on:
   workflow_call:
@@ -83,7 +82,7 @@ on:
         type: string
         default: null
       entity:
-        description: 'The catalog-info.yml metadata.name value for mapping in Tech Hub.'
+        description: 'The catalog-info.yml metadata.name value for mapping in TechHub.'
         required: false
         type: string
         default: null
@@ -120,19 +119,77 @@ on:
         description: 'The custom facts that will be included in the Deployment Notifications channel.  By default Actor and Version are included.'
         required: false
         type: string
+      ms-teams-uri:
+        description: The URI for the teams channel where a status will be posted.  Either this value or the secret MS_TEAMS_URI must be provided.  This input is the preferred way to provide the URI but the secret should be used instead if the value is defined as a secret.
+        required: false
+        type: string
+      deploy-notifications-channel:
+        description: 'The URI for the notifications channel where a status will be posted.  Either this value or the secret DEPLOY_NOTIFICATIONS_CHANNEL must be provided.  This secret is deprecated because this value is defined as a variable at the org level.'
+        required: false
+        type: string
     secrets:
       MS_TEAMS_URI:
-        description: 'The URI for the teams channel where a status will be posted.'
-        required: true
+        description: 'The URI for the teams channel where a status will be posted.  Either this value or the input ms-teams-uri must be provided.  The input is the preferred way to provide the URI but the secret should be used if the value is defined as a secret.'
+        required: false
       DEPLOY_NOTIFICATIONS_CHANNEL:
-        description: 'The URI for the teams channel where a status will be posted.'
-        required: true
+        description: 'The URI for the notifications channel where a status will be posted.  Either this value or the input deploy-notifications-channel must be provided.  This secret is deprecated because this value is defined as a variable at the org level.  Please switch to using the input.'
+        required: false
 
 jobs:
   finish-deployment-workflow:
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.gh-secrets-environment }}
     steps:
+      - name: Check and print inputs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Some teams have this as a secret and some as a var, allow both ways
+            // but check at least one is provided
+            const teamsUri = '${{ inputs.ms-teams-uri || secrets.MS_TEAMS_URI }}';
+            if (!teamsUri || teamsUri.trim().length === 0){
+              core.setFailed('The MS_TEAMS_URI secret or the ms-teams-uri input (preferred) must be provided.');
+            }
+            const notificationsUri = '${{ inputs.deploy-notifications-channel || secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}';
+            if (!notificationsUri || notificationsUri.trim().length === 0){
+              core.setFailed('The DEPLOY_NOTIFICATIONS_CHANNEL secret or the deploy-notifications-channel input (preferred) must be provided.');
+            }
+
+            core.info('Reusable workflow inputs:');
+            const inputs = [
+              { name: 'deployment-environment', value: '${{ inputs.deployment-environment }}'},
+              { name: 'gh-secrets-environment', value: '${{ inputs.gh-secrets-environment }}'},
+              { name: 'release-tag', value: '${{ inputs.release-tag }}'},
+              { name: 'title-of-teams-post', value: '${{ inputs.title-of-teams-post }}'},
+              { name: 'runs-on', value: '${{ inputs.runs-on }}'},
+              { name: 'post-status-in-deployment-notifications-channel', value: '${{ inputs.post-status-in-deployment-notifications-channel }}'},
+              { name: 'timezone', value: '${{ inputs.timezone }}'},
+              { name: 'deployment-board-number', value: '${{ inputs.deployment-board-number }}'},
+              { name: 'deployable-type', value: '${{ inputs.deployable-type }}'},
+              { name: 'deployable-label', value: '${{ inputs.deployable-label }}'},
+              { name: 'enable-deployment-slot-tracking', value: '${{ inputs.enable-deployment-slot-tracking }}'},
+              { name: 'slot-swapped-with-production-slot', value: '${{ inputs.slot-swapped-with-production-slot }}'},
+              { name: 'target-slot', value: '${{ inputs.target-slot }}'},
+              { name: 'source-slot', value: '${{ inputs.source-slot }}'},
+              { name: 'instance', value: '${{ inputs.instance }}'},
+              { name: 'custom-facts-for-team-channel', value: '${{ inputs.custom-facts-for-team-channel }}'},
+              { name: 'custom-facts-for-deployment-notifications-channel', value: '${{ inputs.custom-facts-for-deployment-notifications-channel }}'},
+              { name: 'ms-teams-uri', value: '${{ inputs.ms-teams-uri }}'},
+              { name: 'deploy-notifications-channel', value: '${{ inputs.deploy-notifications-channel }}'}
+            ];
+            for (const input of inputs){
+              console.log(`\n\t${input.name}: '${input.value}'`);
+            }
+
+            core.info('\n\nReusable workflow secrets:');
+            const secrets = [
+              { name: 'MS_TEAMS_URI', value: '${{ secrets.MS_TEAMS_URI }}'},
+              { name: 'DEPLOY_NOTIFICATIONS_CHANNEL', value: '${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}'}
+            ];
+            for (const secret of secrets){
+              console.log(`\n\t${secret.name}: '${secret.value}'`);
+            }
+
       - uses: im-open/workflow-conclusion@v2.2
         id: conclusion
         with:
@@ -156,9 +213,9 @@ jobs:
           source-slot: ${{ inputs.source-slot }}
           timezone: ${{ inputs.timezone }}
 
-      # Only run this step if Tech Hub metadata.name value
+      # Only run this step if TechHub metadata.name value
       # and a metadata.instance value are provided
-      - name: Create GitHub Deployment
+      - name: Create GitHub Deployment for TechHub
         if: ${{ inputs.entity != null && (inputs.instance != null || inputs.target-slot != null) }}
         uses: im-open/create-github-deployment@v1.0
         with:
@@ -174,7 +231,7 @@ jobs:
       - name: Configure facts for team's notification channel
         if: always()
         id: team-channel-facts
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const rawFacts = process.env.FACTS;
@@ -206,14 +263,14 @@ jobs:
           title: ${{ inputs.title-of-teams-post }}
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
-          teams-uri: ${{ secrets.MS_TEAMS_URI }}
+          teams-uri: ${{ inputs.ms-teams-uri || secrets.MS_TEAMS_URI }}
           timezone: ${{ inputs.timezone }}
           custom-facts: ${{ steps.team-channel-facts.outputs.facts }}
 
       - name: Determine if a post should be made in Deployment Notifications channel
         if: always()
         id: post-to-deployment-channel
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const postInProd = ${{ inputs.post-status-in-deployment-notifications-channel }};
@@ -240,7 +297,7 @@ jobs:
       - name: Configure facts for Deployment Notifications channel
         if: always() && steps.post-to-deployment-channel.outputs.post == 'true'
         id: deployment-channel-facts
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const rawFacts = process.env.FACTS;
@@ -269,7 +326,7 @@ jobs:
           title: ${{ inputs.title-of-teams-post }}
           workflow-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
           workflow-type: Deploy
-          teams-uri: ${{ secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}
+          teams-uri: ${{ inputs.deploy-notifications-channel || secrets.DEPLOY_NOTIFICATIONS_CHANNEL }}
           timezone: ${{ inputs.timezone }}
           include-default-facts: false # This cuts down on the message size for the prod room
           custom-facts: ${{ steps.deployment-channel-facts.outputs.facts }}

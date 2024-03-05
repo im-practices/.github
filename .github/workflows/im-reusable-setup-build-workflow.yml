@@ -81,9 +81,24 @@ jobs:
       NEXT_VERSION_NO_PREFIX: ${{ steps.version.outputs.NEXT_VERSION_NO_PREFIX }}
 
     steps:
+      - name: Print inputs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.info('Reusable workflow inputs:');
+            const inputs = [
+              { name: 'runs-on', value: '${{ inputs.runs-on }}'},
+              { name: 'default-branch', value: '${{ inputs.default-branch }}'},
+              { name: 'tag-prefix', value: '${{ inputs.tag-prefix }}'},
+              { name: 'workflow-summary', value: '${{ inputs.workflow-summary }}'}
+            ];
+            for (const input of inputs){
+              console.log(`\n\t${input.name}: '${input.value}'`);
+            }
+
       - name: Set default env variables
         id: set-vars
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const targetRef = '${{ github.base_ref }}';
@@ -119,7 +134,7 @@ jobs:
 
       - name: Check if Dependabot PR
         id: actor_check
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const actor = '${{ github.actor}}';
@@ -133,7 +148,7 @@ jobs:
 
       - name: Construct Workflow Summary
         id: summary
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             let summary = process.env.SUMMARY;
@@ -163,7 +178,7 @@ jobs:
 
       - run: echo '${{ steps.summary.outputs.summary }}' >> $GITHUB_STEP_SUMMARY
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         if: steps.set-vars.outputs.CONTINUE_WORKFLOW == 'true'
         with:
           ref: ${{ steps.set-vars.outputs.REF_TO_BUILD_AND_TAG }}
