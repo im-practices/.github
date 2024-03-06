@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v31    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v32    DO NOT REMOVE
 # Purpose:
 #    Automatically calculates the next semantic version, runs an npm ci, an npm run tests
 #    if there is one, an npm publish and then pushes a latest tag for main builds. When the
@@ -147,6 +147,7 @@ jobs:
           ```bash
           npm install @<org>/<package-name>@${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}
           ```
+      ms-teams-uri: ${{ vars.MS_TEAMS_URI }}
       # timezone: 'america/denver'        # TODO: Include this argument and update if your timezone is not america/denver
       # custom-facts-for-team-channel: |  # TODO: These are the custom facts that will be included the different Teams posts by default.  If adjusting the facts that are supplied, they must be a valid JSON array.
       #   [
@@ -155,6 +156,3 @@ jobs:
       #     { "name": "Actor", "value": "${{ github.actor }}" },
       #     { "name": "Version", "value": "${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}" }
       #   ]
-      
-    secrets:
-      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}

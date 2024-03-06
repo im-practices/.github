@@ -3,7 +3,6 @@
 # (meaning it has been reviewed and merged into main) and that the release is production
 # ready (it is not a draft/pre-release).
 
-
 # Example Usage in a repo's workflow:
 # jobs:
 #  setup-deployment-workflow:
@@ -35,12 +34,12 @@ on:
         description: Comma separated list of production environments to check against.  Defaults to 'prod,prod-secondary'
         required: false
         type: string
-        default: 'prod,prod-secondary'      
+        default: 'prod,prod-secondary'
       verify-release-production-ready:
-          description: Verify associated release is not draft or prerelease
-          required: false
-          type: boolean
-          default: true
+        description: Verify associated release is not draft or prerelease
+        required: false
+        type: boolean
+        default: true
       default-branch:
         description: Default branch of the repository
         required: false
@@ -50,15 +49,40 @@ on:
         description: 'String that will override the default GitHub Summary when provided.'
         type: string
         required: false
-      
+
 jobs:
   setup-deployment-workflow:
     runs-on: ${{ inputs.runs-on}}
 
     steps:
+      - name: Print inputs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            function printInput(inputName, inputValue, isMultilineInput){
+               if (!inputValue || inputValue.trim().length === 0){
+                core.info(`${inputName}: Not Provided`);
+              } else if (isMultilineInput){
+                console.log(`\n${inputName}:\n${inputValue}`);
+              }
+              else {
+                core.info(`${inputName}: ${inputValue}`);
+              }
+            }
+            printInput('runs-on', '${{ inputs.runs-on }}');
+            printInput('ref-to-deploy', '${{ inputs.ref-to-deploy }}');
+            printInput('deployment-environment', '${{ inputs.deployment-environment }}');
+            printInput('production-environments', '${{ inputs.production-environments }}');
+            printInput('verify-release-production-ready', '${{ inputs.verify-release-production-ready }}');
+            printInput('default-branch', '${{ inputs.default-branch }}');
+            printInput('workflow-summary', process.env.SUMMARY, true);
+            
+        env:
+          SUMMARY: ${{ inputs.workflow-summary }}
+
       - name: Construct Workflow Summary
-        id: summary  
-        uses: actions/github-script@v6
+        id: summary
+        uses: actions/github-script@v7
         with:
           script: |
             let summary = process.env.SUMMARY;
@@ -79,18 +103,18 @@ jobs:
             core.setOutput('summary', summary);
         env:
           SUMMARY: ${{ inputs.workflow-summary }}
-      
+
       - run: echo '${{ steps.summary.outputs.summary }}' >> $GITHUB_STEP_SUMMARY
 
-      # In this job, always checkout the default branch (not the tag that was provided as an input).  
-      # Also use fetch-depth: 0 to retrieve the history and tags so we can check if a tag is 
+      # In this job, always checkout the default branch (not the tag that was provided as an input).
+      # Also use fetch-depth: 0 to retrieve the history and tags so we can check if a tag is
       # exists, is reachable from the default branch and is production ready.
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.default-branch }}
           fetch-depth: 0
-      
+
       - name: Verify Tag Exists
         uses: im-open/verify-git-ref@v1.2
         with:
@@ -98,7 +122,7 @@ jobs:
 
       - name: Determine if deployment is to Prod
         id: check-env
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const prodEnvsRaw = '${{ inputs.production-environments }}';
@@ -108,7 +132,7 @@ jobs:
             }
             const prodEnvs = prodEnvsRaw.split(',').map(e => e.trim());
             const deploymentEnv = '${{ inputs.deployment-environment }}'.trim();
-            
+
             const isProd = prodEnvs.includes(deploymentEnv);
             core.setOutput('IS_PROD', isProd);
 
@@ -117,7 +141,7 @@ jobs:
         with:
           tag: ${{ inputs.ref-to-deploy }}
           default-branch: ${{ inputs.default-branch }}
-          error-if-not-reachable: true  # This only runs for prod environments, so if the tag is not in main, it should fail
+          error-if-not-reachable: true # This only runs for prod environments, so if the tag is not in main, it should fail
 
       - uses: im-open/is-release-production-ready@v1
         if: steps.check-env.outputs.IS_PROD == 'true' && inputs.verify-release-production-ready == 'true'

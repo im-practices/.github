@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v25    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v26    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and deploys a directory to the
 #    specified storage account when someone kicks it off manually.
@@ -41,6 +41,11 @@ permissions:
   contents: read
   # Required for create-github-deployment
   deployments: write
+  # Required for update-deployment-board
+  # TODO: Remove once techhub deployments are fully functional
+  repository-projects: write
+  issues: write
+  actions: read
 
 env:
   ENVIRONMENT: ${{ github.event.inputs.environment }}
@@ -98,7 +103,7 @@ jobs:
             -d '${{ env.TARGET_CONTAINER }}' \
             -s '${{ env.SOURCE_DIRECTORY }}'
 
-      # Only run this step if Tech Hub metadata.name value is passed in
+      # Only run this step if TechHub metadata.name value is passed in
       - name: Create GitHub Deployment
         if: always()
         uses: im-open/create-github-deployment@v1.0

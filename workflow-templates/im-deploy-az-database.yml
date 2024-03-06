@@ -1,4 +1,4 @@
-# Workflow Code: BetrayedCod_v32    DO NOT REMOVE
+# Workflow Code: BetrayedCod_v33    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures
 #    tags are valid for production deployments and runs the migrations against
@@ -63,6 +63,11 @@ permissions:
   contents: read
   # Required for create-github-deployment
   deployments: write
+  # Required for update-deployment-board
+  # TODO: Remove once techhub deployments are fully functional
+  repository-projects: write
+  issues: write
+  actions: read
 
 env:
   RELEASE_TAG: ${{ inputs.tag == 0 && github.ref_name || inputs.tag }} # This is the tag that we'll be deploying
@@ -278,7 +283,9 @@ jobs:
       gh-secrets-environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} # The GitHub environment that secrets are pulled from
       release-tag: ${{ inputs.tag == 0 && github.ref_name || inputs.tag }}
       title-of-teams-post: 'Deploy ${{ needs.deploy-az-db.outputs.DB_NAME }} ${{ inputs.tag == 0 && github.ref_name || inputs.tag }} to ${{ inputs.environment-or-target }}' # TODO:  Verify title to ensure it is descriptive/readable.
-      # Inputs for Tech Hub deployment tracking
+      ms-teams-uri: ${{ vars.MS_TEAMS_URI }}
+      deploy-notifications-channel: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}
+      # Inputs for TechHub deployment tracking
       # entity: '' # TODO: This the catalog-info.yml value in metadata.name value
       # instance: '' # TODO: This the specific target deployment location, i.e., testing-slot-1, primary-app-service, failover-slot-2, NA26-production-slot
 
@@ -300,6 +307,3 @@ jobs:
       #     { "name": "Actor", "value": "${{ github.actor }}" },
       #     { "name": "Version", "value": "${{ inputs.tag == 0 && github.ref_name || inputs.tag }}" }
       #   ]
-    secrets:
-      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}

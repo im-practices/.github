@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v25    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v26    DO NOT REMOVE
 # Purpose:
 #    Destroys the resources created by a terraform configuration when someone kicks it off manually.
 #
@@ -43,6 +43,11 @@ permissions:
   contents: read
   # Required for create-github-deployment
   deployments: write
+  # Required for update-deployment-board
+  # TODO: Remove once techhub deployments are fully functional
+  repository-projects: write
+  issues: write
+  actions: read
 
 env:
   DEPLOYMENT_DESC: 'Destroying <project-name> ${{ inputs.tf-targets }} ${{ inputs.root-module }} via Terraform at ${{ inputs.branch-tag-sha }}' # TODO: Replace <project-name> with your project
@@ -370,7 +375,9 @@ jobs:
       release-tag: ${{ inputs.branch-tag-sha }}
       title-of-teams-post: 'Destroy <<PROJECT_NAME>> ${{ inputs.tf-targets }} @${{ inputs.branch-tag-sha }} in ${{ inputs.root-module }}' # TODO:  Replace <<PROJECT_NAME>> and verify title to ensure it is descriptive/readable.
       post-status-in-deployment-notifications-channel: false
-      # Inputs for Tech Hub deployment tracking
+      ms-teams-uri: ${{ vars.MS_TEAMS_URI }}
+      deploy-notifications-channel: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}
+      # Inputs for TechHub deployment tracking
       # entity: '' # TODO: This the catalog-info.yml value in metadata.name value
       # instance: '' # TODO: This the specific target deployment location, i.e., testing-slot-1, primary-app-service, failover-slot-2, NA26-production-slot
 
@@ -391,6 +398,3 @@ jobs:
       #     { "name": "Actor", "value": "${{ github.actor }}" },
       #     { "name": "Version", "value": "${{ inputs.branch-tag-sha }}" }
       #   ]
-    secrets:
-      MS_TEAMS_URI: ${{ vars.MS_TEAMS_URI }}
-      DEPLOY_NOTIFICATIONS_CHANNEL: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}
