@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v8   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v9   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -55,6 +55,11 @@ on:
         required: false
         type: boolean
         default: false # TODO: Set true if you require npm build to run for your k6 bundle to be created
+      output-to-prometheus:
+        description: 'Output to Prometheus: Enable output to Prometheus.'
+        required: false
+        type: boolean
+        default: true
       maintenance-window-duration:
         description: 'Maintenance Window Duration: Duration of maintenance window in minutes. This should match your loop count'
         required: false
@@ -69,11 +74,14 @@ permissions:
 env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
-  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>&var-env=${{ inputs.env }}' # TODO: Update product tag
-  NODE_VERSION: '18.x' # TODO: Set correct node version
+  GRAFANA_INFLUXDB_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1?&from=now-1h&to=now&var-ProductTag=SHOP&var-env=${{ inputs.env }}'
+  GRAFANA_PROMETHEUS_DASHBOARD_URI: 'https://grafana.mktp.io/d/a3b2aaa8-bb66-4008-a1d8-16c49afedbf0/k6-prometheus-native-histograms?orgId=1&refresh=10s&var-quantile=0.99'
+  NODE_VERSION: '20.x' # TODO: Set correct node version
 
-  K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
-  RETENTION_IN_DAYS: 1 # TODO: Set retention in days for uploaded artifacts
+  K6_DEFAULT_PARAMETERS: "${{ inputs.output-to-prometheus && '--out experimental-prometheus-rw' || '--out influxdb=https://influxdb-v1.mktp.io/loadtesting' }} --insecure-skip-tls-verify --tag product=SHOP,family=EN,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}" # TODO: Set default k6 parameters specifically replace product and family tags.
+  # TODO: Optional add K6_PROMETHEUS_RW_STALE_MARKERS=true when running long load tests.  This variable will make short tests not show up in grafana
+  K6_DEFAULT_ENVIRONMNET_VARIABLES: "K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max;K6_PROMETHEUS_RW_SERVER_URL=http://prm-srv-prometheus-server.prometheus:80/api/v1/write;K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true"
+  RETENTION_IN_DAYS: 1
   K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
   PAGERDUTY_WINDOW_IN_MIN: ${{ inputs.maintenance-window-duration }}
@@ -105,7 +113,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
 
@@ -136,13 +144,12 @@ jobs:
 
       - name: Check for an npm cache
         id: has-cache
-        uses: actions/cache@v3.2.6
+        uses: actions/cache@v4
         with:
           path: '**/k6/node_modules'
           key: ${{ env.NPM_CACHE_KEY }}
           lookup-only: true
           enableCrossOsArchive: true
-
 
       # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
 
@@ -154,14 +161,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Setup caching for node_modules directory
-        if: steps.has-cache.outputs.cache-hit != 'true'
-        uses: actions/cache@v3.2.6
-        with:
-          key: ${{ env.NPM_CACHE_KEY }}
-          path: '**/k6/node_modules'
-          enableCrossOsArchive: true
-
       # TODO:  If the project contains internal npm packages, uncomment and update the orgs with the needed organizations
       # - name: Authenticate with GitHub Packages if cache does not exist
       #   if: steps.has-cache.outputs.cache-hit != 'true'
@@ -170,12 +169,20 @@ jobs:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
       #     orgs: ''
 
-      - name: NPM Install if cache does not exist
+      - name: NPM Install
         if: steps.has-cache.outputs.cache-hit != 'true'
         working-directory: ${{ env.WORKING_DIRECTORY }}
         run: |
           echo "Installing NPM"
           npm ci
+
+      - name: Save cache for node_modules directory
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ env.NPM_CACHE_KEY }}
+          path: '**/k6/node_modules'
+          enableCrossOsArchive: true
 
   start-k6-operator-test:
     runs-on: [self-hosted, im-linux]
@@ -188,24 +195,21 @@ jobs:
 
     outputs:
       run-name: ${{ steps.start-k6-test.outputs.run-name }}
+      grafana-prometheus-dashboard-uri: ${{ steps.test-tag.outputs.GRAFANA_PROMETHEUS_DASHBOARD_URI }}
       config-map-name: ${{ steps.start-k6-test.outputs.config-map-name }}
-      deploy-yaml-artifact: ${{ steps.start-k6-test.outputs.deploy-yaml-artifact }}
+      deploy-json-artifact: ${{ steps.start-k6-test.outputs.deploy-json-artifact }}
+      deploy-json-file: ${{ steps.start-k6-test.outputs.deploy-json-file }}
       maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
 
-      - name: Clean Test File Name for K6 Tag and Ouput Run Name
+      - name: Clean Test File Name for K6 Tag
         id: test-tag
         run: |
-          k6_test_file_tag="--tag test=${{ inputs.test-file }}"
-          # Removing slashes from k6_test_file_tag
-          k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
-          echo "test-tag=$k6_test_file_tag" >> $GITHUB_OUTPUT
-
           # Creating RunName
           k6_test_file="${{ inputs.test-file }}"
           k6_run_name="${k6_test_file/.js/''}"
@@ -239,7 +243,7 @@ jobs:
 
       # TODO: Delete if you don't build your k6 tests
       - name: Download npm cache
-        uses: actions/cache/restore@v3.2.6
+        uses: actions/cache/restore@v4
         if: inputs.run-npm-build
         with:
           key: ${{ needs.npm-cache.outputs.NPM_CACHE_KEY }}
@@ -270,7 +274,7 @@ jobs:
 
       # TODO: Delete if your runner has kubelogin and kubectl already installed
       - name: Setup Kubectl
-        uses: azure/setup-kubectl@v3.2
+        uses: azure/setup-kubectl@v3
         with:
           version: latest
 
@@ -303,7 +307,7 @@ jobs:
         run: exit 1
 
       - name: Start K6-Operator Test
-        uses: im-practices/run-k6-operator-test/start@latest
+        uses: im-practices/run-k6-operator-test/start@v3
         id: start-k6-test
         with:
           working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -312,7 +316,8 @@ jobs:
           upload-type: ${{ env.UPLOAD_TYPE}}
           upload-files-folder: ${{ inputs.upload-files-folder }}
           k6-parameters: '${{ inputs.k6-parameters }}'
-          k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }} ${{ steps.test-tag.outputs.test-tag }}'
+          k6-default-parameters: '${{ env.K6_DEFAULT_PARAMETERS }}'
+          k6-environment-variables: "${{ env.K6_DEFAULT_ENVIRONMNET_VARIABLES }}"
           parallelism: ${{ inputs.parallelism }}
           separate-nodes: ${{ inputs.separate-nodes }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
@@ -321,7 +326,7 @@ jobs:
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
-        uses: im-open/open-pagerduty-maintenance-window@v1.2
+        uses: im-open/open-pagerduty-maintenance-window@v1
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
@@ -331,7 +336,7 @@ jobs:
 
       - name: Send Status to Teams - Starting Test
         continue-on-error: true
-        uses: im-open/post-status-to-teams-action@v1.3
+        uses: im-open/post-status-to-teams-action@v1
         with:
           title: 'K6 Test Starting Shortly in AKS - ${{ steps.start-k6-test.outputs.run-name }}'
           workflow-status: started
@@ -344,26 +349,27 @@ jobs:
               { "name": "Run", "value": "${{ github.run_id }}" },
               { "name": "Actor", "value": "${{ github.actor }}" },
               { "name": "Environment", "value": "${{ inputs.env }}"},
-              { "name": "K6 Test", "value": "${{ inputs.test-file }}" }
+              { "name": "K6 Test", "value": "${{ inputs.test-file }}" },
+              { "name": "K6 Run Name w/Timestamp", "value": "${{ steps.start-k6-test.outputs.run-name }}"}
             ]
           custom-actions: |
             [
               {
                 "name": "View Grafana Dashboard",
-                "uri": "${{ env.GRAFANA_DASHBOARD_URI }}"
+                "uri": "${{ inputs.output-to-prometheus && format('{0}&var-testid={1}',env.GRAFANA_PROMETHEUS_DASHBOARD_URI,steps.start-k6-test.outputs.run-name) || env.GRAFANA_INFLUXDB_DASHBOARD_URI }}"
               }
             ]
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
 
       # Due to composite actions not supporting post steps, the following workflow steps are required to stop a k6-operator mid stream.
-      - name: Upload K6 Deployment Yaml if Cancelled
+      - name: Upload K6 Deployment Json if Cancelled
         if: cancelled()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.start-k6-test.outputs.deploy-yaml-artifact }}-bk
-          path: ${{ env.WORKING_DIRECTORY }}/${{ steps.start-k6-test.outputs.run-name }}.yaml
+          name: ${{ steps.run-k6-operator-test.outputs.deploy-json-artifact }}-bk
+          path: ${{ steps.run-k6-operator-test.outputs.deploy-json-file }}
           retention-days: ${{ env.RETENTION_IN_DAYS }}
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
@@ -409,9 +415,23 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
+
+      # TODO: Delete if your runner has kubelogin and kubectl already installed
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3.2
+        with:
+          version: latest
+
+      # TODO: Delete if your runner has kubelogin and kubectl already installed
+      - name: Setup Kubelogin
+        uses: azure/use-kubelogin@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          kubelogin-version: 'latest'
 
       - name: AZ Login
         uses: azure/login@v1
@@ -443,13 +463,13 @@ jobs:
         run: exit 1
 
       - name: Stop K6-Operator Test
-        uses: im-practices/run-k6-operator-test/stop@latest
+        uses: im-practices/run-k6-operator-test/stop@v3
         id: stop-k6-test
         with:
           working-directory: ./tests/k6
           run-name: ${{ needs.start-k6-operator-test.outputs.run-name }}
           kube-config-file-path: ${{ steps.kube-config.outputs.kube-config-file }}
-          deploy-yaml-artifact-name: ${{ needs.start-k6-operator-test.outputs.deploy-yaml-artifact }}
+          deploy-json-artifact-name: ${{ needs.start-k6-operator-test.outputs.deploy-json-artifact }}
           retention-in-days: 1
           # pod-log-lines-gha-output: 500 # TODO: uncomment if you want to change the number of lines in github actions that the pod logs output.
           # pod-log-lines-file-output: 3000 # TODO: uncomment if you want to change the number of lines to file that the pod logs output.
@@ -477,12 +497,11 @@ jobs:
     environment: ${{ inputs.env }}
     if: always()
     steps:
-      - uses: im-open/workflow-conclusion@v2.2
+      - uses: im-open/workflow-conclusion@v2
         id: conclusion
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
 
-      ### Cleanup K6-Operator test if workflow is cancelled ###
       # TODO: Delete if your runner has kubelogin and kubectl already installed
       - name: Setup Kubectl
         uses: azure/setup-kubectl@v3.2
@@ -557,11 +576,12 @@ jobs:
         run: |
           # Remove kubectl config
           rm -rf ${{ steps.kube-config.outputs.kube-config-file }}
+
       ### Cleanup K6-Operator test if workflow is cancelled ###
       - name: Close the PagerDuty Maintenance Window
         if: always()
         continue-on-error: true
-        uses: im-open/close-pagerduty-maintenance-window@v1.1
+        uses: im-open/close-pagerduty-maintenance-window@v1
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           maintenance-window-id: ${{ needs.start-k6-operator-test.outputs.maintenance-window-id }}
@@ -569,7 +589,7 @@ jobs:
       - name: Send Status to Teams - Test Finished
         if: always()
         continue-on-error: true
-        uses: im-open/post-status-to-teams-action@v1.3
+        uses: im-open/post-status-to-teams-action@v1
         with:
           title: 'K6 Test in AKS Complete - ${{ needs.start-k6-operator-test.outputs.run-name }}'
           workflow-status: ${{ needs.stop-k6-operator-test.outputs.stop-k6-test-outcome && needs.stop-k6-operator-test.outputs.stop-k6-test-outcome || steps.conclusion.outputs.workflow_conclusion }}
@@ -590,6 +610,6 @@ jobs:
             [
               {
                 "name": "View Grafana Dashboard",
-                "uri": "${{ env.GRAFANA_DASHBOARD_URI }}"
+                "uri": "${{ inputs.output-to-prometheus && format('{0}&var-testid={1}',env.GRAFANA_PROMETHEUS_DASHBOARD_URI,needs.start-k6-operator-test.outputs.run-name) || env.GRAFANA_INFLUXDB_DASHBOARD_URI }}"
               }
             ]
