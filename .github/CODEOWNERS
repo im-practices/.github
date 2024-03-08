@@ -1,2 +1,3 @@
 * @im-practices/swat
 /.github/CODEOWNERS @im-practices/swat
+/.github/workflow-templates/im-test-k6-* @im-practices/swat @im-practices/sre-strategy
