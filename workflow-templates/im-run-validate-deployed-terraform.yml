@@ -13,7 +13,7 @@
 #
 # TODO Prerequisites:
 #    - This workflow relies on a Deployment Board being set up to determine what should be currently deployed to the environment
-#      https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#      https://github.com/im-practices/git-er-done/blob/main/docs/actions/deployment-board.md
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
 
 name: Validate Deployed Terraform

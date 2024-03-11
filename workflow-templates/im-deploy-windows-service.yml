@@ -15,7 +15,7 @@
 #
 # TODO: Prerequisites:
 #     - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#     - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#     - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/docs/actions/deployment-board.md
 #       Generally one board should be set up per windows service in the repository.
 #     - The target server must be domain joined. If this is not the case already, create an ITHD ticket to have it joined to
 #       the ExtendHealth domain for service account authentication
