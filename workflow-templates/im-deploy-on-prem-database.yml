@@ -17,7 +17,7 @@
 #    - Make sure the database login secrets have been added to Vault and are accessible from our self-hosted runners.
 #      See https://github.com/im-practices/git-er-done/blob/main/actions/hashicorp-vault-integration.md for information on how to do that.
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/docs/actions/deployment-board.md
 #      Generally one board should be set up per database in the repository.
 
 name: Deploy Database to On-Prem Server # TODO: If there are multiple on prem databases in the repo, append the db name to this workflow's file name and update this name

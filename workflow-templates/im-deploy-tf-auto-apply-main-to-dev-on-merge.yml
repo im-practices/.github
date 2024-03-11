@@ -11,7 +11,7 @@
 #
 # TODO: Prerequisites:
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/docs/actions/deployment-board.md
 
 name: Auto Apply main branch to Dev on PR Merge
 run-name: Apply dev terraform from main

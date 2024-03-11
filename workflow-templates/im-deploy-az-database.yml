@@ -16,7 +16,7 @@
 #    - Make sure the az secrets have been added to the environment
 #    - Make sure the prod runners have access to the database with a 'azurerm_sql_virtual_network_rule'
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/docs/actions/deployment-board.md
 #      Generally one board should be set up per database in the repository.
 
 name: Deploy Database to Azure # TODO: If there are multiple az databases in the repo, append the db name to this workflow's file name and update the workflow name below

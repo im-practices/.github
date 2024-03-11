@@ -19,7 +19,7 @@
 #    - Make sure the az secrets have been added to the environment in GitHub
 #    - Make sure the scm restrictions (terraform) include the prod github runners (previously it had just octopus)
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/actions/deployment-board.md
+#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/docs/actions/deployment-board.md
 #      Generally one board should be set up per app service/function in the repository.
 
 name: Manually deploy AZ App # TODO: If there are multiple app service/functions in the repo, append the project name (svc/bff/mfe/etc) to this and the actual file name
