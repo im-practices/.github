@@ -1,4 +1,4 @@
-# Workflow Code: NeedyPig_v16    DO NOT REMOVE
+# Workflow Code: NeedyPig_v17    DO NOT REMOVE
 # Purpose:
 #    Performs a start, stop or restart on an app service in the
 #    specified environment when someone kicks it off manually.
@@ -101,7 +101,7 @@ jobs:
 
       - name: AZ Login
         id: login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}

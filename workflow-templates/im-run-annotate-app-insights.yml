@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v17    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v18    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc app insights annotation for a specified
 #    environment when someone kicks it off manually.
@@ -91,7 +91,7 @@ jobs:
 
       - name: AZ Login
         id: login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}

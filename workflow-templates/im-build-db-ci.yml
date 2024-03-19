@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v18    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v19    DO NOT REMOVE
 # Purpose:
 #    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #    In addition to that, however, there are three other things this workflow template is set up to do.
@@ -58,7 +58,7 @@ jobs:
       current-branch-is-default: ${{ steps.capture-branch-state.outpus.isDefaultBranch }} # TODO: Can be useful for if logic to skip steps. Remove if your CI process is the same for all branches.
       should-skip-remaining-workflow-jobs: ${{ steps.capture-branch-state.outputs.skip }} # TODO: This is only needed if your workflow is committing a snapshot and needs to skip running the CI for that commit. Remove this and its usages if not needed.
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # TODO: Update or remove this if you aren't creating snapshots and/or are doing the same CI process for every branch.
       - name: Capture branch details
@@ -91,9 +91,9 @@ jobs:
     needs: set-vars # TODO: Remove this if you deleted the set-vars job
     if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }} # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: '14' # TODO: The current LTS version. Can be updated to something else if needed.
 
@@ -125,7 +125,7 @@ jobs:
         options: -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=StrongPassword!1"
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Flyway
         uses: im-open/setup-flyway@v1.1

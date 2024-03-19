@@ -1,4 +1,4 @@
-# Workflow Code: DeterminedPorcupine_v22    DO NOT REMOVE
+# Workflow Code: DeterminedPorcupine_v23    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform plan against the specified environments and
 #    comments on the PR with the expected changes when commits are pushed to a PR.
@@ -65,11 +65,11 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.3
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
@@ -102,7 +102,7 @@ jobs:
 
       - name: 'Terraform Comment'
         if: always()
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         env:
           PLAN: "\n```\n${{ steps.plan.outputs.stdout }}\n```\n"
         with:

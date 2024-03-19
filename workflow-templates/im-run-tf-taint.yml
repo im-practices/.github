@@ -1,4 +1,4 @@
-# Workflow Code: GratefulTermite_v17    DO NOT REMOVE
+# Workflow Code: GratefulTermite_v18    DO NOT REMOVE
 # Purpose:
 #    Taints a specified terraform resource when someone kicks it off manually.
 #
@@ -80,7 +80,7 @@ jobs:
           | TF Resource Address | `${{ github.event.inputs.tf-resource-address }}` |' >> $GITHUB_STEP_SUMMARY
           
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.GITHUB_REF }}
 
@@ -91,7 +91,7 @@ jobs:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2.0.3
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 

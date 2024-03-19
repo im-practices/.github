@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v47    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v48    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -177,7 +177,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.GITHUB_REF }}
 
@@ -189,7 +189,7 @@ jobs:
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
-        uses: im-open/open-pagerduty-maintenance-window@v1.2
+        uses: im-open/open-pagerduty-maintenance-window@v1.3
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.DEPLOYMENT_DESC }}'
@@ -198,7 +198,7 @@ jobs:
           #service-ids: '' # TODO: Provide a comma separated list if there are multiple ids. 'PD01,PD02,PD03'
 
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
@@ -208,7 +208,7 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.3
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
@@ -300,7 +300,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.GITHUB_REF }}
 
@@ -316,7 +316,7 @@ jobs:
           Install-Module -Name SqlServer -Force
 
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           tenant-id: ${{ vars.ARM_TENANT_ID }}
           subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
@@ -324,7 +324,7 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.3
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
@@ -400,7 +400,7 @@ jobs:
           az account clear
 
       - name: Close the PagerDuty Maintenance Window
-        uses: im-open/close-pagerduty-maintenance-window@v1.1
+        uses: im-open/close-pagerduty-maintenance-window@v1.2
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           maintenance-window-id: ${{ needs.tf-plan.outputs.maintenance_window_id }}

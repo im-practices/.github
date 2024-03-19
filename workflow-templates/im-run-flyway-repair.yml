@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v19    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v20    DO NOT REMOVE
 # Purpose:
 #    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
@@ -60,7 +60,7 @@ jobs:
           | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
           
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.GITHUB_REF }}
 
@@ -74,7 +74,7 @@ jobs:
        
       - name: AZ Login
         id: login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # TODO: If repairing an on prem database's migration history, the Service Principal these credentials are for needs to be given access to login to Vault.
           #       See this git-er-done article for more information:
@@ -137,7 +137,7 @@ jobs:
       # TODO: Uncomment this step if this workflow is run against an on-prem database
       # - name: Import Secrets
       #   id: vault-secrets
-      #   uses: hashicorp/vault-action@v2.3.1
+      #   uses: hashicorp/vault-action@v3
       #   with:
       #     url: '${{ env.VAULT_URL }}'
       #     token: '${{ steps.vault_token.outputs.client_token }}'
