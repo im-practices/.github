@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v48    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v49    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -295,7 +295,7 @@ jobs:
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
-        uses: im-open/open-pagerduty-maintenance-window@v1.2
+        uses: im-open/open-pagerduty-maintenance-window@v1.3
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
@@ -305,7 +305,7 @@ jobs:
 
       - name: AZ Login
         id: login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
@@ -363,7 +363,7 @@ jobs:
 
       # TODO: remove this step if this workflow is for an azure function
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
           package: ./${{ env.DEPLOY_ZIP }}
@@ -371,7 +371,7 @@ jobs:
 
       # TODO: remove this step if this workflow is for an azure app service
       - name: Deploy to Azure Function
-        uses: azure/functions-action@v1.4.8
+        uses: azure/functions-action@v1
         with:
           app-name: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
           package: ./${{ env.UNZIPPED_ASSET }}
@@ -406,7 +406,7 @@ jobs:
 
       - name: Close the PagerDuty Maintenance Window
         if: always() && steps.open-window.outcome == 'success'
-        uses: im-open/close-pagerduty-maintenance-window@v1.1
+        uses: im-open/close-pagerduty-maintenance-window@v1.2
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
@@ -440,7 +440,7 @@ jobs:
       # TODO: Uncomment if you have a separate workflow for swapping slots and you want to trigger it now.  Delete if you don't.
       #        A dispatch event like this could also trigger other workflows that do things like smoke tests
       # - name: Trigger the Slot Swap
-      #   uses: actions/github-script@v6
+      #   uses: actions/github-script@v7
       #   with:
       #     github-token: ${{ secrets.PIPELINE_BOT_PAT }} # This is an org-level secret #TODO:  make sure im-pipeline-bot has at least write access to your repo
       #     script: |

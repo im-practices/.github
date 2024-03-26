@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v32    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v33    DO NOT REMOVE
 # Purpose:
 #    Automatically calculates the next semantic version, runs an npm ci, an npm run tests
 #    if there is one, an npm publish and then pushes a latest tag for main builds. When the
@@ -66,11 +66,11 @@ jobs:
         working-directory: '' # TODO: Add the path to the npm package project
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.REF_TO_BUILD_AND_TAG }}
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 16 # TODO: verify node version
           registry-url: https://npm.pkg.github.com/

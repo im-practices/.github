@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v34    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v35    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures tags
 #    are valid for production deployments and runs the migrations against an on-prem
@@ -125,7 +125,7 @@ jobs:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."
 
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_TAG }}
 
@@ -154,7 +154,7 @@ jobs:
 
       - name: AZ Login
         id: login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
@@ -174,7 +174,7 @@ jobs:
 
       - name: Import Secrets
         id: vault-secrets
-        uses: hashicorp/vault-action@v2.5.0
+        uses: hashicorp/vault-action@v3
         with:
           url: '${{ env.VAULT_URL }}'
           token: '${{ steps.vault_token.outputs.client_token }}'

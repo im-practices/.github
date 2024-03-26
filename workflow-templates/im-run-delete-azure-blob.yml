@@ -1,4 +1,4 @@
-# Workflow Code: ScornfulFlamingo_v6   DO NOT REMOVE
+# Workflow Code: ScornfulFlamingo_v7   DO NOT REMOVE
 # Purpose:
 #    Deletes a blob from a specified Azure Storage Account when someone kicks it off manually.
 #
@@ -63,7 +63,7 @@ jobs:
           
       - name: AZ Login
         id: login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
