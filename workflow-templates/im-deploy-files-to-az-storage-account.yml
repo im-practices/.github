@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v26    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v27    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and deploys a directory to the
 #    specified storage account when someone kicks it off manually.
@@ -70,7 +70,7 @@ jobs:
           | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
 
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.GITHUB_REF }}
           fetch-depth: 0
@@ -82,7 +82,7 @@ jobs:
 
       - name: AZ Login
         id: login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}

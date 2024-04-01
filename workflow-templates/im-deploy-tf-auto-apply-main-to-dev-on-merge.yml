@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v35    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v36    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform apply -auto-approve with the changes
 #    in the PR against the dev environment when a PR is merged to main.
@@ -70,7 +70,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
@@ -84,7 +84,7 @@ jobs:
           Install-Module -Name SqlServer -Force
 
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           tenant-id: ${{ vars.ARM_TENANT_ID }}
           subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
@@ -92,7 +92,7 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.3
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
@@ -102,7 +102,7 @@ jobs:
 
       - name: Open a PagerDuty Maintenance Window
         id: open-window
-        uses: im-open/open-pagerduty-maintenance-window@v1.2
+        uses: im-open/open-pagerduty-maintenance-window@v1.3
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           description: '${{ env.PAGERDUTY_WINDOW_DESC }}'
@@ -119,7 +119,7 @@ jobs:
             -var="pagerduty_token=${{ secrets.PAGERDUTY_API_KEY }}"
 
       - name: Close the PagerDuty Maintenance Window
-        uses: im-open/close-pagerduty-maintenance-window@v1.1
+        uses: im-open/close-pagerduty-maintenance-window@v1.2
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
@@ -127,7 +127,7 @@ jobs:
       # TODO: Remove this step if you do not want a teams notification
       - name: Send Status to Teams
         if: always()
-        uses: im-open/post-status-to-teams-action@v1.3
+        uses: im-open/post-status-to-teams-action@v1.4
         with:
           title: Auto-Deploying <project-name> Terraform to Dev # TODO: Replace <project-name> with your project
           workflow-status: ${{ job.status }}

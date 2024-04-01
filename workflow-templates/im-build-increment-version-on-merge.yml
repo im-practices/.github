@@ -1,4 +1,4 @@
-# Workflow Code: AngryGoose_v14    DO NOT REMOVE
+# Workflow Code: AngryGoose_v15    DO NOT REMOVE
 # Purpose:
 #   Automatically calculates the next semantic version and creates a tag on the repository
 #   when a PR is merged. The tag is used in later workflows to deploy the tf or db.
@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           # Because this is running only on merged PRs, the default behavior of always checking out the merge commit is correct here.
@@ -46,7 +46,7 @@ jobs:
           default-release-type: major # This means if the action cannot find a tag, it will start at v1.0.0
 
       - name: Create version tag on GitHub
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             github.rest.git.createRef({

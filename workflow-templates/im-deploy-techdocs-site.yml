@@ -1,4 +1,4 @@
-# Workflow Code: SparklyToad_v2    DO NOT REMOVE
+# Workflow Code: SparklyToad_v3    DO NOT REMOVE
 # Purpose:
 #    Publishes a techdocs site to the storage account where TechHub
 #    looks for TechDocs.
@@ -49,12 +49,12 @@ jobs:
       
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # All SPs that are owners of their rgrp's have access to publish to bdaimpna26techhubsa.
       # Use the credentials for your SP to login and publish to the storage account.
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO:  Verify this secret is set
           # TODO:  If the repo you are publishing from has federated access to the techdocs RGRP, you can use the secretless

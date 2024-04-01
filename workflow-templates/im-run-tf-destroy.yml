@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v26    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v27    DO NOT REMOVE
 # Purpose:
 #    Destroys the resources created by a terraform configuration when someone kicks it off manually.
 #
@@ -166,7 +166,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.GITHUB_REF }}
 
@@ -177,7 +177,7 @@ jobs:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
@@ -187,7 +187,7 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.3
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
@@ -279,7 +279,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.GITHUB_REF }}
 
@@ -290,7 +290,7 @@ jobs:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
@@ -300,7 +300,7 @@ jobs:
 
       - name: Setup Terraform
         id: setup
-        uses: hashicorp/setup-terraform@v2.0.3
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '${{ env.TF_VERSION }}'
 
