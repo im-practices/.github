@@ -1,4 +1,4 @@
-# Workflow Code: TroubledJaguar_v5    DO NOT REMOVE
+# Workflow Code: TroubledJaguar_v6    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run K6 with the file specified in
 #    the workflow when commits are pushed to the main branch.

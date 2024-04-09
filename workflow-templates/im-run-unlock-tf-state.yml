@@ -1,4 +1,4 @@
-# Workflow Code: FrazzledFerret_v24    DO NOT REMOVE
+# Workflow Code: FrazzledFerret_v25    DO NOT REMOVE
 # Purpose:
 #    Removes a lock from the terraform state when someone kicks it off manually.
 #
@@ -76,8 +76,8 @@ jobs:
           | ---             |  ---                                 |
           | Lock ID         | `${{ github.event.inputs.lock-id }}` |
           | Environment     | `${{ env.ENVIRONMENT }}`             |
-          | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`              |' >> $GITHUB_STEP_SUMMARY    
-      
+          | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`              |' >> $GITHUB_STEP_SUMMARY
+
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
