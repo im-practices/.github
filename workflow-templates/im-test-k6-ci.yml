@@ -39,7 +39,7 @@ env:
 
 jobs:
   k6_test:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
 
     steps:
       - name: Checkout

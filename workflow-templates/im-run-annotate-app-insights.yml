@@ -54,7 +54,7 @@ env:
 
 jobs:
   create-annotation:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     environment: ${{ github.event.inputs.environment }}
     steps:
       - run: |

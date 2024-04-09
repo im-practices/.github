@@ -62,7 +62,7 @@ env:
 
 jobs:
   tf-taint-resource:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     defaults:

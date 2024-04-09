@@ -57,7 +57,7 @@ env:
 
 jobs:
   deploy-to-azure:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
 
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 

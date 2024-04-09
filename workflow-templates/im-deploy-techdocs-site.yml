@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   publish-techdocs-site:
-    runs-on: [self-hosted, im-techdocs]
+    runs-on: im-techdocs
 
     # TODO:  Uncomment if you need this, otherwise remove it
     # services:

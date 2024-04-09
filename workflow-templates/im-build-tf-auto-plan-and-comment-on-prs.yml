@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   auto-plan-the-tf:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
 
     strategy:
       matrix:

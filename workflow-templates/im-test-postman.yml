@@ -38,7 +38,7 @@ env:
 
 jobs:
   run-postman:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
 
     defaults:
       run:

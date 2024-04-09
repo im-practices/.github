@@ -59,7 +59,7 @@ jobs:
   auto-apply-tf:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO: verify default branch name
 
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
 
     environment: 'Dev'
 
