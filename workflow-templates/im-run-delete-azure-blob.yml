@@ -1,4 +1,4 @@
-# Workflow Code: ScornfulFlamingo_v7   DO NOT REMOVE
+# Workflow Code: ScornfulFlamingo_v8   DO NOT REMOVE
 # Purpose:
 #    Deletes a blob from a specified Azure Storage Account when someone kicks it off manually.
 #
@@ -47,7 +47,7 @@ permissions:
 
 jobs:
   delete-blob:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
 
     environment: ${{ github.event.inputs.environment }}
 
@@ -60,7 +60,7 @@ jobs:
           | Storage Acct    | `${{ github.event.inputs.storage-account-name }}` |
           | Container       | `${{ github.event.inputs.container-name }}`       |
           | Blob Name       | `${{ github.event.inputs.blob-name }}`            |' >> $GITHUB_STEP_SUMMARY
-          
+
       - name: AZ Login
         id: login
         uses: azure/login@v2

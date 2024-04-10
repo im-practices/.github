@@ -1,4 +1,4 @@
-# Workflow Code: MercifulLlama_v17    DO NOT REMOVE
+# Workflow Code: MercifulLlama_v18    DO NOT REMOVE
 # Purpose:
 #    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.)
 #    but they need each item to be deployed together.
@@ -48,7 +48,7 @@ env:
 jobs:
   # This job utilizes a reusable workflow which will:
   #   1 - Verify the tag provided is a valid ref.
-  #   2 - If deploying to a production environment, verify the tag is reachable from the default branch 
+  #   2 - If deploying to a production environment, verify the tag is reachable from the default branch
   #       and that the corresponding release is production ready (not pre-release or a draft).
   setup-deployment-workflow:
     uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
@@ -83,7 +83,7 @@ jobs:
 
   initiate-deployments:
     needs: [stakeholder-approval, attestor-approval]
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
 
     steps:
       - run: echo "The current environment is ${{ env.ENVIRONMENT }}.  The Tag is ${{ env.RELEASE_TAG }}."

@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v18    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v19    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc app insights annotation for a specified
 #    environment when someone kicks it off manually.
@@ -54,7 +54,7 @@ env:
 
 jobs:
   create-annotation:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     environment: ${{ github.event.inputs.environment }}
     steps:
       - run: |
@@ -65,7 +65,7 @@ jobs:
           | Category        | `${{ github.event.inputs.category }}`      |
           | EventName       | `${{ github.event.inputs.eventName }}`     |
           | Custom Metadata | `${{ github.event.inputs.customMetadata }}`|' >> $GITHUB_STEP_SUMMARY
-              
+
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables

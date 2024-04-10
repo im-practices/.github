@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v21    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v22    DO NOT REMOVE
 # Purpose:
 #    Swaps deployment slots in a specified environment for an Azure App Service
 #    or Function outside of a deployment when someone kicks it off manually.
@@ -51,7 +51,7 @@ permissions:
 
 jobs:
   swap-slots:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     environment: ${{ github.event.inputs.environment || github.event.client_payload.environment }}
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
@@ -71,7 +71,7 @@ jobs:
           | Target Slot     | `${{ env.TARGET_SLOT }}` |
           | Source Slot     | `${{ env.SOURCE_SLOT }}` |
           | Open PD Window  | `${{ env.OPEN_WINDOW }}` |' >> $GITHUB_STEP_SUMMARY
-      
+
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables

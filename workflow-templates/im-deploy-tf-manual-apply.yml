@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v48    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v49    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -161,7 +161,7 @@ jobs:
 
   tf-plan:
     needs: [set-vars, stakeholder-approval]
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
@@ -290,7 +290,7 @@ jobs:
 
   tf-apply:
     needs: [set-vars, tf-plan, tf-plan-manual-approval, stakeholder-approval]
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     defaults:

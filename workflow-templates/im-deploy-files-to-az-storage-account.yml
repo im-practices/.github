@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v27    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v28    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and deploys a directory to the
 #    specified storage account when someone kicks it off manually.
@@ -57,7 +57,7 @@ env:
 
 jobs:
   deploy-to-azure:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
 
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 

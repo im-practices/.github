@@ -1,4 +1,4 @@
-# Workflow Code: GratefulTermite_v18    DO NOT REMOVE
+# Workflow Code: GratefulTermite_v19    DO NOT REMOVE
 # Purpose:
 #    Taints a specified terraform resource when someone kicks it off manually.
 #
@@ -62,7 +62,7 @@ env:
 
 jobs:
   tf-taint-resource:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     defaults:
@@ -78,7 +78,7 @@ jobs:
           | Environment         | `${{ env.ENVIRONMENT }}`                         |
           | Branch/Tag/Sha      | `${{ env.GITHUB_REF }}`                          |
           | TF Resource Address | `${{ github.event.inputs.tf-resource-address }}` |' >> $GITHUB_STEP_SUMMARY
-          
+
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:

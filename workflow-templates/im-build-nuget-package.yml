@@ -1,4 +1,4 @@
-# Workflow Code: TrustingCockroach_v43    DO NOT REMOVE
+# Workflow Code: TrustingCockroach_v44    DO NOT REMOVE
 # Purpose:
 #    Automatically builds the project and runs tests with code coverage. If
 #    everything is green, a new semantic version is calculated and a new package
@@ -51,7 +51,7 @@ jobs:
       # workflow-summary : | # TODO:  If desired, the workflow summary that is generated can be overridden by providing this custom value.
 
   build-test-publish:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     needs: [setup-build-workflow]
     if: needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
 

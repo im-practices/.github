@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v19    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v20    DO NOT REMOVE
 # Purpose:
 #    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #    In addition to that, however, there are three other things this workflow template is set up to do.
@@ -110,20 +110,20 @@ jobs:
           path-to-lint-config: ./.tsqllintrc # TODO: Update this with the path to your project's .tsllintrc file
 
   build-database:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     needs: [set-vars, lint-migration-files] # TODO: Remove any jobs you deleted above
     if: ${{ needs.set-vars.outputs.should-skip-remaining-workflow-jobs == 'false' }} # TODO: Remove this if there is no snapshot commit that should cause this step to be skipped.
-    
+
     env:
       SQL_SERVER_PASSWORD: 'StrongPassword!1'
-      
+
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-latest
         ports:
           - 1433:1433
         options: -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=StrongPassword!1"
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -222,7 +222,7 @@ jobs:
 
       ##### End of snapshot steps #####
 
-      
+
       # This allows the next steps to authenticate with and push to GitHub Packages.
       # If you aren't using the steps below you can remove this one.
       # - name: Authenticate with GitHub Packages

@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v9   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v10   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -98,7 +98,7 @@ env:
 jobs:
   # TODO: Delete if you don't build your k6 tests
   npm-cache:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     if: inputs.run-npm-build
 
     defaults:
@@ -185,7 +185,7 @@ jobs:
           enableCrossOsArchive: true
 
   start-k6-operator-test:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     needs: [npm-cache]
     environment: ${{ inputs.env }}
 
@@ -402,7 +402,7 @@ jobs:
         run: echo "Approval on cleaning up the test run."
 
   stop-k6-operator-test:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     needs: [start-k6-operator-test, k6-operator-approval]
     environment: ${{ inputs.env }}
 
@@ -492,7 +492,7 @@ jobs:
           rm -rf ${{ steps.kube-config.outputs.kube-config-file }}
 
   send-teams-notification:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     needs: [start-k6-operator-test, stop-k6-operator-test]
     environment: ${{ inputs.env }}
     if: always()

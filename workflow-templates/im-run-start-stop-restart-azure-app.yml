@@ -1,4 +1,4 @@
-# Workflow Code: NeedyPig_v17    DO NOT REMOVE
+# Workflow Code: NeedyPig_v18    DO NOT REMOVE
 # Purpose:
 #    Performs a start, stop or restart on an app service in the
 #    specified environment when someone kicks it off manually.
@@ -52,21 +52,21 @@ env:
 
 jobs:
   start-stop-restart:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
 
     env:
       AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function change the value to 'functionapp'
 
     steps:
-      
+
       - run: |
           echo $'
           | Build Arguments | Value                   |
           | ---             |  ---                    |
           | Environment     | `${{ env.ENVIRONMENT }}`|
           | Action          | `${{ env.ACTION }}`     |' >> $GITHUB_STEP_SUMMARY
-              
+
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
@@ -115,7 +115,7 @@ jobs:
       - name: ${{ env.ACTION }} ${{ env.AZ_APP_TYPE }}
         run: az ${{ env.AZ_APP_TYPE }} ${{ env.ACTION }} --name ${{ env.APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ vars.ARM_SUBSCRIPTION_ID }}
 
-      
+
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'
         run: |

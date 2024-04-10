@@ -1,4 +1,4 @@
-# Workflow Code: FierceRabbit_v2    DO NOT REMOVE
+# Workflow Code: FierceRabbit_v3    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc PagerDuty event annotation for a specified
 #    service when someone kicks it off manually.
@@ -33,7 +33,7 @@ on:
           - demo
           - uat
           - prod
-        
+
       event:
         description: The event description to record
         required: true
@@ -43,7 +43,7 @@ env:
 
 jobs:
   create-annotation:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     environment: ${{ github.event.inputs.environment }}
     steps:
       - run: |
@@ -52,7 +52,7 @@ jobs:
           | ---             |  ---                                       |
           | Environment     | `${{ env.ENVIRONMENT }}`                   |
           | Event           | `${{ github.event.inputs.event }}`         |' >> $GITHUB_STEP_SUMMARY
-              
+
 
       - name: Create a change event
         uses: im-open/pagerduty-change-events-action@v1

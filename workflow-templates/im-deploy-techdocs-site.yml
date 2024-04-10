@@ -1,4 +1,4 @@
-# Workflow Code: SparklyToad_v3    DO NOT REMOVE
+# Workflow Code: SparklyToad_v4    DO NOT REMOVE
 # Purpose:
 #    Publishes a techdocs site to the storage account where TechHub
 #    looks for TechDocs.
@@ -8,7 +8,7 @@
 #      to publish multiple docs at once
 #
 # Projects to use this Template with:
-#    - Any project with TechDocs 
+#    - Any project with TechDocs
 
 name: Publish TechDocs Site
 
@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   publish-techdocs-site:
-    runs-on: [self-hosted, im-techdocs]
+    runs-on: im-techdocs
 
     # TODO:  Uncomment if you need this, otherwise remove it
     # services:
@@ -42,11 +42,11 @@ jobs:
       ACCOUNT_NAME: bdaimpna26techhubsa
       CONTAINER_NAME: techdocs
 
-      # This is project dependent.  
+      # This is project dependent.
       # TODO:  Replace kind and entity name based on the entity this techdocs site will belong to.
       #        The name can be found in catalog-info.yaml.
       ENTITY_NAME: 'default/<add-kind>/<add-entity-name>'
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -90,4 +90,4 @@ jobs:
           az logout
           az cache purge
           az account clear
-      
+

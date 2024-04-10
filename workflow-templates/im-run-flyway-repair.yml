@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v20    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v21    DO NOT REMOVE
 # Purpose:
 #    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
@@ -49,7 +49,7 @@ env:
 
 jobs:
   repair-database-migrations:
-    runs-on: [self-hosted, im-linux]
+    runs-on: im-linux
     environment: ${{ github.event.inputs.environment }} # Use inputs context because env context is not available to environment:
     steps:
       - run: |
@@ -58,7 +58,7 @@ jobs:
           | ---             |  ---                     |
           | Environment     | `${{ env.ENVIRONMENT }}` |
           | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
-          
+
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -71,7 +71,7 @@ jobs:
 
       # TODO: Remove this step if this workflow is run against an on-prem database
       #       or if your database uses Azure Active Directory Authentication
-       
+
       - name: AZ Login
         id: login
         uses: azure/login@v2
