@@ -13,8 +13,8 @@
 #      title-of-teams-post: 'Deploy ${{ needs.set-vars.outputs.AZ_APP_NAME }} ${{ inputs.tag }} to ${{ inputs.environment-or-target }}'
 #      post-status-in-deployment-notifications-channel: true
 #      timezone: america/denver
-#      deployment-board-number: 1
-#      deployable-type: 'API'
+#      deployment-board-number: 1 # DEPRECATED
+#      deployable-type: 'API'     # DEPRECATED
 #      custom-facts-for-team-channel: |
 #      [
 #        { "name": "Workflow", "value": "${{ github.workflow }}" },
@@ -67,17 +67,25 @@ on:
         type: string
         default: 'america/denver'
       deployment-board-number:
-        description: 'The number of the deployment board that should be updated.  Defaults to 1.'
+        description: |
+          DEPRECATED.  This input will be removed in the next major version.  Migrate to create-github-deployment by providing instance and entity inputs instead.
+          Set to -1 to skip updating the board (useful when moving to TechHub deployments).
+          The number of the deployment board that should be updated.  Defaults to 1.
         required: false
         type: number
         default: 1
       deployable-type:
-        description: 'Identifier if there are multiple deployables in the repo, like MFE, DB, API.  Defaults to an empty string for single deployables.'
+        description: |
+          DEPRECATED.  This input will be removed in the next major version.  Migrate to create-github-deployment by providing instance and entity inputs instead.
+          Identifier if there are multiple deployables in the repo, like MFE, DB, API.  
+          Defaults to an empty string for single deployables.
         required: false
         type: string
         default: ''
       deployable-label:
-        description: 'Deployment board additional label for delete, destroy, or custom label.'
+        description: |
+          DEPRECATED.  This input will be removed in the next major version.  Migrate to create-github-deployment by providing instance and entity inputs instead.
+          Deployment board additional label for delete, destroy, or custom label.
         required: false
         type: string
         default: null
@@ -87,12 +95,16 @@ on:
         type: string
         default: null
       enable-deployment-slot-tracking:
-        description: 'Enable App Service deployment slot tracking on deployment board? [true|false]'
+        description: |
+          DEPRECATED.  This input will be removed in the next major version.  Migrate to create-github-deployment by providing instance and entity inputs instead.
+          Enable App Service deployment slot tracking on deployment board? [true|false].
         required: false
         type: boolean
         default: false
       slot-swapped-with-production-slot:
-        description: 'Did this deployment swap slots with production slot? Set to true for swapping slot immediately with production slot. [true|false]'
+        description: |
+          DEPRECATED.  This input will be removed in the next major version.  Migrate to create-github-deployment by providing instance and entity inputs instead.
+          Did this deployment swap slots with production slot? Set to true for swapping slot immediately with production slot. [true|false].
         required: false
         type: boolean
         default: false
@@ -102,7 +114,9 @@ on:
         required: false
         default: 'production'
       source-slot:
-        description: 'The source slot that was deployed to [production|blue|yellow|canary|red|loadtest|predeploy|your-custom-slot]'
+        description: |
+          DEPRECATED.  This input will be removed in the next major version.  Migrate to create-github-deployment by providing instance and entity inputs instead.
+          The source slot that was deployed to [production|blue|yellow|canary|red|loadtest|predeploy|your-custom-slot].
         type: string
         required: false
         default: 'production'
@@ -124,7 +138,7 @@ on:
         required: false
         type: string
       deploy-notifications-channel:
-        description: 'The URI for the notifications channel where a status will be posted.  Either this value or the secret DEPLOY_NOTIFICATIONS_CHANNEL must be provided.  This secret is deprecated because this value is defined as a variable at the org level.'
+        description: 'The URI for the notifications channel where a status will be posted.  Either this value or the secret DEPLOY_NOTIFICATIONS_CHANNEL must be provided.  The corresponding secret is deprecated because this value is defined as a variable at the org level.'
         required: false
         type: string
     secrets:
@@ -203,8 +217,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update deployment board
-        if: always()
+      # TODO:  Remove update-deployment-board functionality when techhub deployments are ready
+      #        - Remove this step and the next step once techhub deployments are ready
+      #        - Remove the deprecated inputs & all their references in this workflow
+      #          (deployment-board-number, deployable-type, deployable-label, enable-deployment-slot-tracking, slot-swapped-with-production-slot, source-slot)
+      - name: Update deployment board if deployment-board-number is >= 1
+        if: always() && fromJSON(inputs.deployment-board-number) >= 1
         uses: im-open/update-deployment-board@v1.7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -220,6 +238,10 @@ jobs:
           target-slot: ${{ inputs.target-slot }}
           source-slot: ${{ inputs.source-slot }}
           timezone: ${{ inputs.timezone }}
+
+      - name: Skip deployment board update if deployment-board-number is < 1
+        if: always() && fromJSON(inputs.deployment-board-number) < 1
+        run: echo "Skip updating the deployment board since the board number is set to ${{ inputs.deployment-board-number }}."
 
       # Only run this step if TechHub metadata.name value
       # and a metadata.instance value are provided

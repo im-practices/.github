@@ -231,7 +231,7 @@ jobs:
       # Optional Inputs with their default values.  These items can be removed if the default value does not need to be adjusted.
       # post-status-in-deployment-notifications-channel: true # TODO:  Include this arg and set to false if you do not want a status post in the Deployment Notifications channel for prod deploys
       # timezone: 'america/denver'                            # TODO:  Include this argument and update if your timezone is not america/denver
-      # deployment-board-number: 1                            # TODO:  Include this argument and update if your deployment board is not 1
+      # deployment-board-number: 1                            # TODO:  Include this argument and update if your deployment board is not 1. Set to -1 to skip updating the deployment board (useful when migrating to the new TechHub deployment tracking).
       # deployable-type: ''                                   # TODO:  If there are multiple deployables in the repository, add a string type like MFE/DB/API for the deployment board
       # TODO:  These are the custom facts that will be included the different Teams posts by default.  If adjusting the facts that are supplied, they must be a valid JSON array.
       # custom-facts-for-team-channel: |
