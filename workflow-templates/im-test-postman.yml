@@ -53,7 +53,7 @@ jobs:
       #   uses: im-open/authenticate-with-gh-package-registries@v1.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-      #     orgs: 'im-client,im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
+      #     orgs: 'im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
 
       - name: Restore npm packages
         run: npm install

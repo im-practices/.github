@@ -229,7 +229,7 @@ jobs:
       #   uses: im-open/authenticate-with-gh-package-registries@v1.1
       #   with:
       #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }}  # This is an org-level secret
-      #     orgs: 'im-practices,im-client' # TODO: Verify list of orgs packages will be pulled from
+      #     orgs: 'im-practices,im-enrollment' # TODO: Verify list of orgs packages will be pulled from
 
       # Remove this if you don't need to publish mock sql objects
       # - name: Create and publish views from tables
