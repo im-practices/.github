@@ -1,4 +1,4 @@
-# Workflow Code: DrearyBuck_v22    DO NOT REMOVE
+# Workflow Code: DrearyBuck_v23    DO NOT REMOVE
 
 # Purpose:
 #    Imports a specified resource into the terraform state when someone kicks it off manually.
@@ -71,8 +71,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: '${{ env.TF_WORKING_DIR }}'
-
+        
     steps:
       - run: |
           echo $'
@@ -100,8 +99,10 @@ jobs:
           terraform_version: '${{ env.TF_VERSION }}'
 
       - name: Terraform Init
+        working-directory: '${{ env.TF_WORKING_DIR }}'
         run: terraform init
 
       - name: Terraform Import
+        working-directory: '${{ env.TF_WORKING_DIR }}'
         # TODO: Add any additional parameters that are needed
         run: terraform import ${{ github.event.inputs.tf-resource-address }} ${{ github.event.inputs.tf-resource-id }}
