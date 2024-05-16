@@ -191,7 +191,7 @@ jobs:
 
             const nextVersionText = isMergeToMain ?
               `[Tag - ${nextVersion}](https://github.com/${orgAndRepo}/releases/tag/${nextVersion})` :
-              `Next Version - ${nextVersion}`;
+              `[Next Version - ${nextVersion}](https://github.com/${orgAndRepo}/releases/${nextVersion})`;
 
             const prComment = `
             - ${workflowRunText}
