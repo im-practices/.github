@@ -40,7 +40,7 @@ jobs:
       # major/minor/patch through commit messages
       - name: Increment the version
         id: version
-        uses: im-open/git-version-lite@v3.0
+        uses: im-open/git-version-lite@v3.1
         with:
           default-release-type: major
       
