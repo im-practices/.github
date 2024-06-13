@@ -600,7 +600,7 @@ jobs:
   #   3 - Check for workflow failures
   finish-build:
     if: always() && needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
-    needs: [setup-build-workfow, dotnet-test, jest]
+    needs: [setup-build-workflow, dotnet-test, jest]
     uses: im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
     with:
       next-version: ${{ needs.setup-build-workflow.outputs.NEXT_VERSION }}
