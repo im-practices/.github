@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v28    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v29    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and deploys a directory to the
 #    specified storage account when someone kicks it off manually.
@@ -12,7 +12,7 @@
 #
 # TODO: Prerequisites:
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/docs/actions/deployment-board.md
+#    - Create an entity in this repo's catalog-info.yml that represents what is being deployed if it does not already exist
 
 name: Deploy Files to Azure Storage
 run-name: Deploy ${{ inputs.branch-tag-sha }} Files to ${{ inputs.environment }} AZ Storage
@@ -41,10 +41,6 @@ permissions:
   contents: read
   # Required for create-github-deployment
   deployments: write
-  # Required for update-deployment-board
-  # TODO: Remove once techhub deployments are fully functional
-  repository-projects: write
-  issues: write
   actions: read
 
 env:
@@ -114,8 +110,8 @@ jobs:
           release-ref: ${{ env.GITHUB_REF }}
           deployment-status: ${{ job.status }}
           deployment-description: 'Deployment to the ${{ env.ENVIRONMENT }} environment of ${{ env.GITHUB_REF }}'
-          entity: '' # TODO: Fill this out with the catalog-info.yml's metadata.name value
-          instance: file-storage
+          entity: '' # TODO: The TechHub (catalog-info.yml) entity that is being deployed.  This value should match the metadata.name of the entity defined in catalog-info.yml.
+          instance: 'file-storage'
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'

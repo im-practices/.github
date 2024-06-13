@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v37    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v38    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform apply -auto-approve with the changes
 #    in the PR against the dev environment when a PR is merged to main.
@@ -11,7 +11,7 @@
 #
 # TODO: Prerequisites:
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/docs/actions/deployment-board.md
+#    - Create an entity in this repo's catalog-info.yml that represents what is being deployed if it does not already exist
 
 name: Auto Apply main branch to Dev on PR Merge
 run-name: Apply dev terraform from main
@@ -25,13 +25,10 @@ permissions:
   # Required for secretless azure access and deploys
   id-token: write
   contents: read
-  # Required create-github-deployment
+  # Required for create-github-deployment
   deployments: write
-  # Required for update-deployment-board
-  # TODO: Remove once techhub deployments are fully functional
-  repository-projects: write
-  issues: write
   actions: read
+
 env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   PAGERDUTY_WINDOW_IN_MIN: 10 # TODO: Verify the length of your PD Maintenance Window
@@ -152,5 +149,5 @@ jobs:
           release-ref: 'main'
           deployment-status: ${{ job.status }}
           deployment-description: 'Deployment to the Dev environment of the main branch'
-          entity: '' # TODO: Fill this out with the catalog-info.yml's metadata.name value
+          entity: '' # TODO: The TechHub (catalog-info.yml) entity that is being deployed.  This value should match the metadata.name of the entity defined in catalog-info.yml.
           instance: ${{ inputs.instance }}

@@ -6,7 +6,7 @@
 # Example Usage in a repo's workflow:
 # jobs:
 #  setup-deployment-workflow:
-#    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
+#    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v3
 #    with:
 #      runs-on: im-linux
 #      ref-to-deploy: v1.2.3

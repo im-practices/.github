@@ -1,4 +1,4 @@
-# Workflow Code: MercifulLlama_v18    DO NOT REMOVE
+# Workflow Code: MercifulLlama_v19    DO NOT REMOVE
 # Purpose:
 #    This is only required when teams have separate deployable artifacts (db/mfe/api/etc.)
 #    but they need each item to be deployed together.
@@ -51,7 +51,7 @@ jobs:
   #   2 - If deploying to a production environment, verify the tag is reachable from the default branch
   #       and that the corresponding release is production ready (not pre-release or a draft).
   setup-deployment-workflow:
-    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v3
     with:
       ref-to-deploy: ${{ inputs.tag }}
       deployment-environment: ${{ inputs.environment }}

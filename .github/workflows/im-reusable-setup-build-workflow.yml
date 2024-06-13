@@ -6,7 +6,7 @@
 # Example Usage in a repo's workflow:
 # jobs:
 #  setup-build-workflow:
-#    uses: im-practices/.github/.github/workflows/im-reusable-setup-build-workflow.yml@v2
+#    uses: im-practices/.github/.github/workflows/im-reusable-setup-build-workflow.yml@v3
 #    with:
 #     default-branch: main
 #     tag-prefix: none
