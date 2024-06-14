@@ -1,4 +1,4 @@
-# Workflow Code: MysteriousStranger_v17    DO NOT REMOVE
+# Workflow Code: MysteriousStranger_v18    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -12,8 +12,7 @@
 #
 # TODO: Prerequisites:
 #     - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#     - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/docs/actions/deployment-board.md
-#       Generally one board should be set up per windows service in the repository.
+#     - Create an entity in this repo's catalog-info.yml that represents what is being deployed if it does not already exist
 #     - The target server must be domain joined. If this is not the case already, create an ITHD ticket to have it joined to
 #       the ExtendHealth domain for service account authentication
 #     - Create an ITHD ticket to have an ExtendHealth Active directory service account created for each deployment environment.
@@ -64,12 +63,8 @@ on:
   #   types: [<deployable_name>_deploy] # TODO: Replace <deployable_name>.  This will be used in the 'Deploy Multiple Items' workflow to target this deployment workflow.
 
 permissions:
-  # Required for create-github-deployment
+  # Required for create-github-deployment (in the reusable update-github-deployments-and-send-teams-notification job)
   deployments: write
-  # Required for update-deployment-board
-  # TODO: Remove once techhub deployments are fully functional
-  repository-projects: write
-  issues: write
   actions: read
 
 env:
@@ -83,7 +78,7 @@ jobs:
   #   2 - If deploying to a production environment, verify the tag is reachable from the default branch
   #       and that the corresponding release is production ready (not pre-release or a draft).
   setup-deployment-workflow:
-    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v3
     with:
       ref-to-deploy: ${{ inputs.tag }}
       deployment-environment: ${{ inputs.environment }}
@@ -225,7 +220,7 @@ jobs:
   update-github-deployments-and-send-teams-notification:
     needs: [setup-deployment-workflow, deploy-files]
     if: always()
-    uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v3
     with:
       # Required Inputs
       deployment-environment: ${{ inputs.environment }} # The environment/target that was deployed to (dev, qa, stage, stage-secondary, uat, demo, prod, prod-secondary)
@@ -234,15 +229,12 @@ jobs:
       title-of-teams-post: 'Deploy <<PROJECT NAME>> files @${{ inputs.tag }} to ${{ inputs.environment }}' # TODO:  Replace <<PROJECT_NAME>> and verify title to ensure it is descriptive/readable.
       ms-teams-uri: ${{ vars.MS_TEAMS_URI }}
       deploy-notifications-channel: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}
-      # Inputs for TechHub deployment tracking
-      # entity: '' # TODO: This the catalog-info.yml value in metadata.name value
-      # instance: '' # TODO: This the specific target deployment location, i.e., testing-slot-1, primary-app-service, failover-slot-2, NA26-production-slot
+      entity: '' # TODO: The TechHub (catalog-info.yml) entity that is being deployed.  This value should match the metadata.name of the entity defined in catalog-info.yml.
+      instance: '' # TODO: A specific target deployment location e.g., primary, primary-app-service, testing-slot, failover-slot-2, NA26, NA27-production-slot.  Generally some combination of deployment-environment, slot-name and AZ region values.
 
       # Optional Inputs with their default values.  These items can be removed if the default value does not need to be adjusted.
       # post-status-in-deployment-notifications-channel: true # TODO:  Include this arg and set to false if you do not want a status post in the Deployment Notifications channel for prod deploys
       # timezone: 'america/denver'                            # TODO:  Include this argument and update if your timezone is not america/denver
-      # deployment-board-number: 1                            # TODO:  Include this argument and update if your deployment board is not 1. Set to -1 to skip updating the deployment board (useful when migrating to the new TechHub deployment tracking).
-      # deployable-type: ''                                   # TODO:  If there are multiple deployables in the repository, add a string type like MFE/DB/API for the deployment board
       # TODO:  These are the custom facts that will be included the different Teams posts by default.  If adjusting the facts that are supplied, they must be a valid JSON array.
       # custom-facts-for-team-channel: |
       #   [

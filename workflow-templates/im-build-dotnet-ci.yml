@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v54    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v55    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -54,7 +54,7 @@ jobs:
   #   2 - Print a workflow summary
   #   3 - Generate the next version for the repo
   setup-build-workflow:
-    uses: im-practices/.github/.github/workflows/im-reusable-setup-build-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-build-workflow.yml@v3
     with:
       tag-prefix: 'v' # TODO: If you prefix your tags like (mfe/db/etc) uncomment and add that value here
       # default-branch: main # TODO:  Update and include this argument if default branch is different
@@ -601,7 +601,7 @@ jobs:
   finish-build:
     if: always() && needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
     needs: [setup-build-workflow, dotnet-test, jest]
-    uses: im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v3
     with:
       next-version: ${{ needs.setup-build-workflow.outputs.NEXT_VERSION }}
       title-of-teams-post: '<project-name> CI Build' # TODO: Replace <project-name>

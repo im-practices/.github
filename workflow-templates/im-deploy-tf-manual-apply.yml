@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v49    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v50    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -11,7 +11,7 @@
 #
 # TODO: Prerequisites:
 #    - Ensure each of the repo-level and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - Set up a deployment board if it does not already exist: https://github.com/im-practices/git-er-done/blob/main/docs/actions/deployment-board.md
+#    - Create an entity in this repo's catalog-info.yml that represents what is being deployed if it does not already exist
 
 name: Apply Terraform
 run-name: Apply ${{ inputs.root-module }} terraform from ${{ inputs.branch-tag-sha }}
@@ -39,12 +39,8 @@ permissions:
   # Required for secretless azure access and deploys
   id-token: write
   contents: read
-  # Required for create-github-deployment
+  # Required for create-github-deployment (in the reusable update-github-deployments-and-send-teams-notification job)
   deployments: write
-  # Required for update-deployment-board
-  # TODO: Remove once techhub deployments are fully functional
-  repository-projects: write
-  issues: write
   actions: read
 
 env:
@@ -75,7 +71,7 @@ jobs:
   #   1 - Verify the branch/tag/sha provided is a valid ref.
   #   2 - If deploying to a production environment, verify the tag is reachable from the default branch.
   setup-deployment-workflow:
-    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-deployment-workflow.yml@v3
     with:
       ref-to-deploy: ${{ inputs.branch-tag-sha }}
       deployment-environment: ${{ inputs.root-module }}
@@ -412,7 +408,7 @@ jobs:
   update-github-deployments-and-send-teams-notification:
     needs: [set-vars, tf-apply]
     if: always()
-    uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-finish-deployment-workflow.yml@v3
     with:
       # Required Inputs
       deployment-environment: ${{ inputs.root-module }} # The environment/target that was deployed to (dev, qa, stage, stage-secondary, uat, demo, prod, prod-secondary)
@@ -422,14 +418,11 @@ jobs:
       post-status-in-deployment-notifications-channel: false
       ms-teams-uri: ${{ vars.MS_TEAMS_URI }}
       deploy-notifications-channel: ${{ vars.DEPLOY_NOTIFICATIONS_CHANNEL }}
-      # Inputs for TechHub deployment tracking
-      # entity: '' # TODO: This the catalog-info.yml value in metadata.name value
-      # instance: '' # TODO: This the specific target deployment location, i.e., testing-slot-1, primary-app-service, failover-slot-2, NA26-production-slot
+      entity: '' # TODO: The TechHub (catalog-info.yml) entity that is being deployed.  This value should match the metadata.name of the entity defined in catalog-info.yml.
+      instance: '' # TODO: A specific target deployment location e.g., primary, primary-app-service, testing-slot, failover-slot-2, NA26, NA27-production-slot.  Generally some combination of deployment-environment, slot-name and AZ region values.
 
       # Optional Inputs with their default values.  These items can be removed if the default value does not need to be adjusted.
       # timezone: 'america/denver'                            # TODO:  Include this argument and update if your timezone is not america/denver
-      # deployment-board-number: 1                            # TODO:  Include this argument and update if your deployment board is not 1. Set to -1 to skip updating the deployment board (useful when migrating to the new TechHub deployment tracking).
-      # deployable-type: ''                                   # TODO:  If there are multiple deployables in the repository, add a string type like MFE/DB/API for the deployment board
       # TODO:  These are the custom facts that will be included the different Teams posts by default.  If adjusting the facts that are supplied, they must be a valid JSON array.
       # custom-facts-for-team-channel: |
       #   [

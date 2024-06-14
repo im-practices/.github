@@ -1,4 +1,4 @@
-# Workflow Code: GloomyBadger_v33    DO NOT REMOVE
+# Workflow Code: GloomyBadger_v34    DO NOT REMOVE
 # Purpose:
 #    Automatically calculates the next semantic version, runs an npm ci, an npm run tests
 #    if there is one, an npm publish and then pushes a latest tag for main builds. When the
@@ -42,7 +42,7 @@ jobs:
   #   2 - Print a workflow summary
   #   3 - Generate the next version for the repo
   setup-build-workflow:
-    uses: im-practices/.github/.github/workflows/im-reusable-setup-build-workflow.yml@v2
+    uses: im-practices/.github/.github/workflows/im-reusable-setup-build-workflow.yml@v3
     with:
       tag-prefix: 'none' # TODO: verify your prefix, the new ci workflows add v automatically but npm packages typically won't have a prefix
       # default-branch: main # TODO:  Update and include this argument if default branch is different
@@ -137,7 +137,7 @@ jobs:
   finish-build:
     if: always() && needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
     needs: [setup-build-workflow, build-and-publish-to-gpr]
-    uses:  im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v2
+    uses:  im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v3
     with:
       next-version: ${{ needs.build-and-publish-to-gpr.outputs.NEXT_VERSION }}
       title-of-teams-post: 'Build and Publish <project-name> to GH Packages' # TODO: Replace <project-name> 
