@@ -254,7 +254,7 @@ jobs:
         run: npm run build
 
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}

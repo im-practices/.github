@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v10   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v11   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -264,7 +264,7 @@ jobs:
         run: npm run build
 
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
@@ -434,7 +434,7 @@ jobs:
           kubelogin-version: 'latest'
 
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
@@ -518,7 +518,7 @@ jobs:
 
       - name: AZ Login
         if: steps.conclusion.outputs.workflow_conclusion == 'cancelled' || needs.stop-k6-operator-test.outputs.stop-k6-test-outcome == 'failure'
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
