@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v10   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v11   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -74,13 +74,13 @@ permissions:
 env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
-  GRAFANA_INFLUXDB_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1?&from=now-1h&to=now&var-ProductTag=SHOP&var-env=${{ inputs.env }}'
-  GRAFANA_PROMETHEUS_DASHBOARD_URI: 'https://grafana.mktp.io/d/a3b2aaa8-bb66-4008-a1d8-16c49afedbf0/k6-prometheus-native-histograms?orgId=1&refresh=10s&var-quantile=0.99'
+  GRAFANA_INFLUXDB_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1?&from=now-1h&to=now&var-ProductTag=SHOP&var-env=${{ inputs.env }}' # TODO: Update product tag
+  GRAFANA_PROMETHEUS_DASHBOARD_URI: 'https://grafana.mktp.io/d/a3b2aaa8-bb66-4008-a1d8-16c49afedbf0/k6-prometheus?orgId=1&refresh=10s&var-quantile=0.99'
   NODE_VERSION: '20.x' # TODO: Set correct node version
 
   K6_DEFAULT_PARAMETERS: "${{ inputs.output-to-prometheus && '--out experimental-prometheus-rw' || '--out influxdb=https://influxdb-v1.mktp.io/loadtesting' }} --insecure-skip-tls-verify --tag product=SHOP,family=EN,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}" # TODO: Set default k6 parameters specifically replace product and family tags.
   # TODO: Optional add K6_PROMETHEUS_RW_STALE_MARKERS=true when running long load tests.  This variable will make short tests not show up in grafana
-  K6_DEFAULT_ENVIRONMNET_VARIABLES: "K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max;K6_PROMETHEUS_RW_SERVER_URL=http://prm-srv-prometheus-server.prometheus:80/api/v1/write;K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true"
+  K6_DEFAULT_ENVIRONMNET_VARIABLES: "K6_PROMETHEUS_RW_PUSH_INTERVAL=10s;K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max;K6_PROMETHEUS_RW_SERVER_URL=${{vars.K6_PROMETHEUS_RW_SERVER_URL_AKS}}"
   RETENTION_IN_DAYS: 1
   K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
@@ -264,7 +264,7 @@ jobs:
         run: npm run build
 
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
@@ -434,7 +434,7 @@ jobs:
           kubelogin-version: 'latest'
 
       - name: AZ Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
@@ -518,7 +518,7 @@ jobs:
 
       - name: AZ Login
         if: steps.conclusion.outputs.workflow_conclusion == 'cancelled' || needs.stop-k6-operator-test.outputs.stop-k6-test-outcome == 'failure'
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           # This is an org-level variable
           tenant-id: ${{ vars.ARM_TENANT_ID }}
