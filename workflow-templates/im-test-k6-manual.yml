@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v23    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v24    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -48,15 +48,22 @@ on:
         required: false
         type: boolean
         default: false # TODO: Set true if you require npm build to run for your k6 bundle to be created
+      output-to-prometheus:
+        description: 'Output to Prometheus: Enable output to Prometheus.'
+        required: false
+        type: boolean
+        default: true
 
 env:
   WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
-  NODE_VERSION: '16.x' # TODO: Set correct node version or delete if not use npm to build tests
+  NODE_VERSION: '20.x' # TODO: Set correct node version or delete if not use npm to build tests
   # InfluxDB addresses -
   # DNS: https://influxdb-v1.mktp.io/loadtesting
   GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>&var-env=${{ inputs.env }}' # TODO: Update product tag
-  K6_DEFAULT_PARAMETERS: '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}' # TODO: Set default k6 parameters specifically replace product and family tags.
-  K6_VERSION: 'v0.45.0'
+  GRAFANA_PROMETHEUS_DASHBOARD_URI: 'https://grafana.mktp.io/d/a3b2aaa8-bb66-4008-a1d8-16c49afedbf0/k6-prometheus?orgId=1&refresh=10s&var-quantile=0.99'
+  K6_DEFAULT_PARAMETERS: "${{ inputs.output-to-prometheus && '--out experimental-prometheus-rw' || '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\"' }} --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}" # TODO: Set default k6 parameters specifically replace product and family tags.
+  K6_PROMETHEUS_PARAMATERS: "-e K6_PROMETHEUS_RW_PUSH_INTERVAL=10s -e K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max -e K6_PROMETHEUS_RW_SERVER_URL=${{vars.K6_PROMETHEUS_RW_SERVER_URL_AKS}}"
+  K6_VERSION: 'v0.51.0' # TODO: Update to the latest k6 version
 
   # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
   # Update to desired version of releases found in https://github.com/im-practices/performance-testing/releases?q=k6&expanded=true
@@ -227,6 +234,6 @@ jobs:
             [
               {
                 "name": "View Grafana Dashboard",
-                "uri": "${{ env.GRAFANA_DASHBOARD_URI }}"
+                "uri": "${{ inputs.output-to-prometheus && env.GRAFANA_PROMETHEUS_DASHBOARD_URI || env.GRAFANA_DASHBOARD_URI }}"
               }
             ]
