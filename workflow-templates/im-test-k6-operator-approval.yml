@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v11   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v12   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -80,7 +80,7 @@ env:
 
   K6_DEFAULT_PARAMETERS: "${{ inputs.output-to-prometheus && '--out experimental-prometheus-rw' || '--out influxdb=https://influxdb-v1.mktp.io/loadtesting' }} --insecure-skip-tls-verify --tag product=SHOP,family=EN,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}" # TODO: Set default k6 parameters specifically replace product and family tags.
   # TODO: Optional add K6_PROMETHEUS_RW_STALE_MARKERS=true when running long load tests.  This variable will make short tests not show up in grafana
-  K6_DEFAULT_ENVIRONMNET_VARIABLES: "K6_PROMETHEUS_RW_PUSH_INTERVAL=10s;K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max;K6_PROMETHEUS_RW_SERVER_URL=${{vars.K6_PROMETHEUS_RW_SERVER_URL_AKS}}"
+  K6_DEFAULT_ENVIRONMNET_VARIABLES: "K6_INFLUX_DB_PUSH_INTERVAL=10s;K6_PROMETHEUS_RW_PUSH_INTERVAL=10s;K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max;K6_PROMETHEUS_RW_SERVER_URL=${{vars.K6_PROMETHEUS_RW_SERVER_URL_AKS}}" # TODO: Set the push interval for output of k6 logs
   RETENTION_IN_DAYS: 1
   K6_CONTAINER_IMAGE: 'perftest/k6:latest' # TODO: Update to k6 image version if using custom binary.  Uncomment reference in Run K6-Operator Test step to use.
 
