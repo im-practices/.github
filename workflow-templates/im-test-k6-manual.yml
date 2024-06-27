@@ -1,4 +1,4 @@
-# Workflow Code: ZestyFlamingo_v24    DO NOT REMOVE
+# Workflow Code: ZestyFlamingo_v25    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run a K6 stress test against the environment and
 #    with the test file the user specifies when they kick it off manually.
@@ -59,10 +59,10 @@ env:
   NODE_VERSION: '20.x' # TODO: Set correct node version or delete if not use npm to build tests
   # InfluxDB addresses -
   # DNS: https://influxdb-v1.mktp.io/loadtesting
-  GRAFANA_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>&var-env=${{ inputs.env }}' # TODO: Update product tag
+  GRAFANA_INFLUXDB_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1&from=now-1h&to=now&var-ProductTag=<your-product-tag>&var-env=${{ inputs.env }}' # TODO: Update product tag
   GRAFANA_PROMETHEUS_DASHBOARD_URI: 'https://grafana.mktp.io/d/a3b2aaa8-bb66-4008-a1d8-16c49afedbf0/k6-prometheus?orgId=1&refresh=10s&var-quantile=0.99'
-  K6_DEFAULT_PARAMETERS: "${{ inputs.output-to-prometheus && '--out experimental-prometheus-rw' || '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\"' }} --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}" # TODO: Set default k6 parameters specifically replace product and family tags.
-  K6_PROMETHEUS_PARAMATERS: "-e K6_PROMETHEUS_RW_PUSH_INTERVAL=10s -e K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max -e K6_PROMETHEUS_RW_SERVER_URL=${{vars.K6_PROMETHEUS_RW_SERVER_URL_AKS}}"
+  K6_DEFAULT_PARAMETERS: "${{ inputs.output-to-prometheus && '--out experimental-prometheus-rw' || '--out influxdb=\"https://influxdb-v1.mktp.io/loadtesting\" -e K6_INFLUX_DB_PUSH_INTERVAL=10s ' }} --insecure-skip-tls-verify --tag NAME=${{ inputs.run-name }},product=<your-product-tag>,family=pf,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}" # TODO: Set default k6 parameters specifically replace product and family tags.
+  K6_PROMETHEUS_PARAMATERS: "-e K6_PROMETHEUS_RW_PUSH_INTERVAL=10s -e K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max -e K6_PROMETHEUS_RW_SERVER_URL=${{vars.K6_PROMETHEUS_RW_SERVER_URL_ACTIONS}}" # TODO: Updated push interval to required seconds
   K6_VERSION: 'v0.51.0' # TODO: Update to the latest k6 version
 
   # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
@@ -190,23 +190,30 @@ jobs:
       - name: Run k6 test
         id: k6-run
         working-directory: ${{env.WORKING_DIRECTORY }}
+        env:
+          K6_COMBINED_PARAMATERS: ${{ env.K6_DEFAULT_PARAMATERS }}${{ inputs.output-to-prometheus && format(' {0}',env.K6_PROMETHEUS_PARAMATERS) || '' }}
         run: |
           k6_args="${{ github.event.inputs.k6-paramaters }}"
 
-          k6_test_file_tag="--tag test=${{ github.event.inputs.test-file }}"
+          k6_test_file_tag="--tag testid=${{ github.event.inputs.test-file }}"
           # Removing slashes from k6_test_file_tag
           k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
 
           k6_params=""
           if [[ -z k6_args ]]; then
-            k6_params="${{ env.K6_DEFAULT_PARAMATERS }} $k6_test_file_tag"
+            k6_params="$${{ env.K6_COMBINED_PARAMATERS }} $k6_test_file_tag"
           else
-            k6_params="${{ env.K6_DEFAULT_PARAMATERS }} $k6_args $k6_test_file_tag"
+            k6_params="${{ env.K6_COMBINED_PARAMATERS }} $k6_args $k6_test_file_tag"
           fi
 
           echo "K6 Parmaters passing in:"
           echo $k6_params
-          echo "::notice file=k6.params,line=1,col=1,endColumn=1::$k6_params"
+          echo $'
+          ## K6 Paramaters
+          | Name                  | Value                    |
+          | ---                   |  ---                     |
+          | K6 Combined Paramaters| `${{env.K6_COMBINED_PARAMATERS}}` |
+          | Test ID               | `$k6_test_file_tag` |' >> $GITHUB_STEP_SUMMARY
 
           # Running the test
           k6 run ${{ github.event.inputs.test-file }} $k6_params
@@ -234,6 +241,6 @@ jobs:
             [
               {
                 "name": "View Grafana Dashboard",
-                "uri": "${{ inputs.output-to-prometheus && env.GRAFANA_PROMETHEUS_DASHBOARD_URI || env.GRAFANA_DASHBOARD_URI }}"
+                "uri": "${{ inputs.output-to-prometheus && env.GRAFANA_PROMETHEUS_DASHBOARD_URI || env.GRAFANA_INFLUXDB_DASHBOARD_URI }}"
               }
             ]

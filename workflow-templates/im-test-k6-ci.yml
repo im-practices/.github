@@ -1,4 +1,4 @@
-# Workflow Code: TroubledJaguar_v6    DO NOT REMOVE
+# Workflow Code: TroubledJaguar_v7    DO NOT REMOVE
 # Purpose:
 #    Uses a container to run K6 with the file specified in
 #    the workflow when commits are pushed to the main branch.
@@ -26,11 +26,9 @@ env:
   K6_VERSION: 'v0.45.0' # TODO: Set version of k6. IE. 0.38.3
   TEST_FILE: '' # TODO: Add test file to run.
 
-  # InfluxDB addresses -
-  # DNS: https://influxdb-v1.mktp.io/loadtesting
-  # Alternatively you can use IPs if the dns doesn't resolve.
-  # IPS: https://10.206.234.23/loadtesting or https://10.206.234.22/loadtesting  or https://10.206.234.21/loadtesting
-  K6_DEFAULT_PARAMATERS: '--out influxdb=https://influxdb-v1.mktp.io/loadtesting --insecure-skip-tls-verify --tag NAME=K6-CI-Test,product=<your-product-tag>,family=pf,env=dev -e RUN_ENV=dev' # TODO: Set default k6 parameters. Update product and family tag
+  K6_DEFAULT_PARAMATERS: '--insecure-skip-tls-verify --tag NAME=K6-CI-Test,product=<your-product-tag>,family=pf,env=dev -e RUN_ENV=dev' # TODO: Set default k6 parameters. Update product and family tag
+  K6_INFLUX_DB_PARAMATERS: "-e K6_INFLUX_DB_PUSH_INTERVAL=10s --out influxdb=https://influxdb-v1.mktp.io/loadtesting"
+  K6_PROMETHEUS_PARAMATERS: "-e K6_PROMETHEUS_RW_PUSH_INTERVAL=10s -e K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max -e K6_PROMETHEUS_RW_SERVER_URL=${{vars.K6_PROMETHEUS_RW_SERVER_URL_ACTIONS}} --out experimental-prometheus-rw"
 
   # TODO: Uncomment if you are using custom k6 binary with k6 extensions installed
   # Update to desired version of releases found in https://github.com/im-practices/performance-testing/releases?q=k6&expanded=true
@@ -98,23 +96,25 @@ jobs:
 
       - name: Run k6 test
         working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          # K6_COMBINED_PARAMATERS: ${{ env.K6_DEFAULT_PARAMATERS }} ${{ env.K6_INFLUX_DB_PARAMATERS }} # TODO: Uncomment if using influxdb output
+          # K6_COMBINED_PARAMATERS: ${{ env.K6_DEFAULT_PARAMATERS }} ${{ env.K6_PROMETHEUS_PARAMATERS }} # TODO: Uncomment if using prometheus output 
         run: |
-          k6_args="${{ env.K6_PARAMATERS }}"
-
-          k6_test_file_tag="--tag test=${{ env.TEST_FILE }}"
+          k6_test_file_tag="--tag testid=${{ env.TEST_FILE }}"
           # Removing slashes from k6_test_file_tag
           k6_test_file_tag=$(echo $k6_test_file_tag  | tr '/' '-')
 
           k6_params=""
-          if [[ -z k6_args ]]; then
-            k6_params="${{ env.K6_DEFAULT_PARAMATERS }} $k6_test_file_tag"
-          else
-            k6_params="${{ env.K6_DEFAULT_PARAMATERS }} $k6_args $k6_test_file_tag"
-          fi
+          k6_params="${{ env.K6_COMBINED_PARAMATERS }} $k6_test_file_tag"
 
           echo "K6 Parmaters passing in:"
           echo $k6_params
-          echo "::notice file=k6.params,line=1,col=1,endColumn=1::$k6_params"
+          echo $'
+          ## K6 Paramaters
+          | Name                  | Value                    |
+          | ---                   |  ---                     |
+          | K6 Combined Paramaters| `${{env.K6_COMBINED_PARAMATERS}}` |
+          | Test ID               | `$k6_test_file_tag` |' >> $GITHUB_STEP_SUMMARY
 
           # Running the test
           k6 run ${{ env.TEST_FILE }} $k6_params
