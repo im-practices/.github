@@ -202,7 +202,7 @@ jobs:
         if: env.IS_MERGE_TO_MAIN == 'true'
         uses: im-open/delete-branch-package-versions@v3.1
         with:
-          github-token: ${{ secrets.GH_PACKAGES_TOKEN }} # This is a special org-level secret that needs to be authorized for this repo
+          github-token: ${{ secrets.GITHUB_TOKEN }} # This is a special org-level secret that needs to be authorized for this repo
           organization: ${{ github.repository_owner }}
           branch-name: ${{ github.head_ref }}
           package-type: 'nuget'
