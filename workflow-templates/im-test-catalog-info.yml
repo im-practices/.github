@@ -25,12 +25,11 @@ jobs:
       # If the trigger is pull_request, consider adding this reusable job to the CI workflow
       add-pr-comment: false
 
-      # Any of these items can be changed from their defaults if necessary
+      # These items can be changed from their defaults if necessary
       # runs-on: im-linux
-      # filename: catalog-info.yml  # Most repos should have this as their catalog-info.yml filename
+      # filename: catalog-info.yml  # Most repos should have this as their catalog info filename
 
       # This workflow is dedicated to validating catalog-info.yml so it is best
       # to leave these items as their default values
-      # only-validate-if-file-changed: false
       # have-validation-step-generate-job-summary: true  # Adds a job summary with all validation errors to workflow summary tab but can be disabled
       # fail-validation-step-if-errors: true             # Can be set to false so this job does not fail if there are any validation errors

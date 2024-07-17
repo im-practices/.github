@@ -11,7 +11,6 @@
 #      runs-on: im-linux
 #      filename: catalog-info.yml
 #      add-pr-comment: true
-#      only-validate-if-file-changed: true
 #      fail-validation-step-if-errors: true
 #      have-validation-step-generate-job-summary: true
 
@@ -38,16 +37,6 @@ on:
         type: boolean
         required: false
         default: true
-      only-validate-if-file-changed:
-        description: |
-          THIS ONLY APPLIES IF THE TRIGGER IS PULL_REQUEST OR PULL.
-          Flag indicating whether the validation should happen on every run or just if the catalog-info.yml file changed.
-          This is set to false by default, so validation will happen on every run.
-          If the trigger is workflow_dispatch or schedule, false is an appropriate choice because validation should always run.
-          For a trigger like pull_request you may want to set this to true so validation only happens if the file changed.
-        type: boolean
-        required: false
-        default: false
       fail-validation-step-if-errors:
         description: Flag indicating whether the validate-catalog-info action should fail if the catalog-info.yml file contains validation errors.
         type: boolean
@@ -64,7 +53,6 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     env:
       ADD_PR_COMMENT: ${{ github.event_name == 'pull_request' && inputs.add-pr-comment == true }}
-      CONTINUE_WITH_VALIDATION: '' # Set in a step
 
     steps:
       - name: Print inputs & variables
@@ -86,7 +74,6 @@ jobs:
             printInput('runs-on', '${{ inputs.runs-on }}');
             printInput('filename', '${{ inputs.filename }}');
             printInput('add-pr-comment', '${{ inputs.add-pr-comment }}');
-            printInput('only-validate-if-file-changed', '${{ inputs.only-validate-if-file-changed }}');
             printInput('fail-validation-step-if-errors', '${{ inputs.fail-validation-step-if-errors }}');
             printInput('have-validation-step-generate-job-summary', '${{ inputs.have-validation-step-generate-job-summary }}');
 
@@ -96,61 +83,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Determine if ${{ inputs.filename }} changed
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
-        id: catalog-info-changed
-        uses: im-open/identify-changes-action@v1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          patterns: |
-            {
-              "catalog-info": "${{ inputs.filename }}"
-            }
-
-      - name: Determine whether to validate ${{ inputs.filename }} or not
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const eventName = '${{ github.event_name }}';
-            const filename = '${{ inputs.filename }}';
-            const onlyValidateIfChanged = ${{ inputs.only-validate-if-file-changed }};
-            const catalogInfoChanged = ${{ steps.catalog-info-changed.outputs.result }};
-            const applicableEvents = ['push', 'pull_request'];
-
-            let continueWithValidation;
-
-            if (applicableEvents.includes(eventName)){
-              if (onlyValidateIfChanged){
-                if (catalogInfoChanged){
-                  core.info(`Validate ${filename} -  only-validate-if-file-changed=true and the file changed.`);
-                  continueWithValidation = true;
-                } else {
-                  core.info(`Do not validate ${filename} - only-validate-if-file-changed=true but the file did not change.`);
-                  continueWithValidation = false;
-                }
-              } else {
-                core.info(`Validate ${filename} - only-validate-if-file-changed=false so validation should always occur.`);
-                continueWithValidation = true;
-              }
-            }
-            else {
-              core.info(`Validate ${filename} - The event '${eventName}' is not push or pull_request so validation should always occur.`);
-              continueWithValidation = true;
-            }
-
-            core.exportVariable('CONTINUE_WITH_VALIDATION', continueWithValidation);
-
-      - name: If applicable, validate ${{ inputs.filename }}
+      - name: Validate ${{ inputs.filename }}
         uses: im-open/validate-catalog-info@v1
-        if: env.CONTINUE_WITH_VALIDATION == 'true'
         id: validate
         with:
           filename: ${{ inputs.filename }}
           fail-if-errors: ${{ inputs.fail-validation-step-if-errors }}
           generate-job-summary: ${{ inputs.have-validation-step-generate-job-summary }}
 
-      - name: If pull_request, add-pr-comment=true, and validation failed comment on PR with errors
-        if: always() && env.CONTINUE_WITH_VALIDATION == 'true' && env.ADD_PR_COMMENT == 'true' && steps.validate.outputs.is-valid != 'true'
+      - name: If event is pull_request, add-pr-comment is true, and validation has failed then comment on PR with errors
+        if: always() && env.ADD_PR_COMMENT == 'true' && steps.validate.outputs.is-valid != 'true'
         continue-on-error: true
         uses: im-open/update-pr-comment@v1.2
         with:
