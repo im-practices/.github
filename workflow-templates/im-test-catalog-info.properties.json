@@ -1,0 +1,5 @@
+{
+  "name": "Test - Catalog Info",
+  "description": "Workflow template for validating the contents of catalog-info.yml",
+  "iconName": "im_test"
+}

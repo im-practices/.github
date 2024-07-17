@@ -1,0 +1,159 @@
+# The purpose of this reusable job is to validate the catalog-info.yml file
+# by optionally checking if the file changed in the PR, checking out the repo,
+# validating the catalog-info.yml file using im-open/validate-catalog-info-file
+# and optionally updating the PR comment with the validation results.
+
+# Example Usage in a repo's workflow:
+# jobs:
+#  validate-catalog-info:
+#    uses: im-practices/.github/.github/workflows/im-reusable-validate-catalog-info.yml@v3
+#    with:
+#      runs-on: im-linux
+#      filename: catalog-info.yml
+#      add-pr-comment: true
+#      only-validate-if-file-changed: true
+#      fail-validation-step-if-errors: true
+#      have-validation-step-generate-job-summary: true
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: 'The runner that this workflow will run on.'
+        type: string
+        required: false
+        default: 'im-linux'
+      filename:
+        description: |
+          The name of the catalog info file that contains TechHub entities.
+          For most cases this will be catalog-info.yml.
+        type: string
+        required: false
+        default: 'catalog-info.yml'
+      add-pr-comment:
+        description: |
+          THIS ONLY APPLIES IF THE TRIGGER IS PULL_REQUEST.
+          Flag indicating whether a PR comment should be made with the validation results.
+          By default this is true so a PR comment will be made each time the workflow runs.
+        type: boolean
+        required: false
+        default: true
+      only-validate-if-file-changed:
+        description: |
+          THIS ONLY APPLIES IF THE TRIGGER IS PULL_REQUEST OR PULL.
+          Flag indicating whether the validation should happen on every run or just if the catalog-info.yml file changed.
+          This is set to false by default, so validation will happen on every run.
+          If the trigger is workflow_dispatch or schedule, false is an appropriate choice because validation should always run.
+          For a trigger like pull_request you may want to set this to true so validation only happens if the file changed.
+        type: boolean
+        required: false
+        default: false
+      fail-validation-step-if-errors:
+        description: Flag indicating whether the validate-catalog-info action should fail if the catalog-info.yml file contains validation errors.
+        type: boolean
+        required: false
+        default: true
+      have-validation-step-generate-job-summary:
+        description: Flag indicating whether the validate-catalog-info action should add a job summary to the workflow run or not.
+        type: boolean
+        required: false
+        default: true
+
+jobs:
+  validate-catalog-info:
+    runs-on: ${{ inputs.runs-on }}
+    env:
+      ADD_PR_COMMENT: ${{ github.event_name == 'pull_request' && inputs.add-pr-comment == true }}
+      CONTINUE_WITH_VALIDATION: '' # Set in a step
+
+    steps:
+      - name: Print inputs & variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            function printInput(inputName, inputValue, isMultilineInput){
+               if (!inputValue || inputValue.trim().length === 0){
+                core.info(`${inputName}: Not Provided`);
+              } else if (isMultilineInput){
+                console.log(`\n${inputName}:\n${inputValue}`);
+              }
+              else {
+                core.info(`${inputName}: ${inputValue}`);
+              }
+            }
+
+            core.info('Inputs');
+            printInput('runs-on', '${{ inputs.runs-on }}');
+            printInput('filename', '${{ inputs.filename }}');
+            printInput('add-pr-comment', '${{ inputs.add-pr-comment }}');
+            printInput('only-validate-if-file-changed', '${{ inputs.only-validate-if-file-changed }}');
+            printInput('fail-validation-step-if-errors', '${{ inputs.fail-validation-step-if-errors }}');
+            printInput('have-validation-step-generate-job-summary', '${{ inputs.have-validation-step-generate-job-summary }}');
+
+            core.info('Context Data');
+            printInput('GitHub Event', '${{ github.event_name }}');
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Determine if ${{ inputs.filename }} changed
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+        id: catalog-info-changed
+        uses: im-open/identify-changes-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          patterns: |
+            {
+              "catalog-info": "${{ inputs.filename }}"
+            }
+
+      - name: Determine whether to validate ${{ inputs.filename }} or not
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const eventName = '${{ github.event_name }}';
+            const filename = '${{ inputs.filename }}';
+            const onlyValidateIfChanged = ${{ inputs.only-validate-if-file-changed }};
+            const catalogInfoChanged = ${{ steps.catalog-info-changed.outputs.result }};
+            const applicableEvents = ['push', 'pull_request'];
+
+            let continueWithValidation;
+
+            if (applicableEvents.includes(eventName)){
+              if (onlyValidateIfChanged){
+                if (catalogInfoChanged){
+                  core.info(`Validate ${filename} -  only-validate-if-file-changed=true and the file changed.`);
+                  continueWithValidation = true;
+                } else {
+                  core.info(`Do not validate ${filename} - only-validate-if-file-changed=true but the file did not change.`);
+                  continueWithValidation = false;
+                }
+              } else {
+                core.info(`Validate ${filename} - only-validate-if-file-changed=false so validation should always occur.`);
+                continueWithValidation = true;
+              }
+            }
+            else {
+              core.info(`Validate ${filename} - The event '${eventName}' is not push or pull_request so validation should always occur.`);
+              continueWithValidation = true;
+            }
+
+            core.exportVariable('CONTINUE_WITH_VALIDATION', continueWithValidation);
+
+      - name: If applicable, validate ${{ inputs.filename }}
+        uses: im-open/validate-catalog-info@v1
+        if: env.CONTINUE_WITH_VALIDATION == 'true'
+        id: validate
+        with:
+          filename: ${{ inputs.filename }}
+          fail-if-errors: ${{ inputs.fail-validation-step-if-errors }}
+          generate-job-summary: ${{ inputs.have-validation-step-generate-job-summary }}
+
+      - name: If pull_request, add-pr-comment=true, and validation failed comment on PR with errors
+        if: always() && env.CONTINUE_WITH_VALIDATION == 'true' && env.ADD_PR_COMMENT == 'true' && steps.validate.outputs.is-valid != 'true'
+        continue-on-error: true
+        uses: im-open/update-pr-comment@v1.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          comment-identifier: catalog-info-errors
+          comment-content: ${{ steps.validate.outputs.errors-markdown }}
