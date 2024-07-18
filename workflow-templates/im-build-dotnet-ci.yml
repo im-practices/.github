@@ -1,4 +1,4 @@
-# Workflow Code: LoathsomeSnipe_v55    DO NOT REMOVE
+# Workflow Code: LoathsomeSnipe_v56    DO NOT REMOVE
 # Purpose:
 #    Automatically checks out the code, builds, run tests and creates artifacts
 #    which are uploaded to a GH release when commits are pushed to a PR. In the
@@ -61,6 +61,17 @@ jobs:
       # workflow-summary : | # TODO:  If desired, the workflow summary that is generated can be overridden by providing this custom value.
 
   # TODO:  Remove this job and references to this job if the project does not use npm
+  
+  validate-catalog-info:
+    uses: im-practices/.github/.github/workflows/im-reusable-validate-catalog-info.yml@v3
+    with:
+      # Any of these items can be changed from their default values
+      # runs-on: im-linux
+      # filename: catalog-info.yml
+      # add-pr-comment: true                             # Creates a PR comment if there are any validation errors
+      # fail-validation-step-if-errors: true             # Can be set to false so this job does not fail if there are any validation errors
+      # have-validation-step-generate-job-summary: true  # Adds a job summary with all validation errors to workflow summary tab but can be disabled
+
   npm-cache:
     runs-on: im-linux
     needs: [setup-build-workflow]
@@ -600,7 +611,7 @@ jobs:
   #   3 - Check for workflow failures
   finish-build:
     if: always() && needs.setup-build-workflow.outputs.CONTINUE_WORKFLOW == 'true'
-    needs: [setup-build-workflow, dotnet-test, jest]
+    needs: [setup-build-workflow, validate-catalog-info, dotnet-test, jest, build-deployment-artifacts]
     uses: im-practices/.github/.github/workflows/im-reusable-finish-build-workflow.yml@v3
     with:
       next-version: ${{ needs.setup-build-workflow.outputs.NEXT_VERSION }}

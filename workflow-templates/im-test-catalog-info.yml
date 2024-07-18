@@ -1,0 +1,35 @@
+# Workflow Code: SnappyBeagle_v1    DO NOT REMOVE
+# Purpose:
+#    Runs the reusable workflow to validate the contents
+#    of a repo's catalog-info.yml file
+#
+# Frequency:
+#    - This workflow should only occur once in a repository
+#
+# Projects to use this Template with:
+#    -  Any repo with a catalog-info.yml file
+#
+
+name: Validate catalog-info.yml
+
+on:
+  schedule:
+    - cron: '26 7 * * 3' # Every Thursday at 07:26
+  workflow_dispatch:
+
+jobs:
+  validate-catalog-info:
+    uses: im-practices/.github/.github/workflows/im-reusable-validate-catalog-info.yml@v3
+    with:
+      # The trigger will likely not be pull_request, so a comment is unnecessary
+      # If the trigger is pull_request, consider adding this reusable job to the CI workflow
+      add-pr-comment: false
+
+      # These items can be changed from their defaults if necessary
+      # runs-on: im-linux
+      # filename: catalog-info.yml  # Most repos should have this as their catalog info filename
+
+      # This workflow is dedicated to validating catalog-info.yml so it is best
+      # to leave these items as their default values
+      # have-validation-step-generate-job-summary: true  # Adds a job summary with all validation errors to workflow summary tab but can be disabled
+      # fail-validation-step-if-errors: true             # Can be set to false so this job does not fail if there are any validation errors
