@@ -1,4 +1,4 @@
-# Workflow Code: SurprisedHedgehog_v21    DO NOT REMOVE
+# Workflow Code: SurprisedHedgehog_v22    DO NOT REMOVE
 # Purpose:
 #    Runs the Cypress script specified in the workflow when commits
 #    are pushed to the PR or when someone kicks it off manually.
@@ -51,7 +51,7 @@ env:
 
 jobs:
   run-cypress:
-    runs-on: [self-hosted, windows-2019]
+    runs-on: im-windows-sql-server
 
     defaults:
       run:

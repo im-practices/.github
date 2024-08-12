@@ -1,4 +1,4 @@
-# Workflow Code: FuzzyDragon_v48    DO NOT REMOVE
+# Workflow Code: FuzzyDragon_v49    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified environments,
@@ -218,7 +218,7 @@ jobs:
 
   deploy-site-to-machine:
     needs: [set-vars, stakeholder-approval, attestor-approval]
-    runs-on: [self-hosted, windows-2019] # In order to use WinRM this must remain as a windows runner
+    runs-on: im-windows # In order to use WinRM this must remain as a windows runner
     environment: ${{ inputs.environment }} # Use inputs context because env context is not available to 'environment:'
 
     strategy:
