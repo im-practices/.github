@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v29    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v30    DO NOT REMOVE
 # Purpose:
 #    Destroys the resources created by a terraform configuration when someone kicks it off manually.
 #
@@ -98,7 +98,7 @@ jobs:
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
         id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.1
+        uses: im-open/set-environment-variables-by-scope@v1.2
         with:
           scope: ${{ inputs.root-module }}
           create-output-variables: true
@@ -168,7 +168,7 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.1
+        uses: im-open/setup-deploy-keys@v1.2
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
@@ -281,7 +281,7 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.1
+        uses: im-open/setup-deploy-keys@v1.2
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 

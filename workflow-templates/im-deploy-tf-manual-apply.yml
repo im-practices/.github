@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v50    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v51    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -97,7 +97,7 @@ jobs:
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
         id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.1
+        uses: im-open/set-environment-variables-by-scope@v1.2
         with:
           scope: ${{ inputs.root-module }}
           create-output-variables: true
@@ -179,7 +179,7 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.1
+        uses: im-open/setup-deploy-keys@v1.2
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 
@@ -302,7 +302,7 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.1
+        uses: im-open/setup-deploy-keys@v1.2
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 

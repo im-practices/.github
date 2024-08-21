@@ -1,4 +1,4 @@
-# Workflow Code: BetrayedCod_v36    DO NOT REMOVE
+# Workflow Code: BetrayedCod_v37    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures
 #    tags are valid for production deployments and runs the migrations against
@@ -101,7 +101,7 @@ jobs:
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
         id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.1
+        uses: im-open/set-environment-variables-by-scope@v1.2
         with:
           scope: ${{ inputs.environment-or-target }}
           create-output-variables: true
@@ -186,7 +186,7 @@ jobs:
           client-id: ${{ vars.ARM_CLIENT_ID }}
 
       - name: Setup Flyway
-        uses: im-open/setup-flyway@v1.1
+        uses: im-open/setup-flyway@v1.3
         with:
           version: 7.9.2
 
@@ -195,7 +195,7 @@ jobs:
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Database Vars
         id: db-vars
-        uses: im-open/set-environment-variables-by-scope@v1.1
+        uses: im-open/set-environment-variables-by-scope@v1.2
         with:
           scope: ${{ inputs.environment-or-target }}
           create-output-variables: true

@@ -1,4 +1,4 @@
-# Workflow Code: EmpatheticDolphin_v19    DO NOT REMOVE
+# Workflow Code: EmpatheticDolphin_v20    DO NOT REMOVE
 # Purpose:
 #    Creates an ad hoc app insights annotation for a specified
 #    environment when someone kicks it off manually.
@@ -70,7 +70,7 @@ jobs:
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
         id: set-variables
-        uses: im-open/set-environment-variables-by-scope@v1.1
+        uses: im-open/set-environment-variables-by-scope@v1.2
         with:
           scope: ${{ github.event.inputs.environment }}
         env:

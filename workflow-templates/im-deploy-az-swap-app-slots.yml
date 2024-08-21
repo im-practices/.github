@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v22    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v23    DO NOT REMOVE
 # Purpose:
 #    Swaps deployment slots in a specified environment for an Azure App Service
 #    or Function outside of a deployment when someone kicks it off manually.
@@ -75,7 +75,7 @@ jobs:
       # For more information and best practices on the usage and options available
       # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
       - name: Set Variables
-        uses: im-open/set-environment-variables-by-scope@v1.1
+        uses: im-open/set-environment-variables-by-scope@v1.2
         with:
           scope: ${{ env.ENVIRONMENT }}
         env:

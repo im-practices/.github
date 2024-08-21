@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v21    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v22    DO NOT REMOVE
 # Purpose:
 #    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
@@ -65,7 +65,7 @@ jobs:
           ref: ${{ env.GITHUB_REF }}
 
       - name: Install Flyway
-        uses: im-open/setup-flyway@v1.1
+        uses: im-open/setup-flyway@v1.3
         with:
           version: 7.9.2
 
@@ -89,7 +89,7 @@ jobs:
       # TODO: Use this for any variables that change per environment
       - name: Set Database Vars
         id: db-vars
-        uses: im-open/set-environment-variables-by-scope@v1.1
+        uses: im-open/set-environment-variables-by-scope@v1.2
         with:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true
