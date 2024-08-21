@@ -1,4 +1,4 @@
-# Workflow Code: AmbitiousLizard_v52    DO NOT REMOVE
+# Workflow Code: AmbitiousLizard_v53    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release
 #    with the specified tags, makes changes to any configuration files for the specified
@@ -219,6 +219,7 @@ jobs:
       UNZIPPED_ASSET: 'published_app' # TODO: If you have multiple deployables, this name is probably different and you need to update the value.
       DEPLOY_ZIP: 'deploy.zip' # TODO: remove if this workflow is for an azure function
       AZ_APP_TYPE: 'webapp' # TODO: If this workflow is for an azure function, change this value to functionapp
+      AZ_APP_NAME: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
 
     steps:
       - name: Download artifacts from release
@@ -329,18 +330,18 @@ jobs:
       # - name: Create a deployment slot
       #   run: |
       #     az ${{ env.AZ_APP_TYPE }} deployment slot create \
-      #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
+      #     --name ${{ env.AZ_APP_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #     --subscription ${{ vars.ARM_SUBSCRIPTION_ID }} \
-      #     --configuration-source ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+      #     --configuration-source ${{ env.AZ_APP_NAME }}
 
       # TODO: Uncomment if you use User Managed Identity in your app service.
       # - name: Assign MSI to slot
       #   if: steps.create-slot.outcome == 'success'
       #   run: |
       #     az webapp identity assign \
-      #       --name ${{ needs.set-vars.outputs.AZ_APP_NAME }} \
+      #       --name ${{ env.AZ_APP_NAME }} \
       #       --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #       --slot ${{ env.AZ_SLOT_NAME }} \
       #       --identities /subscriptions/${{ vars.ARM_SUBSCRIPTION_ID }}/resourcegroups/${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${{ needs.set-vars.outputs.AZ_APP_MSI }}
@@ -350,7 +351,7 @@ jobs:
       #   if: steps.create-slot.outcome == 'success'
       #   run: |
       #     az webapp vnet-integration add \
-      #       --name ${{ needs.set-vars.outputs.AZ_APP_NAME }} \
+      #       --name ${{ env.AZ_APP_NAME }} \
       #       --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
       #       --vnet ${{ needs.set-vars.outputs.VNET }} \
       #       --subnet ${{ needs.set-vars.outputs.SUBNET }} \
@@ -360,7 +361,7 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+          app-name: ${{ env.AZ_APP_NAME }}
           package: ./${{ env.DEPLOY_ZIP }}
           slot-name: ${{ env.AZ_SLOT_NAME }} # TODO: Delete if not using slots
 
@@ -368,7 +369,7 @@ jobs:
       - name: Deploy to Azure Function
         uses: azure/functions-action@v1
         with:
-          app-name: ${{ needs.set-vars.outputs.AZ_APP_NAME }}
+          app-name: ${{ env.AZ_APP_NAME }}
           package: ./${{ env.UNZIPPED_ASSET }}
           slot-name: ${{ env.AZ_SLOT_NAME }} # TODO: Delete if not using slots
 
@@ -379,7 +380,7 @@ jobs:
       #     az ${{ env.AZ_APP_TYPE }} deployment slot swap \
       #     --subscription ${{ vars.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }} \
-      #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
+      #     --name ${{ env.AZ_APP_NAME }}  \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
       #     --target-slot ${{ env.TARGET_SLOT }}
 
@@ -388,7 +389,7 @@ jobs:
       # - run: |
       #     az ${{ env.AZ_APP_TYPE }} deployment slot delete \
       #     --slot ${{ env.AZ_SLOT_NAME }} \
-      #     --name ${{ needs.set-vars.outputs.AZ_APP_NAME }}  \
+      #     --name ${{ env.AZ_APP_NAME }}  \
       #     --subscription ${{ vars.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}
 
@@ -406,16 +407,22 @@ jobs:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
           maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
-      # TODO: Delete the following step if not using app insights
       - name: Annotate App Insights
         uses: im-open/create-app-insights-annotation@v1.0
         with:
           subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
           resourceGroupName: ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}
           appInsightsResourceName: '${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}'
-          releaseName: '${{ needs.set-vars.outputs.AZ_APP_NAME }}-${{ env.RELEASE_TAG }}'
+          releaseName: '${{ env.AZ_APP_NAME }}-${{ env.RELEASE_TAG }}'
           category: 'Deployment'
-          customMetadata: 'ProjectName=${{ needs.set-vars.outputs.AZ_APP_NAME }},DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
+          customMetadata: 'ProjectName=${{ env.AZ_APP_NAME }},DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
+
+      - name: Send Deployment Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Deployment] ${{ inputs.tag }} deployed to ${{ inputs.environment-or-target }} ${{ env.AZ_APP_NAME }} (${{ job.status }})'
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'

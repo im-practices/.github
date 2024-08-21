@@ -1,4 +1,4 @@
-# Workflow Code: IrritableEagle_v39    DO NOT REMOVE
+# Workflow Code: IrritableEagle_v40    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform apply -auto-approve with the changes
 #    in the PR against the dev environment when a PR is merged to main.
@@ -41,6 +41,8 @@ env:
   TF_IN_AUTOMATION: 'true'
   TF_VERSION: '~>1.4.0' #TODO:  Verify your version of terraform.
   TF_WORKING_DIR: './infrastructure/dev' # TODO: Verify this directory is correct for your repository (older projects may not be inside of an infrastructure folder)
+  RESOURCE_GROUP: '' # TODO: Populate this value 
+  APP_INSIGHTS_NAME: '' # TODO: Populate this value
   # The following SSH_* secrets are org-level secrets
   SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
   SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
@@ -55,9 +57,7 @@ env:
 jobs:
   auto-apply-tf:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' # TODO: verify default branch name
-
     runs-on: im-linux
-
     environment: 'Dev'
 
     defaults:
@@ -110,6 +110,7 @@ jobs:
       # TODO: Remove the pagerduty token if not configuring pagerduty.  If using pagerduty verify 'pagerduty_token' is the name of the variable that tf expects
       # TODO: Add any other secrets that would be required for a tf plan to succeed.  Since this is a multi-line command every line except the last will need a \ on the end of it
       # PAGERDUTY_API_KEY is an org-level secret
+      
       - name: Terraform Apply
         run: |
           terraform apply -auto-approve -lock-timeout=90s \
@@ -138,7 +139,23 @@ jobs:
               { "name": "Actor", "value": "${{ github.actor }}" }
             ]
 
-        # Only run this step if TechHub metadata.name value is passed in
+      - name: Annotate App Insights
+        uses: im-open/create-app-insights-annotation@v1.0
+        with:
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
+          releaseName: 'Infrastructure.main'
+          category: 'Deployment'
+          customMetadata: 'ProjectName=Infrastructure,DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
+
+      - name: Send Deployment Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Deployment] Terraform@main deployed to ${{ env.RESOURCE_GROUP }} (${{ job.status }})'
+
       - name: Create GitHub Deployment
         if: always()
         uses: im-open/create-github-deployment@v1.0

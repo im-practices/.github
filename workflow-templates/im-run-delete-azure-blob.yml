@@ -1,4 +1,4 @@
-# Workflow Code: ScornfulFlamingo_v8   DO NOT REMOVE
+# Workflow Code: ScornfulFlamingo_v9   DO NOT REMOVE
 # Purpose:
 #    Deletes a blob from a specified Azure Storage Account when someone kicks it off manually.
 #
@@ -71,6 +71,28 @@ jobs:
           subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
           client-id: ${{ vars.ARM_CLIENT_ID }}
 
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
+      - name: Set Variables
+        id: set-variables
+        uses: im-open/set-environment-variables-by-scope@v1.2
+        with:
+          scope: ${{ inputs.environment }}
+        env:
+          # TODO: For the following inputs, fill in the value if you have the environment or delete the environment if it does not exist
+          RESOURCE_GROUP@dev: ''
+          RESOURCE_GROUP@qa: ''
+          RESOURCE_GROUP@stage: ''
+          RESOURCE_GROUP@demo: ''
+          RESOURCE_GROUP@uat: ''
+          RESOURCE_GROUP@prod: ''
+          APP_INSIGHTS_NAME@dev: ''
+          APP_INSIGHTS_NAME@qa: ''
+          APP_INSIGHTS_NAME@stage: ''
+          APP_INSIGHTS_NAME@demo: ''
+          APP_INSIGHTS_NAME@uat: ''
+          APP_INSIGHTS_NAME@prod: ''
+
       # This call uses RBAC (--auth-mode login) to delete files from the azure storage account.
       # No other key or connection string is needed. In order to delete files from a stg account
       # the SP that authenticates in the step above needs an additional permission (Storage
@@ -83,6 +105,22 @@ jobs:
             --account-name '${{ github.event.inputs.storage-account-name }}' \
             --container-name '${{ github.event.inputs.container-name }}' \
             --name '${{ github.event.inputs.blob-name }}'
+
+      - name: Annotate App Insights
+        uses: im-open/create-app-insights-annotation@v1.0
+        with:
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
+          category: 'Runbook'
+          customMetadata: 'Action=DeleteAzBlob,Blob=${{ inputs.blob-name }},Container=${{ inputs.container-name }},StorageAccount=${{ inputs.storage-account-name }},RunBy=${{ github.actor }},RunID=${{ github.run_id }}'
+
+      - name: Send Delete Blob Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Runbook] ${{ inputs.container-name }}/${{ inputs.blob-name }} deleted from ${{ inputs.storage-account-name }} (${{ job.status }})'
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'

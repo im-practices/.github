@@ -1,4 +1,4 @@
-# Workflow Code: BetrayedCod_v37    DO NOT REMOVE
+# Workflow Code: BetrayedCod_v38    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures
 #    tags are valid for production deployments and runs the migrations against
@@ -256,6 +256,13 @@ jobs:
           releaseName: '${{ needs.set-vars.outputs.APP_INSIGHTS_ANNOTATION }}'
           category: 'Deployment'
           customMetadata: 'ProjectName=${{ needs.set-vars.outputs.APP_INSIGHTS_ANNOTATION }},DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
+
+      - name: Send Deployment Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Deployment] ${{ env.RELEASE_TAG }} deployed to ${{ inputs.environment-or-target }} ${{ env.DB_NAME }} (${{ job.status }})'
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'
