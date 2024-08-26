@@ -1,4 +1,4 @@
-# Workflow Code: DeterminedPorcupine_v25    DO NOT REMOVE
+# Workflow Code: DeterminedPorcupine_v26    DO NOT REMOVE
 # Purpose:
 #    Automatically runs a terraform plan against the specified environments and
 #    comments on the PR with the expected changes when commits are pushed to a PR.
@@ -30,6 +30,9 @@ permissions:
 jobs:
   auto-plan-the-tf:
     runs-on: im-linux
+    # runs-on: # TODO: Delete if you don't deploy to Managed SQL Server
+      # labels: im-linux
+      # group: dynamic-runners # TODO: Uncomment if you are deploying to Managed SQL Server as it requires a region specific runner
 
     strategy:
       matrix:

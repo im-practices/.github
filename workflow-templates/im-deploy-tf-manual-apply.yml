@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v50    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v51    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -91,6 +91,7 @@ jobs:
       STORAGE_ACCOUNT: ${{ steps.set-variables.outputs.STORAGE_ACCOUNT }}
       # APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }} # TODO: Uncomment to Annotate in AppInsights
       GITHUB_SECRETS_ENVIRONMENT: ${{ steps.set-variables.outputs.GITHUB_SECRETS_ENVIRONMENT }}
+      # RUNS_ON_GROUP: ${{ steps.set-variables.outputs.RUNS_ON_GROUP }} # TODO: Uncomment if you are deploying to Managed SQL Server as it requires a region specific runner
 
     steps:
       # For more information and best practices on the usage and options available
@@ -145,6 +146,9 @@ jobs:
           GITHUB_SECRETS_ENVIRONMENT@stage-secondary: 'stage'
           GITHUB_SECRETS_ENVIRONMENT@prod-secondary: 'prod'
 
+          # RUNS_ON_GROUP@dev qa stage prod: 'dynamic-runners' # TODO: Uncomment if you are deploying to Managed SQL Server as it requires a region specific runner
+          # RUNS_ON_GROUP@stage-secondary prod-secondary: 'dynamic-runners-secondary' # TODO: Uncomment if you are deploying to Managed SQL Server as it requires a region specific runner
+
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
@@ -158,6 +162,9 @@ jobs:
   tf-plan:
     needs: [set-vars, stakeholder-approval]
     runs-on: im-linux
+    # runs-on: # TODO: Delete if you don't deploy to Managed SQL Server
+    #   labels: im-linux
+    #   group: ${{ needs.set-vars.outputs.RUNS_ON_GROUP }} # TODO: Uncomment if you are deploying to Managed SQL Server as it requires a region specific runner
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
     env:
       PAGERDUTY_WINDOW_IN_MIN: 30 # TODO: Verify the length of your PD Maintenance Window
@@ -287,6 +294,9 @@ jobs:
   tf-apply:
     needs: [set-vars, tf-plan, tf-plan-manual-approval, stakeholder-approval]
     runs-on: im-linux
+    # runs-on: # TODO: Delete if you don't deploy to Managed SQL Server
+    #   labels: im-linux
+    #   group: ${{ needs.set-vars.outputs.RUNS_ON_GROUP }} # TODO: Uncomment if you are deploying to Managed SQL Server as it requires a region specific runner
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
     defaults:
