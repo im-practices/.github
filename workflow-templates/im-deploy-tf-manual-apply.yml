@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v51    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v52    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -377,20 +377,25 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color -lock-timeout=90s -input=false ./plans/tfplan
 
-      # TODO: Uncomment to Annotate in AppInsights
-      # - name: Annotate App Insights
-      #   uses: im-open/create-app-insights-annotation@v1.0
-      #   continue-on-error: true
-      #   with:
-      #     subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
-      #
-      #     # The following line assumes the App insights resource is always in the primary region's resource group.
-      #     # You might change this when App insights becomes available in our secondary region.
-      #     resourceGroupName: ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}
-      #     appInsightsResourceName: ${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}
-      #     releaseName: 'Infra.${{ env.GITHUB_REF }}'
-      #     category: 'Deployment'
-      #     customMetadata: 'ProjectName=<project name>,DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}' # TODO: Update project name
+      - name: Annotate App Insights
+        uses: im-open/create-app-insights-annotation@v1.0
+        continue-on-error: true
+        with:
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
+          # The following line assumes the App insights resource is always in the primary region's resource group.
+          # You might change this when App insights becomes available in our secondary region.
+          resourceGroupName: ${{ needs.set-vars.outputs.PRIMARY_RESOURCE_GROUP }}
+          appInsightsResourceName: ${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}
+          releaseName: 'Infrastructure.${{ env.GITHUB_REF }}'
+          category: 'Deployment'
+          customMetadata: 'ProjectName=Infrastructure,DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
+      
+      - name: Send Deployment Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Deployment] Terraform@${{ env.GITHUB_REF }} deployed to ${{ env.TARGET_RESOURCE_GROUP }} (${{ job.status }})'
 
       # TODO: Uncomment if you have azure locks in stage and prod
       # - name: Add RGRP Azure Locks

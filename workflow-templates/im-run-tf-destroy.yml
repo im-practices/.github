@@ -1,4 +1,4 @@
-# Workflow Code: HostileMacaw_v30    DO NOT REMOVE
+# Workflow Code: HostileMacaw_v31    DO NOT REMOVE
 # Purpose:
 #    Destroys the resources created by a terraform configuration when someone kicks it off manually.
 #
@@ -92,6 +92,7 @@ jobs:
       PRIMARY_RESOURCE_GROUP: ${{ steps.set-variables.outputs.PRIMARY_RESOURCE_GROUP }}
       STORAGE_ACCOUNT: ${{ steps.set-variables.outputs.STORAGE_ACCOUNT }}
       GITHUB_SECRETS_ENVIRONMENT: ${{ steps.set-variables.outputs.GITHUB_SECRETS_ENVIRONMENT }}
+      APP_INSIGHTS_NAME: ${{ steps.set-variables.outputs.APP_INSIGHTS_NAME }}
 
     steps:
       # For more information and best practices on the usage and options available
@@ -131,6 +132,14 @@ jobs:
           STORAGE_ACCOUNT@demo: ''
           STORAGE_ACCOUNT@uat: ''
           STORAGE_ACCOUNT@prod prod-secondary: ''
+          
+          # This variable is used to annotate app insights
+          APP_INSIGHTS_NAME@dev: ''
+          APP_INSIGHTS_NAME@qa: ''
+          APP_INSIGHTS_NAME@stage stage-secondary: ''
+          APP_INSIGHTS_NAME@demo: ''
+          APP_INSIGHTS_NAME@uat: ''
+          APP_INSIGHTS_NAME@prod prod-secondary: ''
 
           # Used for getting Azure Credentials Secrets
           GITHUB_SECRETS_ENVIRONMENT@dev qa stage prod demo: '${{ inputs.root-module }}'
@@ -268,6 +277,10 @@ jobs:
     runs-on: im-linux
     environment: ${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }}
 
+    env:
+      APP_INSIGHTS_NAME: ${{ needs.set-vars.outputs.APP_INSIGHTS_NAME }}
+      RESOURCE_GROUP: ${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}
+
     defaults:
       run:
         shell: bash
@@ -349,6 +362,22 @@ jobs:
       #   if: needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'prod' || needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT == 'stage'
       #   run: |
       #     az group lock create --name "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}-delete-locks"  --resource-group "${{ needs.set-vars.outputs.TARGET_RESOURCE_GROUP }}" --lock-type CanNotDelete
+
+      - name: Annotate App Insights
+        uses: im-open/create-app-insights-annotation@v1.0
+        with:
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
+          category: 'Runbook'
+          customMetadata: 'Action=DestroyTerraform,Target=${{ inputs.tf-targets }},RunBy=${{ github.actor }},RunID=${{ github.run_id }}'
+
+      - name: Send Terraform Destroy Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Runbook] ${{ inputs.tf-targets }} destroyed in ${{ env.RESOURCE_GROUP }} (${{ job.status }})'
 
       - name: Azure logout
         run: |

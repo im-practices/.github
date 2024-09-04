@@ -1,4 +1,4 @@
-# Workflow Code: MysteriousStranger_v20    DO NOT REMOVE
+# Workflow Code: MysteriousStranger_v21    DO NOT REMOVE
 # Purpose:
 #    Gathers various stakeholder and attestor approvals, downloads artifacts from a release with the
 #    specified tags, makes changes to any configuration files for the specified environments, stops
@@ -88,6 +88,7 @@ jobs:
 
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
+  
   stakeholder-approval:
     needs: [setup-deployment-workflow]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
@@ -204,6 +205,13 @@ jobs:
           source-zip-file-path: ./${{ env.DEPLOY_ZIP }}
           deployment-folder-path: '${{ env.DEPLOYMENT_PATH }}'
           clean-deployment-folder: 'true' # TODO: Verify that all files not in the deployment package should be removed.
+
+      - name: Send Deployment Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Deployment] ${{ inputs.tag }} deployed to ${{ inputs.environment }} ${{ env.WINDOWS_SERVER }}/${{ env.DEPLOYMENT_PATH }} (${{ job.status }})'
 
       - name: Delete .zips and folder that contains sensitive info
         continue-on-error: true

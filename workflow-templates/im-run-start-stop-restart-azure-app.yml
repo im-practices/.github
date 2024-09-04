@@ -1,4 +1,4 @@
-# Workflow Code: NeedyPig_v19    DO NOT REMOVE
+# Workflow Code: NeedyPig_v20    DO NOT REMOVE
 # Purpose:
 #    Performs a start, stop or restart on an app service in the
 #    specified environment when someone kicks it off manually.
@@ -88,6 +88,12 @@ jobs:
           APP_NAME@demo: ''
           APP_NAME@uat: ''
           APP_NAME@prod: ''
+          APP_INSIGHTS_NAME@dev: ''
+          APP_INSIGHTS_NAME@qa: ''
+          APP_INSIGHTS_NAME@stage: ''
+          APP_INSIGHTS_NAME@demo: ''
+          APP_INSIGHTS_NAME@uat: ''
+          APP_INSIGHTS_NAME@prod: ''
           # TODO: If this workflow is restarting a slot update these values, otherwise delete this section.
           # TODO: If the slot has the same name in all environments, delete this section and populate the env.SLOT_NAME in the job below with the single value
           # SLOT_NAME@dev: ''
@@ -115,6 +121,21 @@ jobs:
       - name: ${{ env.ACTION }} ${{ env.AZ_APP_TYPE }}
         run: az ${{ env.AZ_APP_TYPE }} ${{ env.ACTION }} --name ${{ env.APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --subscription ${{ vars.ARM_SUBSCRIPTION_ID }}
 
+      - name: Annotate App Insights
+        uses: im-open/create-app-insights-annotation@v1.0
+        with:
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
+          category: 'Runbook'
+          customMetadata: 'Action=${{ env.ACTION }},App=${{ env.APP_NAME }},RunBy=${{ github.actor }},RunID=${{ github.run_id }}'
+
+      - name: Send ${{ inputs.action }} Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Runbook] ${{ env.ACTION }} ${{ env.APP_NAME }} (${{ job.status }})'
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'

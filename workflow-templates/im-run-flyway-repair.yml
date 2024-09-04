@@ -1,4 +1,4 @@
-# Workflow Code: SpiritedGnat_v22    DO NOT REMOVE
+# Workflow Code: SpiritedGnat_v23    DO NOT REMOVE
 # Purpose:
 #    Runs a flyway repair command against an Azure SQL or
 #    On-Prem Database when someone kicks it off manually.
@@ -108,6 +108,18 @@ jobs:
           AZURE_KEY_VAULT@qa: ''
           AZURE_KEY_VAULT@stage demo: ''
           AZURE_KEY_VAULT@prod: ''
+          RESOURCE_GROUP@dev: ''
+          RESOURCE_GROUP@qa: ''
+          RESOURCE_GROUP@stage: ''
+          RESOURCE_GROUP@demo: ''
+          RESOURCE_GROUP@uat: ''
+          RESOURCE_GROUP@prod: ''
+          APP_INSIGHTS_NAME@dev: ''
+          APP_INSIGHTS_NAME@qa: ''
+          APP_INSIGHTS_NAME@stage: ''
+          APP_INSIGHTS_NAME@demo: ''
+          APP_INSIGHTS_NAME@uat: ''
+          APP_INSIGHTS_NAME@prod: ''
 
       # TODO: Remove this step if this workflow is run against an on-prem database
       #       or if your database uses Azure Active Directory Authentication
@@ -164,6 +176,22 @@ jobs:
           # These will be set by the step above this one, either by querying Azure Key Vault for Azure db's or Hashicorp Vault for on-prem db's
           username: '${{ env.SQL_USER }}'
           password: '${{ env.SQL_PASSWORD }}'
+
+      - name: Annotate App Insights
+        uses: im-open/create-app-insights-annotation@v1.0
+        with:
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
+          category: 'Runbook'
+          customMetadata: 'Action=FlywayRepair,Database=${{ env.DB_NAME }},RunBy=${{ github.actor }},RunID=${{ github.run_id }}'
+
+      - name: Send Flyway Repair Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Runbook] Flyway Repair run on ${{ env.DB_NAME }} (${{ job.status }})'
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'

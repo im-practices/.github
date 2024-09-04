@@ -1,4 +1,4 @@
-# Workflow Code: IrritatedHyena_v23    DO NOT REMOVE
+# Workflow Code: IrritatedHyena_v24    DO NOT REMOVE
 # Purpose:
 #    Swaps deployment slots in a specified environment for an Azure App Service
 #    or Function outside of a deployment when someone kicks it off manually.
@@ -94,6 +94,13 @@ jobs:
           AZ_APP_NAME@demo: ''
           AZ_APP_NAME@uat: ''
           AZ_APP_NAME@prod: ''
+          # This variable is used to annotate app insights
+          APP_INSIGHTS_NAME@dev: ''
+          APP_INSIGHTS_NAME@qa: ''
+          APP_INSIGHTS_NAME@stage: ''
+          APP_INSIGHTS_NAME@demo: ''
+          APP_INSIGHTS_NAME@uat: ''
+          APP_INSIGHTS_NAME@prod: ''
 
       - name: Open a PagerDuty Maintenance Window
         if: env.OPEN_WINDOW == 'true'
@@ -134,6 +141,23 @@ jobs:
       #     --name ${{ env.AZ_APP_NAME }}  \
       #     --subscription ${{ vars.ARM_SUBSCRIPTION_ID }} \
       #     --resource-group ${{ env.RESOURCE_GROUP }}
+
+      - name: Annotate App Insights
+        uses: im-open/create-app-insights-annotation@v1.0
+        with:
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
+          releaseName: '${{ env.AZ_APP_NAME }}-Slot-Swap'
+          category: 'Deployment'
+          customMetadata: 'ProjectName=${{ env.AZ_APP_NAME }},SourceSlot=${{ env.SOURCE_SLOT }},TargetSlot=${{ env.TARGET_SLOT }},DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
+
+      - name: Send Deployment Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Deployment] ${{ env.SOURCE_SLOT }} slot swapped with ${{ env.TARGET_SLOT }} slot for ${{ env.AZ_APP_NAME }} (${{ job.status }})'
 
       - name: Azure logout
         if: always() && steps.login.outcome == 'success'

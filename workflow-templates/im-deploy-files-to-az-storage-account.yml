@@ -1,4 +1,4 @@
-# Workflow Code: BubblyGreyhound_v29    DO NOT REMOVE
+# Workflow Code: BubblyGreyhound_v30    DO NOT REMOVE
 # Purpose:
 #    Checks out the repository and deploys a directory to the
 #    specified storage account when someone kicks it off manually.
@@ -46,11 +46,9 @@ permissions:
 env:
   ENVIRONMENT: ${{ github.event.inputs.environment }}
   GITHUB_REF: ${{ github.event.inputs.branch-tag-sha }}
-  STORAGE_ACCOUNT_NAME: '' # TODO: Add the appropriate storage account name
   TARGET_CONTAINER: '' # TODO: Add the appropriate target container in the stg account
   SOURCE_DIRECTORY: '' # TODO: Add the appropriate source directory
-  DEPLOY_BOARD_NUM: '' # TODO: Add the automated deployment board number or remove if not using an automated deployment project board.
-
+  
 jobs:
   deploy-to-azure:
     runs-on: im-linux
@@ -64,6 +62,36 @@ jobs:
           | ---             |  ---                     |
           | Environment     | `${{ env.ENVIRONMENT }}` |
           | Branch/Tag/Sha  | `${{ env.GITHUB_REF }}`  |' >> $GITHUB_STEP_SUMMARY
+
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
+      - name: Set Variables
+        uses: im-open/set-environment-variables-by-scope@v1.2
+        with:
+          scope: ${{ env.ENVIRONMENT }}
+        env:
+          # TODO: For the following inputs, fill in the value if you have the environment and delete the environment if it does not exist
+          # This variable is used to swap and delete slots
+          RESOURCE_GROUP@dev: ''
+          RESOURCE_GROUP@qa: ''
+          RESOURCE_GROUP@stage: ''
+          RESOURCE_GROUP@demo: ''
+          RESOURCE_GROUP@uat: ''
+          RESOURCE_GROUP@prod: ''
+          # This variable is used to deploy to the correct storage account
+          STORAGE_ACCOUNT_NAME@dev: ''
+          STORAGE_ACCOUNT_NAME@qa: ''
+          STORAGE_ACCOUNT_NAME@stage: ''
+          STORAGE_ACCOUNT_NAME@demo: ''
+          STORAGE_ACCOUNT_NAME@uat: ''
+          STORAGE_ACCOUNT_NAME@prod: ''
+          # This variable is used to annotate app insights
+          APP_INSIGHTS_NAME@dev: ''
+          APP_INSIGHTS_NAME@qa: ''
+          APP_INSIGHTS_NAME@stage: ''
+          APP_INSIGHTS_NAME@demo: ''
+          APP_INSIGHTS_NAME@uat: ''
+          APP_INSIGHTS_NAME@prod: ''
 
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -99,7 +127,23 @@ jobs:
             -d '${{ env.TARGET_CONTAINER }}' \
             -s '${{ env.SOURCE_DIRECTORY }}'
 
-      # Only run this step if TechHub metadata.name value is passed in
+      - name: Annotate App Insights
+        uses: im-open/create-app-insights-annotation@v1.0
+        with:
+          subscriptionId: ${{ vars.ARM_SUBSCRIPTION_ID }} # This is an env-level variable
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          appInsightsResourceName: '${{ env.APP_INSIGHTS_NAME }}'
+          releaseName: '${{ env.STORAGE_ACCOUNT_NAME }}-File-Deploy'
+          category: 'Deployment'
+          customMetadata: 'StorageAccountName=${{ env.STORAGE_ACCOUNT_NAME }},TargetContainer=${{ env.TARGET_CONTAINER }},SourceDirectory=${{ env.SOURCE_DIRECTORY }},DeployedBy=${{ github.actor }},RunID=${{ github.run_id }}'
+
+      - name: Send Deployment Event to PagerDuty
+        if: always()
+        uses: im-open/pagerduty-change-events-action@v1.1
+        with:
+          integration-key: ${{ secrets.PAGERDUTY_INTEGRATION_KEY }} # This is an env-level secret  # TODO:  Ensure an integration has been created in PagerDuty on each applicable service and the secret added to the environment
+          custom-event: '[Deployment] ${{ env.SOURCE_DIRECTORY }}@${{ env.GITHUB_REF }} deployed to ${{ env.STORAGE_ACCOUNT_NAME }} (${{ job.status }})'
+
       - name: Create GitHub Deployment
         if: always()
         uses: im-open/create-github-deployment@v1.0
