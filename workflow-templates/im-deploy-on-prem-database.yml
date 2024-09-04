@@ -1,4 +1,4 @@
-# Workflow Code: AmazedPiglet_v37    DO NOT REMOVE
+# Workflow Code: AmazedPiglet_v38    DO NOT REMOVE
 # Purpose:
 #    Gathers the required approvals from stakeholders and attestors, ensures tags
 #    are valid for production deployments and runs the migrations against an on-prem
@@ -125,14 +125,14 @@ jobs:
           ref: ${{ env.RELEASE_TAG }}
 
       - name: Setup Flyway
-        uses: im-open/setup-flyway@v1.1
+        uses: im-open/setup-flyway@v1.3
         with:
           version: 7.9.2
 
       # TODO: Use this for any variables that change per environment
       - name: Set Environment Specific Vars
         id: environment-specific-vars
-        uses: im-open/set-environment-variables-by-scope@v1.1
+        uses: im-open/set-environment-variables-by-scope@v1.2
         with:
           scope: ${{ env.ENVIRONMENT }}
           create-output-variables: true

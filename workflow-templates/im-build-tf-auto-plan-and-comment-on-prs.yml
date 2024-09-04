@@ -78,7 +78,7 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.1
+        uses: im-open/setup-deploy-keys@v1.2
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 

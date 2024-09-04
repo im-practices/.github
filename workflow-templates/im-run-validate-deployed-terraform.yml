@@ -1,4 +1,4 @@
-# Workflow Code: ShinySQUIRREL_v27    DO NOT REMOVE
+# Workflow Code: ShinySQUIRREL_v28    DO NOT REMOVE
 # Purpose:
 #    Validates that the deployed terraform matches what is supposed to be deployed
 #    when it runs at a scheduled time or when someone kicks it off manually.
@@ -105,7 +105,7 @@ jobs:
 
       # Allows pulling modules from the repo instead of artifactory
       - name: Setup SSH Keys and known_hosts
-        uses: im-open/setup-deploy-keys@v1.1
+        uses: im-open/setup-deploy-keys@v1.2
         with:
           deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
 

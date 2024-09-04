@@ -1,4 +1,4 @@
-# Workflow Code: GiddyBuzzard_v20    DO NOT REMOVE
+# Workflow Code: GiddyBuzzard_v21    DO NOT REMOVE
 # Purpose:
 #    The main purpose of this workflow is to verify that the database can be created, all of the migration scripts can be run, and any tests that exist pass.
 #    In addition to that, however, there are three other things this workflow template is set up to do.
@@ -128,7 +128,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Flyway
-        uses: im-open/setup-flyway@v1.1
+        uses: im-open/setup-flyway@v1.3
         with:
           version: 7.2.0 # This version works with the current version of build-database-ci-action. Newer versions might, but they should be tested.
 
