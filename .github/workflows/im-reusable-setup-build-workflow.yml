@@ -152,6 +152,21 @@ jobs:
             core.info(`Is Dependabot PR: ${isDependabotPR}`);
             core.setOutput('IS_DEPENDABOT_PR', isDependabotPR);
 
+      - uses: actions/checkout@v4
+        if: steps.set-vars.outputs.CONTINUE_WORKFLOW == 'true'
+        with:
+          ref: ${{ steps.set-vars.outputs.REF_TO_BUILD_AND_TAG }}
+          fetch-depth: 0
+
+      - name: Calculate next version
+        if: steps.set-vars.outputs.CONTINUE_WORKFLOW == 'true'
+        id: version
+        uses: im-open/git-version-lite@v3.1
+        with:
+          calculate-prerelease-version: ${{ steps.set-vars.outputs.IS_PRERELEASE }}
+          branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
+          tag-prefix: ${{ inputs.tag-prefix }}
+
       - name: Construct Workflow Summary
         id: summary
         uses: actions/github-script@v7
@@ -172,7 +187,8 @@ jobs:
               | IS_MERGE_TO_MAIN     | \`${{ steps.set-vars.outputs.IS_MERGE_TO_MAIN }}\`      |
               | REF_TO_BUILD_AND_TAG | \`${{ steps.set-vars.outputs.REF_TO_BUILD_AND_TAG }}\`  |
               | DIST_TAG             | \`${{ steps.set-vars.outputs.DIST_TAG }}\`              |
-              | IS_DEPENDABOT_PR     | \`${{ steps.actor_check.outputs.IS_DEPENDABOT_PR }}\`   |`;
+              | IS_DEPENDABOT_PR     | \`${{ steps.actor_check.outputs.IS_DEPENDABOT_PR }}\`   |
+              | NEXT_VERSION         | \`${{ steps.version.outputs.NEXT_VERSION }}\`           |`;
             } else {
               console.log('A workflow summary was provided and will be used instead of the default value.');
             }
@@ -183,18 +199,3 @@ jobs:
           SUMMARY: ${{ inputs.workflow-summary }}
 
       - run: echo '${{ steps.summary.outputs.summary }}' >> $GITHUB_STEP_SUMMARY
-
-      - uses: actions/checkout@v4
-        if: steps.set-vars.outputs.CONTINUE_WORKFLOW == 'true'
-        with:
-          ref: ${{ steps.set-vars.outputs.REF_TO_BUILD_AND_TAG }}
-          fetch-depth: 0
-
-      - name: Calculate next version
-        if: steps.set-vars.outputs.CONTINUE_WORKFLOW == 'true'
-        id: version
-        uses: im-open/git-version-lite@v3.1
-        with:
-          calculate-prerelease-version: ${{ steps.set-vars.outputs.IS_PRERELEASE }}
-          branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
-          tag-prefix: ${{ inputs.tag-prefix }}
