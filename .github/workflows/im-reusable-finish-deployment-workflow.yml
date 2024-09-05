@@ -86,8 +86,16 @@ on:
         description: The custom facts that will be included in the post in the team's channel.  By default Workflow, Run, Actor and Version are included.
         required: false
         type: string
+      custom-actions-for-team-channel:
+        description: The custom actions that will be included in the post in the team's channel.
+        required: false
+        type: string
       custom-facts-for-deployment-notifications-channel:
-        description: 'The custom facts that will be included in the Deployment Notifications channel.  By default Actor and Version are included.'
+        description: 'The custom facts that will be included in the Deployment Notifications channel.'
+        required: false
+        type: string
+      custom-actions-for-deployment-notifications-channel:
+        description: "The custom actions that will be included in the post in the Deployment Notifications channel."
         required: false
         type: string
       ms-teams-uri:
@@ -140,7 +148,9 @@ jobs:
             printInput('ms-teams-uri', '${{ inputs.ms-teams-uri }}');
             printInput('deploy-notifications-channel', '${{ inputs.deploy-notifications-channel }}');
             printInput('custom-facts-for-team-channel', process.env.CUSTOM_FACTS_TEAMS, true);
+            printInput('custom-actions-for-team-channel', process.env.CUSTOM_ACTIONS_TEAMS, true);
             printInput('custom-facts-for-deployment-notifications-channel', process.env.CUSTOM_FACTS_DEPLOY, true);
+            printInput('custom-actions-for-deployment-notifications-channel', process.env.CUSTOM_ACTIONS_DEPLOY, true);
             core.endGroup();
 
             core.startGroup('Reusable workflow secrets');
@@ -148,7 +158,9 @@ jobs:
             core.endGroup();
         env:
           CUSTOM_FACTS_TEAMS: ${{ inputs.custom-facts-for-team-channel }}
+          CUSTOM_ACTIONS_TEAMS: ${{ inputs.custom-actions-for-team-channel }}
           CUSTOM_FACTS_DEPLOY: ${{ inputs.custom-facts-for-deployment-notifications-channel }}
+          CUSTOM_ACTIONS_DEPLOY: ${{ inputs.custom-actions-for-deployment-notifications-channel}}
 
       - uses: im-open/workflow-conclusion@v2.2
         id: conclusion
@@ -207,6 +219,7 @@ jobs:
           teams-uri: ${{ inputs.ms-teams-uri || secrets.MS_TEAMS_URI }}
           timezone: ${{ inputs.timezone }}
           custom-facts: ${{ steps.team-channel-facts.outputs.facts }}
+          custom-actions: ${{ inputs.custom-actions-for-team-channel }}
 
       - name: Determine if a post should be made in Deployment Notifications channel
         if: always()
@@ -271,3 +284,4 @@ jobs:
           timezone: ${{ inputs.timezone }}
           include-default-facts: false # This cuts down on the message size for the prod room
           custom-facts: ${{ steps.deployment-channel-facts.outputs.facts }}
+          custom-actions: ${{ inputs.custom-actions-for-deployment-notifications-channel }}

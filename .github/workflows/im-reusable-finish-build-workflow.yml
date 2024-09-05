@@ -66,8 +66,17 @@ on:
         description: Additional PR comment content aside from workflow run and next version.
         required: false
         type: string
+      send-teams-notification:
+        description: Flag indicating whether to send a notification to the team's channel.  Expected `true` or `false`.
+        required: false
+        type: boolean
+        default: true
       custom-facts-for-team-channel:
         description: The custom facts that will be included in the post in the team's channel.  By default Workflow, Run, Actor and Version are included.
+        required: false
+        type: string
+      custom-actions-for-team-channel:
+        description: The custom action that will be included in the post in the team's channel.
         required: false
         type: string
       ms-teams-uri:
@@ -117,7 +126,9 @@ jobs:
             printInput('is-merge-to-main', '${{ inputs.is-merge-to-main }}');
             printInput('timezone', '${{ inputs.timezone }}');
             printInput('ms-teams-uri', '${{ inputs.ms-teams-uri }}');
+            printInput('send-teams-notification', '${{ inputs.send-teams-notification }}');
             printInput('custom-facts-for-team-channel', process.env.FACTS, true);
+            printInput('custom-actions-for-team-channel', process.env.ACTION, true);
             printInput('additional-pr-comment-content', process.env.ADDITIONAL_CONTENT, true);
             printInput('additional-conclusions', process.env.ADDITIONAL_CONCLUSIONS, true);
             core.endGroup();
@@ -129,6 +140,7 @@ jobs:
           FACTS: ${{ inputs.custom-facts-for-team-channel }}
           ADDITIONAL_CONTENT: ${{ inputs.additional-pr-comment-content }}
           ADDITIONAL_CONCLUSIONS: ${{ inputs.additional-conclusions }}
+          ACTION: ${{ inputs.custom-actions-for-team-channel }}
 
       - uses: im-open/workflow-conclusion@v2.2
         id: conclusion
@@ -165,7 +177,7 @@ jobs:
           FACTS: ${{ inputs.custom-facts-for-team-channel }}
 
       - name: Send status to team's notification channel
-        if: always()
+        if: always() && inputs.send-teams-notification
         continue-on-error: true
         uses: im-open/post-status-to-teams-action@v1.4
         with:
@@ -175,6 +187,7 @@ jobs:
           teams-uri: ${{ inputs.ms-teams-uri || secrets.MS_TEAMS_URI }}
           timezone: ${{ inputs.timezone }}
           custom-facts: ${{ steps.team-channel-facts.outputs.facts }}
+          custom-actions: ${{ inputs.custom-actions-for-team-channel }}
 
       - name: Construct PR Comment
         id: comment
