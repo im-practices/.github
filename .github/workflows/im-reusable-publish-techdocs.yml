@@ -1,0 +1,106 @@
+# The purpose of this reusable job is to publish a TechDocs site to
+# the azure storage container.
+
+# Example Usage in a repo's workflow:
+# jobs:
+#  publish-techdocs-site:
+#    uses: im-practices/.github/.github/workflows/im-reusable-publish-techdocs.yml@v3
+#    with:
+#      # The working directory where mkdocs.yaml is located
+#      working-directory: ./TechHubIntegrationGuide/
+#
+#      # The repo branch, tag or sha that the TechDocs will be built and published from
+#      ref-to-build-and-publish: ${{ github.ref }}
+#
+#      # The TechHub entity that the TechDocs sites belongs to in the format 'default/<kind>/<entity-name>'
+#      entity-name: 'default/system/techhub'
+#
+#      # Flag that determines where the TechDocs will be published
+#      # When true the TechDocs are published to TechHub's UAT and Prod containers
+#      # When false the TechDocs are only published to TechHub's UAT container
+#      is-production-ready: true
+#
+#      # Optional inputs with their defaults
+#      runs-on: im-techdocs
+#      github-environment: prod
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: 'The runner that this workflow will run on.'
+        type: string
+        required: false
+        default: 'im-techdocs'
+      github-environment:
+        description: 'The github environment that ARM_CLIENT_ID and ARM_SUBSCRIPTION_ID should be pulled from.'
+        type: string
+        required: false
+        default: 'prod'
+      working-directory:
+        description: 'The directory to run the TechDocs commands in.  The same directory where mkdocs.yaml is located.'
+        type: string
+        required: true
+      ref-to-build-and-publish:
+        description: 'The branch, tag or sha that the TechDocs should be built and published to TechHub.'
+        type: string
+        required: true
+      entity-name:
+        description: 'The catalog-info.yml entity name of the TechDocs site to publish.'
+        type: string
+        required: true
+      is-production-ready:
+        description: |
+          Flag indicating whether the docs at the ref provided are production ready.
+          When set to true the docs will be published to TechHub's UAT and Prod containers.
+          When set to false the docs will only be published to TechHub's UAT container.
+          Default is false.
+        type: boolean
+        required: true
+
+jobs:
+  publish-techdocs-site:
+    runs-on: ${{ inputs.runs-on }}  # im-techdocs is purpose-built for TechDocs sites
+    environment: ${{ inputs.github-environment }}
+
+    env:
+      ACCOUNT_NAME: bdaimpna26techhubsa
+      UAT_CONTAINER: techdocs-uat
+      PROD_CONTAINER: techdocs-prod
+    
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref-to-build-and-publish }}
+
+      # All SPs that are owners of their rgrp's have access to publish to bdaimpna26techhubsa.
+      # Use the credentials for your SP to login and publish to the storage account.
+      - name: AZ Login
+        uses: azure/login@v2
+        with:
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
+
+      - name: Generate TechDocs Site
+        run: techdocs-cli generate --no-docker --verbose
+
+      - name: Publish TechDocs Site to ${{ env.UAT_CONTAINER }} Container
+        run: techdocs-cli publish --publisher-type azureBlobStorage --azureAccountName ${{ env.ACCOUNT_NAME }} --storage-name ${{ env.UAT_CONTAINER }} --entity ${{ inputs.entity-name }}
+
+      - name: Publish TechDocs Site to ${{ env.PROD_CONTAINER }} Container
+        if: ${{ inputs.is-production-ready == 'true' }}
+        run: techdocs-cli publish --publisher-type azureBlobStorage --azureAccountName ${{ env.ACCOUNT_NAME }} --storage-name ${{ env.PROD_CONTAINER }} --entity ${{ inputs.entity-name }}
+
+      - name: Azure logout
+        if: always()
+        run: |
+          az logout
+          az cache purge
+          az account clear

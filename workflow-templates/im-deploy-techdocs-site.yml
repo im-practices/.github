@@ -1,4 +1,4 @@
-# Workflow Code: SparklyToad_v4    DO NOT REMOVE
+# Workflow Code: SparklyToad_v5    DO NOT REMOVE
 # Purpose:
 #    Publishes a techdocs site to the storage account where TechHub
 #    looks for TechDocs.
@@ -14,7 +14,9 @@ name: Publish TechDocs Site
 
 # TODO:  Select the appropriate triggers for when TechDocs should be published
 on:
-  # push:
+  push:
+    branches:
+      - main
   # workflow_dispatch:
   # pull_request:
   #   types: [closed]
@@ -26,68 +28,25 @@ permissions:
 
 jobs:
   publish-techdocs-site:
-    runs-on: im-techdocs
+    uses: im-practices/.github/.github/workflows/im-reusable-publish-techdocs.yml@v3
+    with:
+      # The working directory where mkdocs.yaml is located
+      working-directory: '' # TODO: specify the working directory
 
-    # TODO:  Uncomment if you need this, otherwise remove it
-    # services:
-    #   kroki:
-    #     image: yuzutech/kroki
-    #     ports:
-    #       - 8000:8000
+      # The repo branch, tag or sha that the TechDocs will be built and published from
+      ref-to-build-and-publish: ${{ github.ref }} # TODO:  This may need to be modified depending on the trigger.
+      #   merge commit or push: github.ref
+      #   pull_request non-merge commit: github.head_ref
+      #   workflow_dispatch => inputs.ref
 
-    environment: dev
+      # The TechHub entity that the docs sites belongs to in the format 'default/<kind>/<entity-name>'
+      entity-name: 'default/<kind>/<entity-name>' # TODO:  Replace kind and entity name
 
-    env:
-      # These items will remain the same for all workflows
-      ACCOUNT_NAME: bdaimpna26techhubsa
-      CONTAINER_NAME: techdocs
+      # Flag that determines where the TechDocs will be published
+      # When true the TechDocs are published to TechHub's UAT and Prod containers
+      # When false the TechDocs are only published to TechHub's UAT container
+      is-production-ready: true # TODO: This may need to be dynamically set based on the trigger
 
-      # This is project dependent.
-      # TODO:  Replace kind and entity name based on the entity this techdocs site will belong to.
-      #        The name can be found in catalog-info.yaml.
-      ENTITY_NAME: 'default/<add-kind>/<add-entity-name>'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # All SPs that are owners of their rgrp's have access to publish to bdaimpna26techhubsa.
-      # Use the credentials for your SP to login and publish to the storage account.
-      - name: AZ Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # TODO:  Verify this secret is set
-          # TODO:  If the repo you are publishing from has federated access to the techdocs RGRP, you can use the secretless
-          #        pattern below for accessing the rgrp, otherwise, you need to provide azure credentials for publishing the docs.
-          # # This is an org-level variable
-          # tenant-id: ${{ vars.ARM_TENANT_ID }}
-          # # These are env-level variables
-          # subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
-          # client-id: ${{ vars.ARM_CLIENT_ID }}
-
-
-      # The im-techdocs runner used in this workflow contains the TechDocs CLI & several plugins, see the installed items here:
-      #     https://github.com/im-practices/coldstone-configs/blob/main/configs/im-techdocs.cold.json
-      # If additional plugins are needed, follow the same format as below or submit to modify the im-techdocs runner.
-      # - name: Install additional mkdocs plugins
-      #   run: python -m pip install mkdocs-newsletter==1.*
-
-      - name: Generate & Publish TechDocs Site
-        working-directory: '' # TODO:  specify the working directory where the mkdocs.yaml file is located
-        run: |
-          techdocs-cli generate --no-docker --verbose
-          techdocs-cli publish --publisher-type azureBlobStorage --azureAccountName ${{ env.ACCOUNT_NAME }} --storage-name ${{ env.CONTAINER_NAME }} --entity ${{ env.ENTITY_NAME }}
-
-      # TODO: To publish additional sites:
-      #       1 - Duplicate the 'Generate & Publish TechDocs Site' step
-      #       2 - Give each step a more specific name
-      #       3 - Update the working directory to the location of the additional site
-      #       4 - Update the --entity argument with the name of the additional site
-
-      - name: Azure logout
-        if: always()
-        run: |
-          az logout
-          az cache purge
-          az account clear
-
+      # Optional inputs with their defaults
+      # runs-on: im-techdocs      # im-techdocs is purpose-built for techdocs sites, use this runner unless there is a specific reason not to.
+      # github-environment: prod  # the environment that the SP info (ARM_CLIENT_ID, ARM_SUBSCRIPTION_ID) will be pulled from.
