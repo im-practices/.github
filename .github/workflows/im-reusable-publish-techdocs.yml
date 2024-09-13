@@ -95,7 +95,7 @@ jobs:
         run: techdocs-cli publish --publisher-type azureBlobStorage --azureAccountName ${{ env.ACCOUNT_NAME }} --storage-name ${{ env.UAT_CONTAINER }} --entity ${{ inputs.entity-name }}
 
       - name: Publish TechDocs Site to ${{ env.PROD_CONTAINER }} Container
-        if: ${{ inputs.is-production-ready == 'true' }}
+        if: inputs.is-production-ready == 'true' || inputs.is-production-ready == true
         run: techdocs-cli publish --publisher-type azureBlobStorage --azureAccountName ${{ env.ACCOUNT_NAME }} --storage-name ${{ env.PROD_CONTAINER }} --entity ${{ inputs.entity-name }}
 
       - name: Azure logout
