@@ -1,4 +1,4 @@
-# Workflow Code: SparklyToad_v5    DO NOT REMOVE
+# Workflow Code: SparklyToad_v6    DO NOT REMOVE
 # Purpose:
 #    Publishes a techdocs site to the storage account where TechHub
 #    looks for TechDocs.
@@ -12,14 +12,18 @@
 
 name: Publish TechDocs Site
 
-# TODO:  Select the appropriate triggers for when TechDocs should be published
+# TODO:  Update if different triggers are desired (some steps in set-vars may need to be updated if triggers are changed)
 on:
   push:
     branches:
       - main
-  # workflow_dispatch:
-  # pull_request:
-  #   types: [closed]
+  workflow_dispatch:
+    inputs:
+      ref-to-build-and-publish:
+        description: The branch, tag or sha that the TechDocs will be built and published from.  Refs reachable from the default branch will be published to UAT and Prod.  Other refs will only be published to UAT.
+        required: false
+        type: string
+        default: main
 
 permissions:
   # Required for secretless azure access and deploys
@@ -27,17 +31,47 @@ permissions:
   contents: read
 
 jobs:
+  set-vars:
+    runs-on: ubuntu-latest
+
+    outputs:
+      ref-to-publish: ${{ steps.ref.outputs.ref-to-publish }}
+      is-production-ready: ${{ github.event_name == 'push' || inputs.ref-to-build-and-publish == 'main' || steps.reachable.outputs.reachable }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine ref
+        id: ref
+        shell: pwsh
+        run: |
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            echo 'ref-to-publish=${{ inputs.ref-to-build-and-publish }}' >> $env:GITHUB_OUTPUT
+          }
+          else {
+            echo 'ref-to-publish=${{ github.ref }}' >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Check if workflow_dispatch ref is reachable from main
+        uses: im-open/is-tag-reachable-from-default-branch@v1
+        if: github.event_name == 'workflow_dispatch' && inputs.ref-to-build-and-publish != 'main'
+        id: reachable
+        with:
+          tag: ${{ steps.ref.outputs.ref-to-publish }}
+          default-branch: main
+          error-if-not-reachable: false
+
   publish-techdocs-site:
     uses: im-practices/.github/.github/workflows/im-reusable-publish-techdocs.yml@v3
+    needs: [set-vars]
     with:
       # The working directory where mkdocs.yaml is located
       working-directory: '' # TODO: specify the working directory
 
       # The repo branch, tag or sha that the TechDocs will be built and published from
-      ref-to-build-and-publish: ${{ github.ref }} # TODO:  This may need to be modified depending on the trigger.
-      #   merge commit or push: github.ref
-      #   pull_request non-merge commit: github.head_ref
-      #   workflow_dispatch => inputs.ref
+      ref-to-build-and-publish: ${{ needs.set-vars.outputs.ref-to-publish }}
 
       # The TechHub entity that the docs sites belongs to in the format 'default/<kind>/<entity-name>'
       entity-name: 'default/<kind>/<entity-name>' # TODO:  Replace kind and entity name
@@ -45,7 +79,7 @@ jobs:
       # Flag that determines where the TechDocs will be published
       # When true the TechDocs are published to TechHub's UAT and Prod containers
       # When false the TechDocs are only published to TechHub's UAT container
-      is-production-ready: true # TODO: This may need to be dynamically set based on the trigger
+      is-production-ready: ${{ fromJSON(needs.set-vars.outputs.is-production-ready) }}
 
       # Optional inputs with their defaults
       # runs-on: im-techdocs      # im-techdocs is purpose-built for techdocs sites, use this runner unless there is a specific reason not to.
