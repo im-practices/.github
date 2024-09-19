@@ -112,6 +112,20 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.gh-secrets-environment }}
     steps:
+      - name: Check if workflow should post to teams
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Some teams have these as a secret and some as a var, allow either way but if not present do not post
+            const teamsUri = '${{ inputs.ms-teams-uri || secrets.MS_TEAMS_URI }}';
+            if (!teamsUri || teamsUri.trim().length === 0){
+              core.info('The MS_TEAMS_URI secret or the ms-teams-uri input must be provided to post to teams.  A post will not be made.');
+              core.exportVariable('POST_TO_TEAMS', false);
+            }
+            else {
+              core.exportVariable('POST_TO_TEAMS', true);
+            }
+
       - name: Print inputs
         uses: actions/github-script@v7
         with:
@@ -200,7 +214,7 @@ jobs:
           FACTS: ${{ inputs.custom-facts-for-team-channel }}
 
       - name: Send status to team's notification channel
-        if: always() && (inputs.ms-teams-uri || secrets.MS_TEAMS_URI)
+        if: always() && env.POST_TO_TEAMS == 'true'
         uses: im-open/post-status-to-teams-action@v1.4
         with:
           title: ${{ inputs.title-of-teams-post }}
