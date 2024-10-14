@@ -64,6 +64,13 @@ on:
       NEXT_VERSION_NO_PREFIX:
         description: The next version calculated by git-version-lite without a prefix.
         value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION_NO_PREFIX }}
+      NEXT_VERSION_NO_PRERELEASE:
+        description: The next version calculated by git-version-lite without a postfix.
+        value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION_NO_PRERELEASE }}
+      NEXT_VERSION_NO_PREFIX_NO_PRERELEASE:
+        description: The next version calculated by git-version-lite without a prefix and without a postfix.
+        value: ${{ jobs.setup-build-workflow.outputs.NEXT_VERSION_NO_PREFIX_NO_PRERELEASE }}
+      
 
 jobs:
   setup-build-workflow:
@@ -79,6 +86,8 @@ jobs:
       IS_DEPENDABOT_PR: ${{ steps.actor_check.outputs.IS_DEPENDABOT_PR }}
       NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
       NEXT_VERSION_NO_PREFIX: ${{ steps.version.outputs.NEXT_VERSION_NO_PREFIX }}
+      NEXT_VERSION_NO_PRERELEASE: ${{ steps.version-no-pre-release.outputs.NEXT_VERSION }}
+      NEXT_VERSION_NO_PREFIX_NO_PRERELEASE: ${{ steps.version-no-pre-release.outputs.NEXT_VERSION }}
 
     steps:
       - name: Print inputs
@@ -164,6 +173,15 @@ jobs:
         uses: im-open/git-version-lite@v3.1
         with:
           calculate-prerelease-version: ${{ steps.set-vars.outputs.IS_PRERELEASE }}
+          branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
+          tag-prefix: ${{ inputs.tag-prefix }}
+
+      - name: Calculate next version without pre-release
+        if: steps.set-vars.outputs.CONTINUE_WORKFLOW == 'true'
+        id: version-no-pre-release
+        uses: im-open/git-version-lite@v3.1
+        with:
+          calculate-prerelease-version: false
           branch-name: ${{ github.head_ref }} # This is only populated when the trigger is pull_request, otherwise it is empty
           tag-prefix: ${{ inputs.tag-prefix }}
 
