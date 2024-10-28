@@ -1,0 +1,5 @@
+{
+    "name": "Test - Playwright Schedule Workflow",
+    "description": "Workflow template for running Playwright tests on a schedule. This workflow supports the UI Health Check feature.",
+    "iconName": "im_test"
+}
