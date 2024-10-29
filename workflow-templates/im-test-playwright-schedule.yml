@@ -1,0 +1,194 @@
+# Workflow Code: LuckyHamster_v1   DO NOT REMOVE
+# Purpose:
+#    Runs Playwright UI Health Check tests in Github Actions on a schedule.
+#    With the workflow the you specify when to run this test.
+#
+# Frequency:
+#    - This workflow is intended to be reusable, and used once per repository.
+#
+# Projects to use this Template with:
+#    - Testing projects that use Playwright.
+# # TODO: Prerequisites:
+#    - Add secret APPINSIGHTS_CONNECTION_STRING to every environment you are testing.
+#    - Update your playwright test config to include the im.playwright-appinsights-reporter reporter. Instructions found here: https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/Playwright-UI-Health-Check.md
+#    - Add @estruyf/github-actions-reporter reporter to your playwright config when running in CI.  npm install --dev @estruyf/github-actions-reporter.
+#       - playwright.config.ts Example:  
+#         reporter: process.env.CI ? [
+#             ['list'],
+#             ['html'],
+#             ['@estruyf/github-actions-reporter'] 
+#           ] : [['list'],['html']], 
+
+name: 🧪 Run Playwright on Schedule
+run-name: 🧪 Run Playwright on Schedule
+
+on:
+  schedule: # TODO: Update the schedule to run at the desired frequency. Do not run more than every 30 minutes as to not produce undue load on the system.  
+    - cron: '59 * * * *' # Run Every hour # TODO: Update the frequency of the schedule.
+    # - cron: '1/30 * * * *' # Run Every 30 minutes # TODO: Uncomment this line if you want to run every 30 minutes.
+    # - cron: '1/40 * * * *' # Run Every 40 minutes # TODO: Uncomment this line if you want to run every 40 minutes.
+
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+
+env:
+  GITHUB_REF: 'main'
+  PLAYWRIGHT_TEST_DIR: 'tests/playwright' # TODO: Update this to the path of the playwright test root door
+  PLAYWRIGHT_REPORT_DIR: 'tests/playwright/playwright-report' # TODO: Update this to the path of the playwright report directory
+  PLAYWRIGHT_RESULTS_DIR: 'tests/playwright/test-results' # TODO: Update this to the path of the playwright test results directory
+  TIMEZONE: America/Denver
+  NPM_CACHE_PATH: '**/tests/playwright/node_modules' # TODO: Update this to the path of the node_modules directory in the playwright test root directory
+  NODE_VERSION: '20.x' # TODO: Update this to the version of node you want to use for the tests
+  PLAYWRIGHT_CONFIG_FILE: 'playwright.availability.config.ts' # TODO: Update with the playwright config file that uses the im.playwright-appinsights-reporter reporter
+  TEST_FILTER: '' # TODO: Add filter for your ui-health-check tests 
+  BROWSER_PROJECT: 'chromium' # TODO: Update this to the browser project found in variable PLAYWRIGHT_CONFIG_FILE you want to use for the tests
+
+jobs:
+  npm-cache:
+    runs-on: im-linux
+
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      NPM_CACHE_KEY: ${{ env.NPM_CACHE_KEY }}
+
+    steps:
+      - name: Annotate Inputs # TODO Update Environment value to reflect the matrix environments in the playwright-test job.
+        run: |
+          echo $'
+          | Inputs                 | Value                                               |
+          | ---------------------- | --------------------------------------------------- |
+          | Environment            | `dev, qa, stage`                                    |
+          | Branch/Tag             | `${{ env.GITHUB_REF }}`                             |
+          | Workflow Branch/Tag    | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |
+          | Browser                | `${{ env.BROWSER_PROJECT }}`                        |
+          | Playwright Config File | `${{ env.PLAYWRIGHT_CONFIG_FILE }}`                 |
+          | Test Filter            | `${{ env.TEST_FILTER }}`                            |' >> $GITHUB_STEP_SUMMARY
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - name: Set Cache Keys
+        # As long as these files don't change the cache will remain in tact and the time
+        # to restore the different packages in the various jobs will be reduced.  If one
+        # of the files does change though, a new cache will be uploaded the next time
+        # it runs, then subsequent runs should be faster.
+        run: echo "NPM_CACHE_KEY=playwright_node_modules-${{ hashFiles('**/tests/playwright/package-lock.json') }}" >> $GITHUB_ENV
+
+      - name: Check for an npm cache
+        id: has-cache
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          key: ${{ env.NPM_CACHE_KEY }}
+          path: |
+            ${{ env.NPM_CACHE_PATH }}
+
+      # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
+      # This action creates a post-job step that will upload the node_modules dir to the cache if the job
+      # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
+      # folder if the package-lock.json hasn't changed and it uses a ubuntu-20.04 runner to restore the cache from.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Authenticate with GitHub Packages
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        uses: im-open/authenticate-with-gh-package-registries@v1
+        with:
+          read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+          orgs: 'im-client,im-enrollment,im-customer-engagement,im-practices,im-open' # TODO: Verify list of orgs packages will be pulled from  
+
+
+      - name: NPM Install
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        working-directory: '${{ env.PLAYWRIGHT_TEST_DIR }}'
+        run: |
+          echo "Installing NPM"
+          npm ci
+
+      - name: Save cache for node_modules directory
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ env.NPM_CACHE_KEY }}
+          enableCrossOsArchive: true
+          path: |
+            ${{ env.NPM_CACHE_PATH }}
+
+  playwright-test:
+    runs-on: im-linux
+    needs: npm-cache
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        environment: [dev, qa, stage] # TODO: Add environments you want your tests to run in
+
+    environment: ${{ matrix.environment }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download npm cache
+        id: restore-npm-cache
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ needs.npm-cache.outputs.NPM_CACHE_KEY }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+          path: |
+            ${{ env.NPM_CACHE_PATH }}
+
+      - name: Rebuild Node Modules
+        if: steps.restore-npm-cache.outputs.cache-hit == 'true'
+        working-directory: '${{ env.PLAYWRIGHT_TEST_DIR }}'
+        run: npm rebuild
+
+      - name: Install Playwright Browsers
+        working-directory: '${{ env.PLAYWRIGHT_TEST_DIR }}'
+        run: npx playwright install ${{ env.BROWSER_PROJECT }} --with-deps
+
+      - name: Run Playwright tests
+        id: playwright-test
+        working-directory: '${{ env.PLAYWRIGHT_TEST_DIR }}'
+        env:
+          ENVIRONMENT: ${{ matrix.environment }}
+          APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }} # TODO: Add the secret APPINSIGHTS_CONNECTION_STRING for each environment in your github actions environment secrets
+          RUN_LOCATION: 'West US' # TODO: Update with the location of the test runnner.
+          # Below environment variables are used to suppress appinsights sdk warnings in test output. 
+          APPLICATIONINSIGHTS_INSTRUMENTATION_LOGGING_LEVEL: 'WARNING' # APPLICATIONINSIGHTS_INSTRUMENTATION_LOGGING_LEVEL environment variable could be used to set desired log level, supporting the following values: NONE, ERROR, WARN, INFO, DEBUG, VERBOSE and ALL.
+          APPLICATIONINSIGHTS_LOG_DESTINATION: 'file'
+          APPLICATIONINSIGHTS_LOGDIR: '${{ github.workspace }}/${{ env.PLAYWRIGHT_RESULTS_DIR }}'
+        run: npx playwright test --config ${{ env.PLAYWRIGHT_CONFIG_FILE }} --project ${{ env.BROWSER_PROJECT }} --grep ${{ env.TEST_FILTER }}
+
+      - name: Copy Playwright Report to test-results folder
+        if: ${{ always() && steps.playwright-test.outcome != 'success' }}
+        continue-on-error: true
+        working-directory: '${{ github.workspace }}'
+        shell: bash
+        run: cp -r ${{ env.PLAYWRIGHT_REPORT_DIR }} ${{ env.PLAYWRIGHT_RESULTS_DIR }}/reports
+
+      - name: Upload Playwright Report
+        if: ${{ always() && steps.playwright-test.outcome != 'success' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.environment }}
+          path: ${{ env.PLAYWRIGHT_RESULTS_DIR }}
+          retention-days: 5

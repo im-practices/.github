@@ -1,0 +1,5 @@
+{
+    "name": "Test - Playwright Manual Workflow",
+    "description": "Workflow template for running Playwright tests triggered manually.",
+    "iconName": "im_test"
+}
