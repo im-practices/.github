@@ -1,0 +1,174 @@
+# Workflow Code: SurprisedHedgehog_v22    DO NOT REMOVE
+# Purpose:
+#    Runs Cypress UI Health Check tests in Github Actions on a schedule or when someone kicks it off manually.
+#    This workflow is designed to run Cypress tests that are part of a UI Health Check suite.
+#
+# Frequency:
+#    - This workflow can be duplicated once per cypress project that you wish to run independently.
+#
+# Projects to use this Template with:
+#    - Azure App Service or Function (Optional Template)
+#    - On-Prem Site                  (Optional Template)
+#
+# TODO Prerequisites:
+#    - Add secret APPLICATIONINSIGHTS_CONNECTION_STRING to every environment you are testing.
+#    - Update your cypress test config to include the im.exporttoappinsights package. Instructions found here: https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/Cypress-UI-Health-Check.md
+#    - If the project contains a local nuget.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+#    - In order to use this workflow a few changes need to be made to the cypress test configuration:
+#      1. Make the following npm package changes in your cypress test directory
+#         npm uninstall mocha-teamcity-reporter
+#         npm install --save-dev mochawesome mochawesome-merge mochawesome-report-generator
+#      2. Modify the cypress run section of the ci script by replacing the '--reporter ./mocha-teamcity-reporter' with '--reporter mochawesome --reporter-options overwrite=false,html=false,json=true'. For instance:
+#         old: "cy:ci" : "....&& cypress run --project ./ --reporter ./mocha-teamcity-reporter \"",
+#         new: "cy:ci" : "....&& cypress run --project ./ --reporter mochawesome --reporter-options overwrite=false,html=false,json=true \"",
+#      3. Add the following pre-ci script.  Your name will vary based on your cypress ci script name.  This removes results between test runs.
+#         "precy:ci": "rm -rf mochawesome-report/",
+#      4. Add the following script that merges all test json files and generates an html report.  Your name may vary based on your project conventions.  If the output file or results dir are changed, update the env values in the workflow.
+#         "cy:report": "mochawesome-merge mochawesome-report/*.json > merged-results.json && marge --reportDir cypress-results merged-results.json",
+#                                                                                             ^^ marge is not a typo, it's a command for the "mochawesome report generator"
+
+name: 🧪 Run Cypress UI Healthcheck Tests
+
+# TODO: Verify Triggers
+on:
+  # This workflow could be run manually with 'workflow_dispatch' or a new 'schedule' trigger could be added.
+  # The schedule trigger is commented out by default.  Uncomment it if you want to run the tests on a schedule.
+  # Another option is using this as a reusable workflow: https://docs.github.com/en/actions/learn-github-actions/reusing-workflows
+  workflow_dispatch:
+    inputs:
+      branch-tag-sha:
+        description: The branch, tag or sha of the cypress tests should be run against. Leave blank to use the workflow's branch/tag.
+        required: false
+        default: 'main'
+      environment:
+        description: The environment the cypress tests should be run against.
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - qa
+          - stage
+          # - prod # Uncomment this line if you want to test against prod
+
+  # schedule:
+    # - cron: '59 * * * *' # Run Every hour # TODO: Update the frequency of the schedule.  Do not run more than every 30 minutes as to not produce undue load on the system.
+    # - cron: '1/30 * * * *' # Run Every 30 minutes # TODO: Uncomment this line if you want to run every 30 minutes.
+    # - cron: '1/40 * * * *' # Run Every 40 minutes # TODO: Uncomment this line if you want to run every 40 minutes.
+
+env:
+  GITHUB_REF: 'main' # Default branch to run against. use ${{ github.event.inputs.branch-tag-sha }} for manual runs
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+  JS_TEST_DIR: '' # TODO: Set to the directory containing the js tests like tests/cypress.
+  NODE_VERSION: '' # TODO: Update this to the version of node you want to use for the tests
+  CYPRESS_CI_SCRIPT: '' # TODO: Add cypress script name, example: 'cy:run:healthcheck:dev'. For a manual run, use ${{ github.event.inputs.environment }}.
+  CYPRESS_REPORT_SCRIPT: 'cy:report' #TODO:  Add the name of the npm script that merges the files and creates an html report, if you copied the one above it is cy:report
+  CYPRESS_RESULTS_FILE: 'merged-results.json' # TODO: Update this value if it was added as something different in the npm report script
+  CYPRESS_REPORT_DIR: 'cypress-results' # TODO: Update this value if it was added as something different in the npm report script
+  CYPRESS_SCREENSHOTS: 'cypress/screenshots' # TODO: Update this value if it was added as something different in the npm report script
+
+jobs:
+  run-cypress:
+    runs-on: im-linux
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.JS_TEST_DIR }}
+
+    # environment: '' # TODO:  If you have additional steps that use environment-level secrets fill this in, otherwise delete it
+
+    # TODO:  If your cypress tests are for an app that needs access to azure this syntax with the environment variables
+    #        ensures your app can connect to azure resources without clashing with the runner machine's azure identity.
+    #        If your tests do not need to connect to Azure, these environment variables can be removed.
+    # env:
+    #   AZURE_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
+    #   AZURE_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+    #   AZURE_TENANT_ID: ${{ vars.ARM_TENANT_ID }} # This is an org-level variable
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # TODO: If you are using any nuget/npm packages from GitHub Packages uncomment this step
+      # - name: Authenticate with GitHub Packages
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.1
+      #   with:
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+      #     orgs: 'im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
+
+      - name: Restore npm packages
+        working-directory: ${{ env.JS_TEST_DIR }}
+        run: npm ci
+
+      - name: Run cypress
+        id: cypress
+        continue-on-error: true
+        run: npm run ${{ env.CYPRESS_CI_SCRIPT }}
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
+
+      - name: Merge json files and create html report
+        run: npm run ${{ env.CYPRESS_REPORT_SCRIPT }}
+
+      - name: Create Status check based on merged cypress results
+        id: process-cypress
+        uses: im-open/process-cypress-test-results@v3.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          results-file: '${{ env.JS_TEST_DIR }}/${{ env.CYPRESS_RESULTS_FILE }}'
+          report-name: 'Cypress ${{ github.run_number }}'
+          # TODO: Verify whether you want status checks or pr comments with the results.
+          create-status-check: true
+          create-pr-comment: true
+          # update-comment-if-one-exists: false # TODO: By default this action creates one comment and updates it for each run.  Uncomment if you wish to have one new comment for every workflow run.
+          ignore-test-failures: true
+          timezone: 'america/denver' # TODO: Verify timezone
+
+      - name: Pre-Zip Code Artifacts
+        # GitHub zips whatever we upload but they charge based on the pre-zip size.
+        # The artifact will be double-zipped when downloaded but we will save on storage costs.
+        if: always() && steps.dotnet_coverage_check.outcome == 'success' && env.IS_DEPENDABOT_PR == 'false'
+        working-directory: ${{ env.JS_TEST_DIR }}
+        shell: pwsh
+        run: |
+          if(Test-Path -Path "./${{ env.CYPRESS_SCREENSHOTS }}") {
+            Compress-Archive -Path ./${{ env.CYPRESS_SCREENSHOTS }}/* -DestinationPath "./${{ env.CYPRESS_SCREENSHOTS }}/screenshots.zip"
+          }
+          if(Test-Path -Path "./${{ env.CYPRESS_REPORT_DIR }}") {
+            Compress-Archive -Path ./${{ env.CYPRESS_REPORT_DIR }}/* -DestinationPath "./${{ env.CYPRESS_REPORT_DIR }}/report-directory.zip"
+          }
+          if(Test-Path -Path ./${{ env.CYPRESS_RESULTS_FILE }}) {
+            Compress-Archive -Path ./${{ env.CYPRESS_RESULTS_FILE }} -DestinationPath "./results-file.zip"
+          }
+
+      - name: Upload cypress screenshots if there are test failures
+        if: steps.cypress.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Failed Cypress Test Screenshots
+          path: ${{ env.JS_TEST_DIR }}/${{ env.CYPRESS_SCREENSHOTS }}/screenshots.zip
+          if-no-files-found: ignore
+          retention-days: 5 # Cannot exceed 30 days.
+
+      - name: Upload Cypress Results Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cypress Results ${{ github.run_number }}
+          path: |
+            ${{ env.JS_TEST_DIR }}/${{ env.CYPRESS_REPORT_DIR }}/report-directory.zip
+            ${{ env.JS_TEST_DIR }}/results-file.zip
+          retention-days: 5 # Cannot exceed 30 days.
+
+      - name: Fail if cypress errors
+        if: steps.cypress.outcome == 'failure'
+        run: |
+          echo "The cypress tests have failures"
+          exit 1
