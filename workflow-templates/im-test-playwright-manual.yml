@@ -67,7 +67,7 @@ permissions:
 
 env:
   DISPATCH_REF: ${{ inputs.tag == 0 && github.ref_name || inputs.branch-tag-sha }}
-  PLAYWRIGHT_TEST_DIR: 'tests/playwright' # TODO: Update this to the path of the playwright test root door
+  PLAYWRIGHT_TEST_DIR: 'tests/playwright' # TODO: Update this to the path of the playwright test root directory
   PLAYWRIGHT_REPORT_DIR: 'tests/playwright/playwright-report' # TODO: Update this to the path of the playwright report directory
   PLAYWRIGHT_RESULTS_DIR: 'tests/playwright/test-results' # TODO: Update this to the path of the playwright test results directory
   TIMEZONE: America/Denver
