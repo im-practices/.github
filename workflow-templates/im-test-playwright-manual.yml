@@ -113,7 +113,7 @@ jobs:
           ref: ${{ env.GITHUB_REF }}
 
       - name: Set Cache Keys
-        # As long as these files don't change the cache will remain in tact and the time
+        # As long as these files don't change the cache will remain intact and the time
         # to restore the different packages in the various jobs will be reduced.  If one
         # of the files does change though, a new cache will be uploaded the next time
         # it runs, then subsequent runs should be faster.
