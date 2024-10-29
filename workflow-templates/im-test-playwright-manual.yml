@@ -42,7 +42,7 @@ on:
       browser-project:
         description: Browser - what browser project to use. # Browser projects defined in the playwright.config.ts file.
         type: choice
-        options:
+        options: # TODO: Update this list to match the browser projects in the playwright.config.ts file.
           - chromium
           - firefox
           - webkit
@@ -90,7 +90,7 @@ jobs:
       - name: Calculate Ref to Checkout
         id: calculate-ref
         run: |
-          GITHUB_REF="${{ github.event_name == 'pull_request' && github.head_ref || env.DISPATCH_REF }}"
+          GITHUB_REF="${{ env.DISPATCH_REF }}"
           echo "GITHUB_REF=$GITHUB_REF" >> $GITHUB_ENV
           echo "GITHUB_REF=$GITHUB_REF" >> $GITHUB_OUTPUT
 
@@ -104,8 +104,7 @@ jobs:
           | Workflow Branch/Tag     | `${{ github.ref_name }}` - SHA: `${{ github.sha }}`                                       |
           | Browser                 | `${{ inputs.browser-project }}`                                                           |
           | Playwright Config File  | `${{ inputs.config-file }}`                                                               |
-          | Test Filter             | `${{ inputs.test-filter != 0 && inputs.test-filter || 'NA' }}`                            |
-          | Send Teams Notification | `${{ inputs.send-teams-notification == 0 && 'false' || inputs.send-teams-notification }}` |' >> $GITHUB_STEP_SUMMARY
+          | Test Filter             | `${{ inputs.test-filter != 0 && inputs.test-filter || 'NA' }}`                            |' >> $GITHUB_STEP_SUMMARY
 
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -113,7 +112,7 @@ jobs:
           ref: ${{ env.GITHUB_REF }}
 
       - name: Set Cache Keys
-        # As long as these files don't change the cache will remain intact and the time
+        # As long as these files don't change the cache will remain in tact and the time
         # to restore the different packages in the various jobs will be reduced.  If one
         # of the files does change though, a new cache will be uploaded the next time
         # it runs, then subsequent runs should be faster.
@@ -128,6 +127,10 @@ jobs:
           path: |
             ${{ env.NPM_CACHE_PATH }}
 
+      # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
+      # This action creates a post-job step that will upload the node_modules dir to the cache if the job
+      # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
+      # folder if the package-lock.json hasn't changed and it uses a ubuntu-20.04 runner to restore the cache from.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         if: steps.has-cache.outputs.cache-hit != 'true'
@@ -139,7 +142,8 @@ jobs:
         uses: im-open/authenticate-with-gh-package-registries@v1
         with:
           read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
-          orgs: 'im-client,im-enrollment,im-customer-engagement,im-practices,im-open'
+          orgs: 'im-client,im-enrollment,im-customer-engagement,im-practices,im-open' # TODO: Verify list of orgs packages will be pulled from  
+
 
       - name: NPM Install
         if: steps.has-cache.outputs.cache-hit != 'true'
@@ -148,10 +152,6 @@ jobs:
           echo "Installing NPM"
           npm ci
 
-      # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
-      # This action creates a post-job step that will upload the node_modules dir to the cache if the job
-      # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
-      # folder if the package-lock.json hasn't changed and it uses a ubuntu-20.04 runner to restore the cache from.
       - name: Save cache for node_modules directory
         if: steps.has-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
