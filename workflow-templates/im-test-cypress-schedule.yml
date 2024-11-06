@@ -71,16 +71,7 @@ jobs:
         # to restore the different packages in the various jobs will be reduced.  If one
         # of the files does change though, a new cache will be uploaded the next time
         # it runs, then subsequent runs should be faster.
-        run: echo "NPM_CACHE_KEY=cypress_node_modules-${{ hashFiles('**/package-lock.json') }}" >> $GITHUB_ENV
-
-      - name: Check for an npm cache
-        id: has-cache
-        uses: actions/cache@v4
-        with:
-          lookup-only: true
-          key: ${{ env.NPM_CACHE_KEY }}
-          path: |
-            ${{ env.NPM_CACHE_PATH }}
+        run: echo "NPM_CACHE_KEY=cypress_node_modules-${{ hashFiles('**/package-lock.json') }}" >> $GITHUB_ENV # TODO: Update path to be more specific for just the cypress package-lock.json if you have multiple package-lock.json files in the repo.
 
       # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
       # This action creates a post-job step that will upload the node_modules dir to the cache if the job
@@ -92,18 +83,20 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Check for an npm cache
+        id: has-cache
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          key: ${{ env.NPM_CACHE_KEY }}
+          path: |
+            ${{ env.NPM_CACHE_PATH }}
+
       - name: Authenticate with GitHub Packages
         uses: im-open/authenticate-with-gh-package-registries@v1.1
         with:
           read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
           orgs: 'im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
-
-      - name: NPM Install
-        if: steps.has-cache.outputs.cache-hit != 'true'
-        working-directory: '${{ env.CYPRESS_NPM_PACKAGE_PATH }}'
-        run: |
-          echo "Installing NPM"
-          npm ci
 
       - name: NPM Install
         if: steps.has-cache.outputs.cache-hit != 'true'
@@ -123,6 +116,7 @@ jobs:
 
   run-cypress:
     runs-on: im-linux
+    needs: npm-cache
     strategy:
       matrix:
         environment: [dev, qa, stage] # TODO: Add environments you want your tests to run in
@@ -135,6 +129,31 @@ jobs:
     environment: ${{ matrix.environment }}
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download npm cache
+        id: restore-npm-cache
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ needs.npm-cache.outputs.NPM_CACHE_KEY }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+          path: |
+            ${{ env.NPM_CACHE_PATH }}
+
+      - name: Rebuild Node Modules
+        if: steps.restore-npm-cache.outputs.cache-hit == 'true'
+        working-directory: '${{ env.CYPRESS_NPM_PACKAGE_PATH }}'
+        run: npm rebuild
+
       - name: Run cypress
         id: cypress
         continue-on-error: true
