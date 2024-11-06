@@ -37,7 +37,7 @@ on:
     # - cron: '1/40 * * * *' # Run Every 40 minutes # TODO: Uncomment this line if you want to run every 40 minutes.
 
 env:
-  GITHUB_REF: 'main' # Default branch to run against. use ${{ github.event.inputs.branch-tag-sha }} for manual runs
+  GITHUB_REF: 'main' # Default branch to run against.
   READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
   JS_TEST_DIR: '' # TODO: Set to the directory containing the js tests like tests/cypress.
   NODE_VERSION: '' # TODO: Update this to the version of node you want to use for the tests
