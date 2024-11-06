@@ -12,8 +12,5 @@
   "bugs": {
     "url": "https://github.com/im-practices/.github/issues"
   },
-  "homepage": "https://github.com/im-practices/.github#readme",
-  "dependencies": {
-    "im-practices-github": "file:"
-  }
+  "homepage": "https://github.com/im-practices/.github#readme"
 }
