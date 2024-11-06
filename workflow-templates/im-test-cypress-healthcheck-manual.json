@@ -1,5 +1,0 @@
-{
-  "name": "Test - Cypress UI Healthcheck Workflow",
-  "description": "Workflow template for running Cypress UI Healthcheck Tests. This workflow supports the UI Health Check feature.",
-  "iconName": "im_test"
-}
