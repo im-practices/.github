@@ -36,7 +36,7 @@ on:
           - qa
           - stage
       browser:
-        description: Browser to use for the tests.
+        description: Browser - What Browser to use for the UI tests.
         type: choice
         options:
           - Chrome
@@ -63,10 +63,10 @@ env:
   SELENIUM_RESULTS_DIR: 'Selenium/TestResults' # TODO: Update this to the results output directory
   DOTNET_VERSION: '8.x' # TODO: Specify the .NET SDK version to use
   TIMEZONE: America/Denver
-
+  
 jobs:
   cache:
-    runs-on: windows-latest
+    runs-on: im-linux
     if: ${{ inputs.enable-cache }}
 
     steps:
@@ -104,6 +104,11 @@ jobs:
         shell: bash
         run: echo "DOTNET_CACHE_KEY=dotnet_packages-${{ hashFiles('**/*.csproj') }}" >> $GITHUB_ENV
 
+      - name: Authenticate with GitHub Packages
+        uses: im-open/authenticate-with-gh-package-registries@v1.1
+        with:
+          github-token: ${{ secrets.READ_PKG_TOKEN }}
+                
       - name: Check for a .NET cache
         id: has-cache
         uses: actions/cache@v4
@@ -145,20 +150,23 @@ jobs:
         shell: bash
         run: dotnet build ${{ env.SELENIUM_TEST_DIR }} --configuration Release
 
-      - name: Run Selenium Tests # Executes Selenium C# tests with customizable environment and browser settings
+      - name: Run Selenium Tests
         working-directory: '${{ env.SELENIUM_TEST_DIR }}'
         shell: bash
         env: 
+          # These environment variables can be accessed in C# using Environment.GetEnvironmentVariable("VARIABLE_NAME")
+          # and assigned in your config file to set configuration values dynamically.
           ENVIRONMENT: ${{ inputs.environment }}
           BROWSER: ${{ inputs.browser }}
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
         run: |
           dotnet test --configuration Release \
           --logger "console;verbosity=detailed" \
           --logger "trx;LogFileName=test-results.trx" \
           --filter "${{ inputs.test-filter }}"
 
-      # Uncomment the following step and remove the previous step to run tests specifically in the QualityPractices_Automation framework.
-      # This configuration allows customization through environment variables such as Browser, BaseUrl, and other settings.
+      # # Uncomment the following step and remove the previous step to run tests specifically in the QualityPractices_Automation framework.
+      # # This configuration allows customization through environment variables such as Browser, BaseUrl, and other settings.
       # - name: Run Selenium Tests (QualityPractices_Automation) # Executes Selenium C# tests using QualityPractices_Automation framework
       #   working-directory: '${{ env.SELENIUM_TEST_DIR }}'
       #   shell: bash
@@ -176,7 +184,9 @@ jobs:
       #     --u $BASE_URL \
       #     --b $BROWSER \
       #     --tm $TIMEOUT \
-      #     --c $CONCURRENCY
+      #     --c $CONCURRENCY \
+      #     --aer true \
+      #     --aic ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
       - name: Copy Test Results to Results Folder
         if: ${{ always() }}
