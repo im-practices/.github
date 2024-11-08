@@ -32,20 +32,28 @@ env:
   SELENIUM_TEST_DIR: 'Selenium' # TODO: Update this to the root directory of the Selenium tests
   SELENIUM_RESULTS_DIR: 'Selenium/TestResults' # TODO: Update this to the results output directory
   DOTNET_VERSION: '8.x' # TODO: Specify the .NET SDK version to use
+  DOTNET_INSTALL_DIR: './.dotnet'  
+  NUGET_CACHE_PATH: '~/.nuget/packages'
   TIMEZONE: America/Denver
-  ENVIRONMENT: 'dev' # TODO: Set the default environment
+  ENVIRONMENTS: "['dev','qa']" # TODO: Update this to the list of environments you want to run the tests 
   BROWSER: 'Chrome' # TODO: Set the default browser
   TEST_FILTER: 'TestMethod' # TODO: Define test filter if necessary
 
 jobs:
   nuget-cache:
     runs-on: im-linux
+    
+    outputs:
+      NUGET_CACHE_KEY: ${{ env.NUGET_CACHE_KEY }}
+      MATRIX: '{ environment: ${{ env.ENVIRONMENTS }} }'
 
     steps:
       - name: Setup .NET  # TODO: Delete if action runner contains the dotnet version you need.
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+        env:
+          DOTNET_INSTALL_DIR: ${{ env.DOTNET_INSTALL_DIR }}
 
       - name: Calculate Ref to Checkout
         id: calculate-ref
@@ -61,7 +69,7 @@ jobs:
           echo $'
           | Inputs                  | Value                                                                                     |
           | ----------------------- | ----------------------------------------------------------------------------------------- |
-          | Environment             | `${{ env.ENVIRONMENT }}`                                                                  |
+          | Environments             | `${{ env.ENVIRONMENTS }}`                                                                |
           | Branch/Tag              | `${{ env.GITHUB_REF }}`                                                                   |
           | Browser                 | `${{ env.BROWSER }}`                                                                      |
           | Test Filter             | `${{ env.TEST_FILTER }}`                                                                  |' >> $GITHUB_STEP_SUMMARY
@@ -73,16 +81,15 @@ jobs:
 
       - name: Set Cache Keys
         shell: bash
-        run: echo "DOTNET_CACHE_KEY=dotnet_packages-${{ hashFiles('**/*.csproj') }}" >> $GITHUB_ENV
+        run: echo "NUGET_CACHE_KEY=nuget-${{ hashFiles('**/*.csproj') }}" >> $GITHUB_ENV
                 
       - name: Check for a .NET cache
         id: has-cache
         uses: actions/cache@v4
         with:
           lookup-only: true
-          key: ${{ env.DOTNET_CACHE_KEY }}
-          path: |
-            ~/.nuget/packages
+          key: ${{ env.NUGET_CACHE_KEY }}
+          path: ${{ env.NUGET_CACHE_PATH }}
 
       - name: Authenticate with GitHub Packages
         if: steps.has-cache.outputs.cache-hit != 'true'
@@ -100,12 +107,19 @@ jobs:
         uses: actions/cache/save@v4
         with:
           key: ${{ env.DOTNET_CACHE_KEY }}
-          path: |
-            ~/.nuget/packages
+          path: ${{ env.NUGET_CACHE_PATH }} 
 
   build-and-test:
     runs-on: im-linux
     needs: nuget-cache
+    
+    strategy:
+      matrix: ${{ fromJson(needs.nuget-cache.outputs.MATRIX) }}
+      fail-fast: false
+    environment: ${{ matrix.environment }}
+
+    env:
+      NUGET_CACHE_KEY: ${{ needs.nuget-cache.outputs.NUGET_CACHE_KEY }}
 
     steps:
       - name: Checkout Repository
@@ -122,11 +136,10 @@ jobs:
         id: restore-nuget-cache
         uses: actions/cache/restore@v4
         with:
-          key: ${{ env.DOTNET_CACHE_KEY }}
+          key: ${{ env.NUGET_CACHE_KEY  }}
           enableCrossOsArchive: true
           fail-on-cache-miss: true
-          path: |
-            ~/.nuget/packages
+          path: ${{ env.NUGET_CACHE_PATH }}
 
       - name: Build Project
         shell: bash
