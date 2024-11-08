@@ -71,6 +71,9 @@ jobs:
   nuget-cache:
     runs-on: im-linux
     if: ${{ inputs.enable-cache }}
+    
+    outputs:
+      NUGET_CACHE_KEY: ${{ env.NUGET_CACHE_KEY }}
 
     steps:
       - name: Setup .NET # TODO: Delete if action runner contains the dotnet version you need.
@@ -136,6 +139,9 @@ jobs:
   build-and-test:
     runs-on: im-linux
     needs: nuget-cache
+    
+    env:
+      NUGET_CACHE_KEY: ${{ needs.nuget-cache.outputs.NUGET_CACHE_KEY }}
 
     steps:
       - name: Checkout Repository
