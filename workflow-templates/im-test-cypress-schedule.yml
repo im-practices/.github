@@ -1,0 +1,204 @@
+# Workflow Code: SwimmingBear_v1    DO NOT REMOVE
+# Purpose:
+#    Runs Cypress UI Health Check tests in Github Actions on a schedule.
+#    With the workflow you specify when to run this test.
+#
+# Frequency:
+#    - This workflow can be duplicated once per cypress project that you wish to run independently.
+#
+# Projects to use this Template with:
+#    - Testing projects that use Cypress.
+#
+# TODO Prerequisites:
+#    - In order to make this workflow used for UI Healthchecks you need to make the below changes:
+#      1. Add secret APPLICATIONINSIGHTS_CONNECTION_STRING to every environment you are testing.
+#      2. Update your cypress test config to include the im.exporttoappinsights package. Instructions found here: https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/Cypress-UI-Health-Check.md
+#    - If the project contains a local npm.config remove it.  It interferes with restoring packages on the GitHub Action runners.
+#    - In order to use this workflow a few changes need to be made to the cypress test configuration:
+#      1. Make the following npm package changes in your cypress test directory
+#         npm uninstall mocha-teamcity-reporter
+#         npm install --save-dev mochawesome mochawesome-merge mochawesome-report-generator
+#      2. Modify the cypress run section of the ci script by replacing the '--reporter ./mocha-teamcity-reporter' with '--reporter mochawesome --reporter-options overwrite=false,html=false,json=true'. For instance:
+#         old: "cy:ci" : "....&& cypress run --project ./ --reporter ./mocha-teamcity-reporter \"",
+#         new: "cy:ci" : "....&& cypress run --project ./ --reporter mochawesome --reporter-options overwrite=false,html=false,json=true \"",
+#      3. Add the following pre-ci script.  Your name will vary based on your cypress ci script name.  This removes results between test runs.
+#         "precy:ci": "rm -rf mochawesome-report/",
+#      4. Add the following script that merges all test json files and generates an html report.  Your name may vary based on your project conventions.  If the output file or results dir are changed, update the env values in the workflow.
+#         "cy:report": "mochawesome-merge mochawesome-report/*.json > merged-results.json && marge --reportDir cypress-results merged-results.json",
+#                                                                                             ^^ marge is not a typo, it's a command for the "mochawesome report generator"
+
+name: 🧪 Run Cypress on Schedule
+run-name: 🧪 Run Cypress on Schedule
+
+# TODO: Verify Triggers
+on:
+  schedule: # TODO: Update the schedule to run at the desired frequency. Do not run more than every 30 minutes as to not produce undue load on the system.
+    - cron: '59 * * * *' # Run Every hour # TODO: Update the frequency of the schedule.  Do not run more than every 30 minutes as to not produce undue load on the system.
+    # - cron: '1/30 * * * *' # Run Every 30 minutes # TODO: Uncomment this line if you want to run every 30 minutes.
+    # - cron: '1/40 * * * *' # Run Every 40 minutes # TODO: Uncomment this line if you want to run every 40 minutes.
+
+env:
+  GITHUB_REF: 'main' # Default branch to run against.
+  READ_PKG_TOKEN: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+  CYPRESS_TEST_DIR: '' # TODO: Set to the directory containing the js tests like tests/cypress.
+  NODE_VERSION: '' # TODO: Update this to the version of node you want to use for the tests
+  CYPRESS_CI_SCRIPT: '' # TODO: Add cypress script name, example: 'cy:run:healthcheck:dev'.
+  CYPRESS_REPORT_SCRIPT: 'cy:report' #TODO:  Add the name of the npm script that merges the files and creates an html report, if you copied the one above it is cy:report
+  CYPRESS_RESULTS_FILE: 'merged-results.json' # TODO: Update this value if it was added as something different in the npm report script
+  CYPRESS_REPORT_DIR: 'cypress-results' # TODO: Update this value if it was added as something different in the npm report script
+  CYPRESS_SCREENSHOTS: 'cypress/screenshots' # TODO: Update this value if it was added as something different in the npm report script
+  CYPRESS_NPM_PACKAGE_PATH: ${{ github.workspace }} # TODO: Update this to the path of the package.json file in the cypress test root directory
+  NPM_CACHE_PATH: ${{ github.workspace }}/node_modules # TODO: Update this to the path of the node_modules directory in the cypress test root directory
+
+jobs:
+  npm-cache:
+    runs-on: im-linux
+
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      NPM_CACHE_KEY: ${{ env.NPM_CACHE_KEY }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - name: Set Cache Keys
+        # As long as these files don't change the cache will remain intact and the time
+        # to restore the different packages in the various jobs will be reduced.  If one
+        # of the files does change though, a new cache will be uploaded the next time
+        # it runs, then subsequent runs should be faster.
+        run: echo "NPM_CACHE_KEY=cypress_node_modules-${{ hashFiles('**/package-lock.json') }}" >> $GITHUB_ENV # TODO: Update path to be more specific for just the cypress package-lock.json if you have multiple package-lock.json files in the repo.
+
+      # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
+      # This action creates a post-job step that will upload the node_modules dir to the cache if the job
+      # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the node_modules
+      # folder if the package-lock.json hasn't changed and it uses a ubuntu-20.04 runner to restore the cache from.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Check for an npm cache
+        id: has-cache
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          key: ${{ env.NPM_CACHE_KEY }}
+          path: |
+            ${{ env.NPM_CACHE_PATH }}
+
+      - name: Authenticate with GitHub Packages
+        uses: im-open/authenticate-with-gh-package-registries@v1.1
+        with:
+          read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+          orgs: 'im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
+
+      - name: NPM Install
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        working-directory: '${{ env.CYPRESS_NPM_PACKAGE_PATH }}'
+        run: |
+          echo "Installing NPM"
+          npm ci
+
+      - name: Save cache for node_modules directory
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ env.NPM_CACHE_KEY }}
+          enableCrossOsArchive: true
+          path: |
+            ${{ env.NPM_CACHE_PATH }}
+
+  run-cypress:
+    runs-on: im-linux
+    needs: npm-cache
+    strategy:
+      matrix:
+        environment: [dev, qa, stage] # TODO: Add environments you want your tests to run in
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.CYPRESS_TEST_DIR }}
+
+    environment: ${{ matrix.environment }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download npm cache
+        id: restore-npm-cache
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ needs.npm-cache.outputs.NPM_CACHE_KEY }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+          path: |
+            ${{ env.NPM_CACHE_PATH }}
+
+      - name: Rebuild Node Modules
+        if: steps.restore-npm-cache.outputs.cache-hit == 'true'
+        working-directory: '${{ env.CYPRESS_NPM_PACKAGE_PATH }}'
+        run: npm rebuild
+
+      - name: Run cypress
+        id: cypress
+        continue-on-error: true
+        run: npm run ${{ env.CYPRESS_CI_SCRIPT }}
+        #TODO: Please remove this below environment variable if you are not using this workflow for UI Healthchecks
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
+
+      - name: Merge json files and create html report
+        run: npm run ${{ env.CYPRESS_REPORT_SCRIPT }}
+
+      - name: Create Status check based on merged cypress results
+        id: process-cypress
+        uses: im-open/process-cypress-test-results@v3.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Special per-job token generated by GH for interacting with the repo
+          results-file: '${{ env.CYPRESS_TEST_DIR }}/${{ env.CYPRESS_RESULTS_FILE }}'
+          report-name: 'Cypress ${{ github.run_number }}'
+          create-status-check: false #This should be set as false as this is a scheduled job
+          create-pr-comment: false #This should be set as false as this is a scheduled job
+          ignore-test-failures: true
+          timezone: 'america/denver' # TODO: Verify timezone
+
+      - name: Upload cypress screenshots if there are test failures
+        if: steps.cypress.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cypress Test Screenshots ${{ github.run_number }}-${{ matrix.environment }}
+          path: ${{ env.CYPRESS_TEST_DIR }}/${{ env.CYPRESS_SCREENSHOTS }}/
+          if-no-files-found: ignore
+          retention-days: 5 # Cannot exceed 30 days.
+
+      - name: Upload Cypress Results Report if there are test failures
+        if: steps.cypress.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cypress Results ${{ github.run_number }}-${{ matrix.environment }}
+          path: |
+            ${{ env.CYPRESS_TEST_DIR }}/${{ env.CYPRESS_REPORT_DIR }}/
+            ${{ env.CYPRESS_TEST_DIR }}/${{ env.CYPRESS_RESULTS_FILE }}
+          retention-days: 5 # Cannot exceed 30 days.
+
+      - name: Fail if cypress errors
+        if: steps.cypress.outcome == 'failure'
+        run: |
+          echo "The cypress tests have failures"
+          exit 1
