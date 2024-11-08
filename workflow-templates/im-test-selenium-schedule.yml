@@ -38,7 +38,7 @@ env:
   TEST_FILTER: 'TestMethod' # TODO: Define test filter if necessary
 
 jobs:
-  cache:
+  nuget-cache:
     runs-on: im-linux
 
     steps:
@@ -74,11 +74,6 @@ jobs:
       - name: Set Cache Keys
         shell: bash
         run: echo "DOTNET_CACHE_KEY=dotnet_packages-${{ hashFiles('**/*.csproj') }}" >> $GITHUB_ENV
-
-      - name: Authenticate with GitHub Packages
-        uses: im-open/authenticate-with-gh-package-registries@v1.1
-        with:
-          github-token: ${{ secrets.READ_PKG_TOKEN }}
                 
       - name: Check for a .NET cache
         id: has-cache
@@ -88,6 +83,12 @@ jobs:
           key: ${{ env.DOTNET_CACHE_KEY }}
           path: |
             ~/.nuget/packages
+
+      - name: Authenticate with GitHub Packages
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        uses: im-open/authenticate-with-gh-package-registries@v1.1
+        with:
+          github-token: ${{ secrets.READ_PKG_TOKEN }}
 
       - name: Restore Dependencies
         if: steps.has-cache.outputs.cache-hit != 'true'
@@ -104,7 +105,7 @@ jobs:
 
   build-and-test:
     runs-on: im-linux
-    needs: cache
+    needs: nuget-cache
 
     steps:
       - name: Checkout Repository
@@ -112,10 +113,20 @@ jobs:
         with:
           ref: ${{ env.DISPATCH_REF }}
 
-      - name: Setup .NET
+      - name: Setup .NET # TODO: Delete if action runner contains the dotnet version you need.
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download NuGet Cache
+        id: restore-nuget-cache
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ env.DOTNET_CACHE_KEY }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+          path: |
+            ~/.nuget/packages
 
       - name: Build Project
         shell: bash
