@@ -11,7 +11,7 @@
 # TODO Prerequisites:
 #    - Add Application Insights secret (APPLICATIONINSIGHTS_CONNECTION_STRING) to every environment you are testing.
 #    - Update your Selenium solution to export test results to Application Insights using the IM.ExportToAppInsights NuGet package. 
-#      Detailed setup guidance can be found here: https://github.com/im-practices/techhub/blob/QAP-390-UI-Health-Check-ADR/docs/Azure/content/Health-Checks/Selenium-UI-Health-Check.md
+#      Detailed setup guidance can be found here: https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/Selenium-UI-Health-Check.md
 
 name: 🧪 Scheduled Selenium C# Tests
 run-name: 🧪 Run Scheduled Selenium C# Tests
