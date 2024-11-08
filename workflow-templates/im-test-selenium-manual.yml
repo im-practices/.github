@@ -1,0 +1,196 @@
+# Workflow Code: CosmicFalcon_v1   DO NOT REMOVE
+# Purpose:
+#    Runs Selenium C# tests in GitHub Actions with a manual trigger.
+#    Allows users to initiate the workflow manually.
+#
+# Frequency:
+#    - Manually triggered for on-demand testing.
+#
+# Projects to use this Template with:
+#    - Testing projects that use Selenium C#.
+#
+# TODO Prerequisites:
+#    - Add Application Insights secret (APPLICATIONINSIGHTS_CONNECTION_STRING) to every environment you are testing.
+#    - Update your Selenium solution to export test results to Application Insights using the IM.ExportToAppInsights NuGet package.  Detailed setup guidance can be found here: https://github.com/im-practices/techhub/blob/QAP-390-UI-Health-Check-ADR/docs/Azure/content/Health-Checks/Selenium-UI-Health-Check.m#    - Update your Selenium solution to enable test result exports to Application Insights by integrating the `IM.ExportToAppInsights` NuGet package. For detailed setup instructions, refer to the [TechHub documentation](https://github.com/im-practices/techhub/blob/QAP-390-UI-Health-Check-ADR/docs/Azure/content/Health-Checks/Selenium-UI-Health-Check.md).
+
+
+name: 🧪 Run Selenium C# Tests
+run-name: 🧪 Run Selenium C# Tests on ${{ inputs.environment }} with ${{ inputs.browser }} browser
+
+concurrency:
+  group: selenium-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch-tag-sha:
+        description: Branch/Tag/SHA; The branch, tag, or SHA of the Selenium tests to run.
+        required: false
+      environment:
+        description: The environment to test against
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - stage
+      browser:
+        description: Browser to use for the tests.
+        type: choice
+        options:
+          - Chrome
+          - Firefox
+          - Edge
+      test-filter:
+        description: Test Filter - input the test category or name to run.
+        required: false
+        default: ''
+      enable-cache:
+        description: Enable caching of .NET packages to speed up builds.
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+
+env:
+  DISPATCH_REF: ${{ inputs.branch-tag-sha || github.ref_name }}
+  SELENIUM_TEST_DIR: 'Selenium' # TODO: Update this to the root directory of the Selenium tests
+  SELENIUM_RESULTS_DIR: 'Selenium/TestResults' # TODO: Update this to the results output directory
+  DOTNET_VERSION: '8.x' # TODO: Specify the .NET SDK version to use
+  TIMEZONE: America/Denver
+
+jobs:
+  cache:
+    runs-on: windows-latest
+    if: ${{ inputs.enable-cache }}
+
+    steps:
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Calculate Ref to Checkout
+        id: calculate-ref
+        shell: bash
+        run: |
+          GITHUB_REF="${{ env.DISPATCH_REF }}"
+          echo "GITHUB_REF=$GITHUB_REF" >> $GITHUB_ENV
+          echo "GITHUB_REF=$GITHUB_REF" >> $GITHUB_OUTPUT
+
+      - name: Annotate Inputs
+        shell: bash
+        run: |
+          echo $'
+          | Inputs                  | Value                                                                                     |
+          | ----------------------- | ----------------------------------------------------------------------------------------- |
+          | Environment             | `${{ inputs.environment }}`                                                               |
+          | Branch/Tag              | `${{ env.GITHUB_REF }}`                                                                   |
+          | Workflow Branch/Tag     | `${{ github.ref_name }}` - SHA: `${{ github.sha }}`                                       |
+          | Browser                 | `${{ inputs.browser }}`                                                                   |
+          | Test Filter             | `${{ inputs.test-filter != 0 && inputs.test-filter || 'NA' }}`                            |' >> $GITHUB_STEP_SUMMARY
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - name: Set Cache Keys
+        shell: bash
+        run: echo "DOTNET_CACHE_KEY=dotnet_packages-${{ hashFiles('**/*.csproj') }}" >> $GITHUB_ENV
+
+      - name: Check for a .NET cache
+        id: has-cache
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          key: ${{ env.DOTNET_CACHE_KEY }}
+          path: |
+            ~/.nuget/packages
+
+      - name: Restore Dependencies
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: dotnet restore ${{ env.SELENIUM_TEST_DIR }}
+
+      - name: Save cache for .NET packages
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ env.DOTNET_CACHE_KEY }}
+          path: |
+            ~/.nuget/packages
+
+  build-and-test:
+    runs-on: im-linux
+    needs: cache
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DISPATCH_REF }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build Project
+        shell: bash
+        run: dotnet build ${{ env.SELENIUM_TEST_DIR }} --configuration Release
+
+      - name: Run Selenium Tests # Executes Selenium C# tests with customizable environment and browser settings
+        working-directory: '${{ env.SELENIUM_TEST_DIR }}'
+        shell: bash
+        env: 
+          ENVIRONMENT: ${{ inputs.environment }}
+          BROWSER: ${{ inputs.browser }}
+        run: |
+          dotnet test --configuration Release \
+          --logger "console;verbosity=detailed" \
+          --logger "trx;LogFileName=test-results.trx" \
+          --filter "${{ inputs.test-filter }}"
+
+      # Uncomment the following step and remove the previous step to run tests specifically in the QualityPractices_Automation framework.
+      # This configuration allows customization through environment variables such as Browser, BaseUrl, and other settings.
+      # - name: Run Selenium Tests (QualityPractices_Automation) # Executes Selenium C# tests using QualityPractices_Automation framework
+      #   working-directory: '${{ env.SELENIUM_TEST_DIR }}'
+      #   shell: bash
+      #   env: 
+      #     ASSEMBLY: 'Tests.DemoApp' # TODO: Set the target test assembly here, e.g., replace 'Tests.DemoApp' with the relevant assembly name
+      #     ATTRIBUTE: 'HealthCheck' # TODO: Specify the test attribute for filtering (e.g., use 'HealthCheck' to run tests marked with this attribute)
+      #     BASE_URL: 'http://localhost:5050' # TODO: Define the base URL for the test environment, e.g., change to the appropriate test server endpoint if needed
+      #     BROWSER: 'chromeheadless' # TODO: Configure the browser mode here, e.g., 'chromeheadless' for headless mode in CI/CD
+      #     TIMEOUT: '10' # TODO: Specify the maximum timeout in minutes for each test, ensuring tests don’t exceed this duration
+      #     CONCURRENCY: '3' # TODO: Define the level of concurrency (e.g., 3 to allow up to 3 tests to run in parallel)
+      #   run: |
+      #     dotnet run \
+      #     --asmb $ASSEMBLY \
+      #     --attr $ATTRIBUTE \
+      #     --u $BASE_URL \
+      #     --b $BROWSER \
+      #     --tm $TIMEOUT \
+      #     --c $CONCURRENCY
+
+      - name: Copy Test Results to Results Folder
+        if: ${{ always() }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p ${{ env.SELENIUM_RESULTS_DIR }}/reports
+          cp -r ${{ env.SELENIUM_TEST_DIR }}/TestResults/*.trx ${{ env.SELENIUM_RESULTS_DIR }}/reports
+
+      - name: Upload Selenium Test Report
+        if: ${{ failure() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-test-results
+          path: ${{ env.SELENIUM_RESULTS_DIR }}
+          retention-days: 5
