@@ -10,8 +10,9 @@
 #    - Testing projects that use Cypress.
 #
 # TODO Prerequisites:
-#    - Add secret APPLICATIONINSIGHTS_CONNECTION_STRING to every environment you are testing.
-#    - Update your cypress test config to include the im.exporttoappinsights package. Instructions found here: https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/Cypress-UI-Health-Check.md
+#    - In order to make this workflow used for UI Healthchecks you need to make the below changes:
+#      1. Add secret APPLICATIONINSIGHTS_CONNECTION_STRING to every environment you are testing.
+#      2. Update your cypress test config to include the im.exporttoappinsights package. Instructions found here: https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/Cypress-UI-Health-Check.md
 #    - If the project contains a local npm.config remove it.  It interferes with restoring packages on the GitHub Action runners.
 #    - In order to use this workflow a few changes need to be made to the cypress test configuration:
 #      1. Make the following npm package changes in your cypress test directory
@@ -158,6 +159,7 @@ jobs:
         id: cypress
         continue-on-error: true
         run: npm run ${{ env.CYPRESS_CI_SCRIPT }}
+        #TODO: Please remove this below environment variable if you are not using this workflow for UI Healthchecks
         env:
           APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
