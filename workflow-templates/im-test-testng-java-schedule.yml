@@ -1,0 +1,138 @@
+﻿name: 🧪 Run Java Health Check Tests on Schedule
+
+# Purpose:
+#   Runs Java-based Health Check tests in GitHub Actions.
+#   This workflow is set to run when there is a push to the specified branches.
+#
+# Frequency:
+#   - This workflow can be customized to run on different branches or schedules as required.
+#
+# TODO Prerequisites:
+#   - Ensure that all necessary environment variables are set in the repository or organization settings.
+#   - Verify the paths for Maven and JAR files as per the project structure.
+#   - Check that the Java and Maven versions used in the project align with those set in this workflow.
+
+# TODO: Verify Triggers
+on:
+  push:
+    branches:
+      - 'login-smoke-test-back-up' # TODO: Specify branches to run tests on.
+
+env:
+  GITHUB_REF: 'main' # Default branch to run against.
+  JAVA_VERSION: '17' # TODO: Update this to the version of Java required for the tests.
+  MAVEN_SETTINGS_PATH: './shells/setup-maven.sh' # Path to the Maven setup script.
+  MAVEN_BIN: 'embedded/maven/bin/mvn' # Path to Maven binary, update if different.
+  JAVA_AGENT: 'test-input/app-insights/applicationinsights-agent-3.5.4.jar' # Path to the App Insights Java agent JAR.
+  ENV_CONFIG_FILE: 'prod.json' # Configuration file for the health check.
+  ENV_HEALTH_CHECK_PASS: 'fake-password' # Password placeholder for health check.
+  ENV_TEST_RUN_NAME: 'PEGA Automation Health Check Tests' # Name for the health check test run.
+
+jobs:
+  setup-cache:
+    # Sets up the Maven cache to speed up dependency installation
+    runs-on: im-linux-ui-tests
+
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      MAVEN_CACHE_KEY: ${{ env.MAVEN_CACHE_KEY }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - name: Set up Cache Keys
+        # Generate a cache key based on the pom.xml file. If it changes, a new cache will be created.
+        run: echo "MAVEN_CACHE_KEY=maven_repo-${{ hashFiles('**/pom.xml') }}" >> $GITHUB_ENV
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Check for Maven Cache
+        id: has-cache
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          key: ${{ env.MAVEN_CACHE_KEY }}
+          path: ~/.m2 # Cache path for Maven dependencies.
+
+      - name: Install Maven and Dependencies
+        # Installs Maven dependencies if the cache is not found.
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Setting up Maven and installing dependencies"
+          chmod +x ${{ env.MAVEN_SETTINGS_PATH }}
+          ${{ env.MAVEN_SETTINGS_PATH }}
+
+  run-tests:
+    # Main job to build and run the health check tests
+    runs-on: im-linux-ui-tests
+    needs: setup-cache
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GITHUB_REF }}
+
+      - name: Set up Java
+        # Sets up the specified Java version.
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Download Maven Cache
+        id: restore-maven-cache
+        # Restore the cached Maven dependencies if available.
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ needs.setup-cache.outputs.MAVEN_CACHE_KEY }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+          path: ~/.m2
+
+      - name: Build Project with Maven
+        # Compiles the project and packages it with Maven.
+        run: ${{ env.MAVEN_BIN }} clean package
+
+      - name: Create Health Check Zephyr Report
+        # Runs a custom Java command to create a health check report in Zephyr.
+        run: ${{ env.MAVEN_BIN }} exec:java -e -D"exec.mainClass"="com.extendhealth.runners.Main" -D"exec.args"="--create-health-check-zephyr-report packages:com.extendhealth.smoke.healthcheck.tests.*;"
+        env:
+          ENV_IS_HEALTH_CHECK: true
+          ENV_CONFIG_FILE: ${{ env.ENV_CONFIG_FILE }}
+
+      - name: Run AppInsight JAR File
+        # Starts the Application Insights agent for tracking metrics.
+        run: |
+          echo "Starting App Insights Agent"
+          java -jar ${{ env.JAVA_AGENT }}
+
+      - name: Run Health Check Tests
+        # Executes health check tests and generates a Zephyr report.
+        run: ${{ env.MAVEN_BIN }} exec:exec -e -D"exec.executable"="java" -D"exec.args"="-javaagent:${{ env.JAVA_AGENT }} -cp %classpath com.extendhealth.runners.Main --update-health-check-zephyr-report packages:com.extendhealth.smoke.healthcheck.tests.*"
+        env:
+          ENV_SMALL_SLEEP: 500 # Adjustable delay time
+          ENV_ENVIRONMENT_FACTOR: 1.1 # Factor used in the environment
+          ENV_THREAD_COUNT: 1 # Number of threads
+          ENV_RETRIES_NUMBER: 1 # Retry attempts
+          ENV_TEST_RUN_NAME: ${{ env.ENV_TEST_RUN_NAME }}
+          ENV_HEALTH_CHECK_PASS: ${{ env.ENV_HEALTH_CHECK_PASS }}
+          ENV_IS_HEALTH_CHECK: true
+          ENV_CONFIG_FILE: ${{ env.ENV_CONFIG_FILE }}
+
+      - name: Close Processes
+        # Runs a cleanup script to close any remaining processes.
+        run: |
+          echo "Cleaning up processes"
+          chmod +x ./shells/close-process.sh
+          ./shells/close-process.sh
