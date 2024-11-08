@@ -42,7 +42,7 @@ jobs:
     runs-on: im-linux
 
     steps:
-      - name: Setup .NET
+      - name: Setup .NET  # TODO: Delete if action runner contains the dotnet version you need.
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
