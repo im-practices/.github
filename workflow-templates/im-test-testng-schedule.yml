@@ -4,7 +4,7 @@
 #       With the workflow you specify when to run this test.
 #
 # Frequency:
-#    - Workflow template for running Selenium-Java tests on a schedule. This workflow supports the UI Health Check feature
+#    - This workflow can be duplicated once per cypress project that you wish to run independently.
 #
 # Projects to use this Template with:
 #    - Testing projects that use Selenium Java.
@@ -12,6 +12,7 @@
 # TODO Prerequisites:
 #    - Make sure you have the Javaagent and applicationinsights.json in resources folder.
 #    - Update your java selenium solution to export test results to Application Insights using the im.exporttoappinsights jar dependencies. 
+#    - Add secret APPLICATIONINSIGHTS_CONNECTION_STRING to every environment you are testing.
 #    - Modify your Maven profile fetch artifacts from github packages.
 #      Detailed setup guidance can be found here: https://github.com/im-practices/techhub/blob/implementation-doc-functional-healthcheck/docs/Azure/content/Health-Checks/Azure-Monitor-Functional-Health-Check.md
 
@@ -31,7 +32,8 @@ env:
   MAVEN_SETTINGS_PATH: './shells/setup-maven.sh' # Path to the Maven setup script.
   MAVEN_BIN: 'embedded/maven/bin/mvn' # Path to Maven binary, update if different.
   JAVA_AGENT: 'resources/app-insights/applicationinsights-agent.jar' # Path to the App Insights Java agent JAR.
-  ENV_TEST_RUN_NAME: 'UI Health Check Tests' # Name for the health check test run.
+  ENV_TEST_RUN_NAME: 'TestNG Tests' # Name for the health check test run.
+  JAVA_TEST_DIR: '' # Path to the Java test directory.
   TESTNG_RESULTS_FILE: 'target/surefire-reports/testng-results.xml' # Path to TestNG results file.
   TESTNG_SCREENSHOTS_DIR: 'target/screenshots' # Path to screenshots directory.
   TESTNG_REPORT_DIR: 'target/surefire-reports' # Path to TestNG reports directory.
@@ -54,12 +56,13 @@ jobs:
         with:
           ref: ${{ env.GITHUB_REF }}
 
-      - name: Set up Cache Keys
+      - name: Set up Maven Cache Keys
         # Generate a cache key based on the pom.xml file. If it changes, a new cache will be created.
         run: echo "MAVEN_CACHE_KEY=maven_repo-${{ hashFiles('**/pom.xml') }}" >> $GITHUB_ENV
 
       - name: Setup Java
         uses: actions/setup-java@v4
+        if: steps.has-cache.outputs.cache-hit != 'true'
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
@@ -70,7 +73,15 @@ jobs:
         with:
           lookup-only: true
           key: ${{ env.MAVEN_CACHE_KEY }}
-          path: ~/.m2 # Cache path for Maven dependencies.
+          path: ~/.m2/repository # Cache path for Maven dependencies.
+          restore-keys: |
+             ${{ runner.os }}-maven-
+
+      - name: Authenticate with GitHub Packages
+        uses: im-open/authenticate-with-gh-package-registries@v1.1
+        with:
+          read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+          orgs: 'im-enrollment,im-practices' # TODO: Verify list of orgs packages will be pulled from
 
       - name: Install Maven and Dependencies
         # Installs Maven dependencies if the cache is not found.
@@ -81,9 +92,22 @@ jobs:
           ${{ env.MAVEN_SETTINGS_PATH }}
 
   run-tests:
-    # Main job to build and run the health check tests
+    # Main job to build and run the tests
     runs-on: im-linux
     needs: setup-cache
+    create-status-check: false #This should be set as false as this is a scheduled job
+    create-pr-comment: false #This should be set as false as this is a scheduled job
+
+    strategy:
+      matrix:
+        environment: [dev, qa, stage] # TODO: Add environments you want your tests to run in
+    
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.JAVA_TEST_DIR }}
+
+    environment: ${{ matrix.environment }}
 
     steps:
       - name: Checkout Repository
@@ -106,31 +130,19 @@ jobs:
           key: ${{ needs.setup-cache.outputs.MAVEN_CACHE_KEY }}
           enableCrossOsArchive: true
           fail-on-cache-miss: true
-          path: ~/.m2
+          path: ~/.m2/repository
 
       - name: Build Project with Maven
         # Compiles the project and packages it with Maven.
         run: ${{ env.MAVEN_BIN }} clean package
 
-      - name: Run Health Check Tests
-        # Executes health check tests.
+      - name: Run TestNG Tests
+        # Executes TestNG tests ,you can modify running using your other approaches to run test.
         run: |
-          ${{ env.MAVEN_BIN }} exec:java -D"exec.mainClass"="com.extendhealth.runners.Main" -D"exec.args"="-javaagent:${{ env.JAVA_AGENT }} -cp %classpath com.healthcheck.runners.Main --update-health-check packages:com.extendhealth.ui.healthcheck.tests.*"
-        env:
-          ENV_IS_HEALTH_CHECK: true
-          ENV_CONFIG_FILE: ${{ env.ENV_CONFIG_FILE }}
+            ${{ env.MAVEN_BIN }} exec:java 
+            -D"exec.mainClass"="org.testng.TestNG" 
+            -D"exec.args"="-javaagent:${{ env.JAVA_AGENT }} -cp %classpath yourtest.xml"
 
-      - name: Process TestNG Results
-        id: process-testng
-        uses: im-open/process-test-results@v3.0.2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          results-file: '${{ env.TESTNG_RESULTS_FILE }}'
-          report-name: 'TestNG Health Check ${{ github.run_number }}'
-          create-status-check: false
-          create-pr-comment: false
-          ignore-test-failures: true
-          timezone: 'america/denver'
 
       - name: Upload TestNG Screenshots if Tests Fail
         if: steps.process-testng.outcome == 'failure'
