@@ -1,37 +1,45 @@
-﻿name: 🧪 Run Java Health Check Tests on Schedule
-
+﻿# Workflow Code: LazySnorlax_v1   DO NOT REMOVE
 # Purpose:
-#   Runs Java-based Health Check tests in GitHub Actions.
-#   This workflow is set to run when there is a push to the specified branches.
+#       Runs Java Selenium UI Health Check tests in Github Actions on a schedule.
+#       With the workflow you specify when to run this test.
 #
 # Frequency:
-#   - This workflow can be customized to run on different branches or schedules as required.
+#    - Workflow template for running Selenium-Java tests on a schedule. This workflow supports the UI Health Check feature
+#
+# Projects to use this Template with:
+#    - Testing projects that use Selenium Java.
 #
 # TODO Prerequisites:
-#   - Ensure that all necessary environment variables are set in the repository or organization settings.
-#   - Verify the paths for Maven and JAR files as per the project structure.
-#   - Check that the Java and Maven versions used in the project align with those set in this workflow.
+#    - Make sure you have the Javaagent and applicationinsights.json in resources folder.
+#    - Update your java selenium solution to export test results to Application Insights using the im.exporttoappinsights jar dependencies. 
+#    - Modify your Maven profile fetch artifacts from github packages.
+#      Detailed setup guidance can be found here: https://github.com/im-practices/techhub/blob/implementation-doc-functional-healthcheck/docs/Azure/content/Health-Checks/Azure-Monitor-Functional-Health-Check.md
+
+name: 🧪 Run Java Selenium HealthCheck tests on Schedule
+run-name: 🧪 Run Java Selenium HealthCheck tests on Schedule
 
 # TODO: Verify Triggers
 on:
-  push:
-    branches:
-      - 'login-smoke-test-back-up' # TODO: Specify branches to run tests on.
+  schedule: # TODO: Update the schedule to run at the desired frequency. Do not run more than every 30 minutes as to not produce undue load on the system.
+    - cron: '59 * * * *' # Run Every hour # TODO: Update the frequency of the schedule.  Do not run more than every 30 minutes as to not produce undue load on the system.
+    # - cron: '1/30 * * * *' # Run Every 30 minutes # TODO: Uncomment this line if you want to run every 30 minutes.
+    # - cron: '1/40 * * * *' # Run Every 40 minutes # TODO: Uncomment this line if you want to run every 40 minutes.
 
 env:
   GITHUB_REF: 'main' # Default branch to run against.
-  JAVA_VERSION: '17' # TODO: Update this to the version of Java required for the tests.
+  JAVA_VERSION: '21' # TODO: Update this to the version of Java required for the tests.
   MAVEN_SETTINGS_PATH: './shells/setup-maven.sh' # Path to the Maven setup script.
   MAVEN_BIN: 'embedded/maven/bin/mvn' # Path to Maven binary, update if different.
-  JAVA_AGENT: 'test-input/app-insights/applicationinsights-agent-3.5.4.jar' # Path to the App Insights Java agent JAR.
-  ENV_CONFIG_FILE: 'prod.json' # Configuration file for the health check.
-  ENV_HEALTH_CHECK_PASS: 'fake-password' # Password placeholder for health check.
-  ENV_TEST_RUN_NAME: 'PEGA Automation Health Check Tests' # Name for the health check test run.
+  JAVA_AGENT: 'resources/app-insights/applicationinsights-agent.jar' # Path to the App Insights Java agent JAR.
+  ENV_TEST_RUN_NAME: 'UI Health Check Tests' # Name for the health check test run.
+  TESTNG_RESULTS_FILE: 'target/surefire-reports/testng-results.xml' # Path to TestNG results file.
+  TESTNG_SCREENSHOTS_DIR: 'target/screenshots' # Path to screenshots directory.
+  TESTNG_REPORT_DIR: 'target/surefire-reports' # Path to TestNG reports directory.
 
 jobs:
   setup-cache:
     # Sets up the Maven cache to speed up dependency installation
-    runs-on: im-linux-ui-tests
+    runs-on: im-linux
 
     defaults:
       run:
@@ -74,7 +82,7 @@ jobs:
 
   run-tests:
     # Main job to build and run the health check tests
-    runs-on: im-linux-ui-tests
+    runs-on: im-linux
     needs: setup-cache
 
     steps:
@@ -104,31 +112,50 @@ jobs:
         # Compiles the project and packages it with Maven.
         run: ${{ env.MAVEN_BIN }} clean package
 
-      - name: Create Health Check Zephyr Report
-        # Runs a custom Java command to create a health check report in Zephyr.
-        run: ${{ env.MAVEN_BIN }} exec:java -e -D"exec.mainClass"="com.extendhealth.runners.Main" -D"exec.args"="--create-health-check-zephyr-report packages:com.extendhealth.smoke.healthcheck.tests.*;"
-        env:
-          ENV_IS_HEALTH_CHECK: true
-          ENV_CONFIG_FILE: ${{ env.ENV_CONFIG_FILE }}
-
-      - name: Run AppInsight JAR File
-        # Starts the Application Insights agent for tracking metrics.
-        run: |
-          echo "Starting App Insights Agent"
-          java -jar ${{ env.JAVA_AGENT }}
-
       - name: Run Health Check Tests
-        # Executes health check tests and generates a Zephyr report.
-        run: ${{ env.MAVEN_BIN }} exec:exec -e -D"exec.executable"="java" -D"exec.args"="-javaagent:${{ env.JAVA_AGENT }} -cp %classpath com.extendhealth.runners.Main --update-health-check-zephyr-report packages:com.extendhealth.smoke.healthcheck.tests.*"
+        # Executes health check tests.
+        run: |
+          ${{ env.MAVEN_BIN }} exec:java -D"exec.mainClass"="com.extendhealth.runners.Main" -D"exec.args"="-javaagent:${{ env.JAVA_AGENT }} -cp %classpath com.healthcheck.runners.Main --update-health-check packages:com.extendhealth.ui.healthcheck.tests.*"
         env:
-          ENV_SMALL_SLEEP: 500 # Adjustable delay time
-          ENV_ENVIRONMENT_FACTOR: 1.1 # Factor used in the environment
-          ENV_THREAD_COUNT: 1 # Number of threads
-          ENV_RETRIES_NUMBER: 1 # Retry attempts
-          ENV_TEST_RUN_NAME: ${{ env.ENV_TEST_RUN_NAME }}
-          ENV_HEALTH_CHECK_PASS: ${{ env.ENV_HEALTH_CHECK_PASS }}
           ENV_IS_HEALTH_CHECK: true
           ENV_CONFIG_FILE: ${{ env.ENV_CONFIG_FILE }}
+
+      - name: Process TestNG Results
+        id: process-testng
+        uses: im-open/process-test-results@v3.0.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          results-file: '${{ env.TESTNG_RESULTS_FILE }}'
+          report-name: 'TestNG Health Check ${{ github.run_number }}'
+          create-status-check: false
+          create-pr-comment: false
+          ignore-test-failures: true
+          timezone: 'america/denver'
+
+      - name: Upload TestNG Screenshots if Tests Fail
+        if: steps.process-testng.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestNG Screenshots ${{ github.run_number }}
+          path: ${{ env.TESTNG_SCREENSHOTS_DIR }}/
+          if-no-files-found: ignore
+          retention-days: 5
+
+      - name: Upload TestNG Report if Tests Fail
+        if: steps.process-testng.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestNG Report ${{ github.run_number }}
+          path: |
+            ${{ env.TESTNG_REPORT_DIR }}/
+            ${{ env.TESTNG_RESULTS_FILE }}
+          retention-days: 5
+
+      - name: Fail if Tests Have Failures
+        if: steps.process-testng.outcome == 'failure'
+        run: |
+          echo "The TestNG tests have failures"
+          exit 1
 
       - name: Close Processes
         # Runs a cleanup script to close any remaining processes.
