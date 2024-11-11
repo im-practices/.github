@@ -91,7 +91,7 @@ jobs:
           chmod +x ${{ env.MAVEN_SETTINGS_PATH }}
           ${{ env.MAVEN_SETTINGS_PATH }}
 
-  run-tests:
+  testng-tests:
     # Main job to build and run the tests
     runs-on: im-linux
     needs: setup-cache
