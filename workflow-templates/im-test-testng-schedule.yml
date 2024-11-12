@@ -14,8 +14,10 @@
 #    - Update your java selenium solution to export test results to Application Insights using the im.exporttoappinsights jar dependencies. 
 #    - Add secret APPLICATIONINSIGHTS_CONNECTION_STRING to every environment you are testing.
 #    - Modify your Maven profile fetch artifacts from github packages.
-#      Detailed setup guidance can be found here: https://github.com/im-practices/techhub/blob/implementation-doc-functional-healthcheck/docs/Azure/content/Health-Checks/Azure-Monitor-Functional-Health-Check.md
-
+#      Detailed setup guidance can be found here:  https://github.com/im-practices/techhub/blob/QAP-390-UI-Health-Check-ADR/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md#steps-to-run-health-check-in-github-actions-workflow
+#    - Create the shell script to setup Maven with the modified settings.xml file.
+#    - Add a shell script to setup Maven with the modified settings.xml file.
+#    - 
 name: 🧪 Run Java Selenium TestNG tests on Schedule
 run-name: 🧪 Run Java Selenium TestNG tests on Schedule
 
@@ -65,40 +67,15 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
 
       - name: Set up Maven
+        # Steps to generate the shell script is available at  https://github.com/im-practices/techhub/blob/QAP-390-UI-Health-Check-ADR/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md#steps-to-run-health-check-in-github-actions-workflow  Step no 5
+        # This step will run the shell script to setup Maven with the modified settings.xml file.
         run: |
-          chmod +x ./shells/setup-maven.sh
-          ./shells/setup-maven.sh
-        shell: bash
-      - name: Set up Maven settings with GitHub Packages authentication
-        run: |
-          mkdir -p ~/.m2
-          echo "<settings>
-                  <servers>
-                    <server>
-                      <id>github</id>
-                      <username>${{ github.actor }}</username>
-                      <password>${{ secrets.GITHUB_TOKEN }}</password>
-                    </server>
-                  </servers>
-                  <profiles>
-                    <profile>
-                      <id>github</id>
-                      <repositories>
-                        <repository>
-                          <id>github</id>
-                          <url>https://maven.pkg.github.com/im-practices/ExportToAppInsights</url>
-                        </repository>
-                      </repositories>
-                    </profile>
-                  </profiles>
-                  <activeProfiles>
-                    <activeProfile>github</activeProfile>
-                  </activeProfiles>
-                </settings>" > ~/.m2/settings.xml
+          chmod +x ./path/to/setup-custom-maven.sh
+          ./path/to/setup-custom-maven.sh
         shell: bash
 
-      - name: Build Project
-        run: mvn clean install -e
+      - name: Build Project using Maven
+        run: mvn clean install
 
       - name: Set up Maven Cache Keys
         # Generate a cache key based on the pom.xml file. If it changes, a new cache will be created.
