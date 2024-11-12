@@ -148,6 +148,9 @@ jobs:
             ${{ env.MAVEN_BIN }} exec:java 
             -D"exec.mainClass"="org.testng.TestNG" 
             -D"exec.args"="-javaagent:${{ env.JAVA_AGENT }} -cp %classpath test.xml"
+        #TODO: Please remove this below environment variable if you are not using this workflow for UI Healthchecks
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
 
       - name: Upload TestNG Screenshots if Tests Fail
