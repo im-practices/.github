@@ -15,8 +15,8 @@
 #    - Add secret APPLICATIONINSIGHTS_CONNECTION_STRING to every environment you are testing.
 #    - Modify your Maven profile fetch artifacts from github packages.
 #      Detailed setup guidance can be found here:  https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md
-#    - Create the shell script to setup Maven with the modified settings.xml file.
-#    - 
+#    - Create the shell script to setup Maven with the modified settings.xml file.details are at the following link Step 4,5
+#    - https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md
 name: 🧪 Run Java Selenium TestNG tests on Schedule
 run-name: 🧪 Run Java Selenium TestNG tests on Schedule
 
