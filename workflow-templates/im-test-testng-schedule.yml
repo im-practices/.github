@@ -31,8 +31,8 @@ on:
 env:
   GITHUB_REF: 'main' # Default branch to run against.
   JAVA_VERSION: '21' # TODO: Update this to the version of Java required for the tests.
-  MAVEN_SETTINGS_PATH: './shells/setup-maven.sh' # TODO: Update this to the Maven setup script.
-  MAVEN_BIN: 'embedded/maven/bin/mvn' # TODO: Update to Maven bin dir.
+  MAVEN_SETTINGS_PATH: './path/to/setup-custom-maven.sh' # TODO: Update this to the Maven setup script.
+  MAVEN_BIN: 'embedded/maven/bin/mvn' # TODO: Update only if you are modifying the path at shell script.
   MAVEN_CACHE_PATH: '~/.m2/repository' # Maven Repo path.
   JAVA_AGENT: 'resources/app-insights/applicationinsights-agent.jar' # # TODO: Update this to the App Insights Java agent JAR location.
   ENV_TEST_RUN_NAME: '' # TODO: Update this with the name of the health check test run.
@@ -70,12 +70,12 @@ jobs:
         # Steps to generate the shell script is available at  https://github.com/im-practices/techhub/blob/QAP-390-UI-Health-Check-ADR/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md#steps-to-run-health-check-in-github-actions-workflow  Step no 5
         # This step will run the shell script to setup Maven with the modified settings.xml file.
         run: |
-          chmod +x ./path/to/setup-custom-maven.sh
-          ./path/to/setup-custom-maven.sh
+          chmod +x ${{ env.MAVEN_SETTINGS_PATH }}
+          ${{ env.MAVEN_SETTINGS_PATH }}
         shell: bash
 
       - name: Build Project using Maven
-        run: mvn clean install
+        run: ${{ env.MAVEN_BIN }} clean install
 
       - name: Set up Maven Cache Keys
         # Generate a cache key based on the pom.xml file. If it changes, a new cache will be created.
@@ -145,7 +145,7 @@ jobs:
         run: ${{ env.MAVEN_BIN }} clean package
 
       - name: Run TestNG Tests
-        # Executes TestNG tests ,you can modify running using your other approaches to run test.
+        # TODO: Executes TestNG tests ,you can modify running using your other approaches to run test.
         run: |
             ${{ env.MAVEN_BIN }} exec:java 
             -D"exec.mainClass"="org.testng.TestNG" 
