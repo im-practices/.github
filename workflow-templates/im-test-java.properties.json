@@ -1,5 +1,0 @@
-{
-	"name": "Test - Java Schedule Workflow",
-	"description": "Workflow template for running Java tests on a schedule. This workflow supports the UI Health Check feature.",
-	"iconName": "im_test"
-}
