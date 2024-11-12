@@ -87,7 +87,6 @@ jobs:
         run: |
           GITHUB_REF="${{ env.DISPATCH_REF }}"
           echo "GITHUB_REF=$GITHUB_REF" >> $GITHUB_ENV
-          echo "GITHUB_REF=$GITHUB_REF" >> $GITHUB_OUTPUT
 
       - name: Annotate Inputs
         shell: bash
@@ -181,9 +180,11 @@ jobs:
           --logger "console;verbosity=detailed" \
           --logger "trx;LogFileName=test-results.trx" \
           --filter "${{ inputs.test-filter }}"
+    
+      # Uncomment the following steps and customize as needed to run tests specifically within the QualityPractices_Automation framework.
+      # For details on QualityPractices_Automation, please visit: https://kb.extendhealth.com/pages/viewpage.action?pageId=955809040
+      # This configuration supports customization through environment variables such as Browser, BaseUrl, and others.
 
-      # # Uncomment the following step and remove the previous step to run tests specifically in the QualityPractices_Automation framework.
-      # # This configuration allows customization through environment variables such as Browser, BaseUrl, and other settings.
       # - name: Run Selenium Tests (QualityPractices_Automation) # Executes Selenium C# tests using QualityPractices_Automation framework
       #   working-directory: '${{ env.SELENIUM_TEST_DIR }}'
       #   shell: bash

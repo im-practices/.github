@@ -35,7 +35,7 @@ env:
   DOTNET_INSTALL_DIR: './.dotnet'  
   NUGET_CACHE_PATH: '~/.nuget/packages'
   TIMEZONE: America/Denver
-  ENVIRONMENTS: "['dev','qa']" # TODO: Update this to the list of environments you want to run the tests 
+  ENVIRONMENTS: '["dev","qa"]' # TODO: Update this to the list of environments you want to run the tests 
   BROWSER: 'Chrome' # TODO: Set the default browser
   TEST_FILTER: 'TestMethod' # TODO: Define test filter if necessary
 
@@ -61,7 +61,6 @@ jobs:
         run: |
           GITHUB_REF="${{ env.DISPATCH_REF }}"
           echo "GITHUB_REF=$GITHUB_REF" >> $GITHUB_ENV
-          echo "GITHUB_REF=$GITHUB_REF" >> $GITHUB_OUTPUT
 
       - name: Annotate Inputs
         shell: bash
@@ -69,7 +68,7 @@ jobs:
           echo $'
           | Inputs                  | Value                                                                                     |
           | ----------------------- | ----------------------------------------------------------------------------------------- |
-          | Environments             | `${{ env.ENVIRONMENTS }}`                                                                |
+          | Environments            | `${{ env.ENVIRONMENTS }}`                                                                 |
           | Branch/Tag              | `${{ env.GITHUB_REF }}`                                                                   |
           | Browser                 | `${{ env.BROWSER }}`                                                                      |
           | Test Filter             | `${{ env.TEST_FILTER }}`                                                                  |' >> $GITHUB_STEP_SUMMARY
@@ -151,7 +150,7 @@ jobs:
         env:
           # These environment variables can be accessed in C# using Environment.GetEnvironmentVariable("VARIABLE_NAME")
           # and assigned in your config file to set configuration values dynamically.
-          ENVIRONMENT: ${{ env.ENVIRONMENT }}
+          ENVIRONMENT: ${{ matrix.environment }}
           BROWSER: ${{ env.BROWSER }}
           APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
         run: |
