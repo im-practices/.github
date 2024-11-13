@@ -1,0 +1,210 @@
+﻿# Workflow Code: BusySnorlax_v1   DO NOT REMOVE
+# Purpose:
+#    Runs TestNG tests in Github Actions with a manual trigger.
+#    With the workflow the user specifies when they kick it off manually.
+#
+# Frequency:
+#    - This workflow is intended to be reusable, and used once per repository.
+#
+# Projects to use this Template with:
+#    - Testing projects that use Selenium Java with TestNg.
+#
+# TODO Prerequisites:
+#    - Make sure you have the Javaagent and applicationinsights.json in resources folder.
+#    - Update your java selenium solution to export test results to Application Insights using the im.exporttoappinsights jar dependencies. 
+#    - Add secret APPLICATIONINSIGHTS_CONNECTION_STRING to every environment you are testing.
+#    - Modify your Maven profile fetch artifacts from github packages.
+#      Detailed setup guidance can be found here:  https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md
+#    - Create the shell script to setup Maven with the modified settings.xml file.details are at the following link Step 4,5
+#    - https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md
+
+name: 🧪 Run Java Selenium TestNG Tests Manually
+run-name: 🧪 Run Java Selenium TestNG Tests on ${{ inputs.environment }} with ${{ inputs.browser }} browser
+
+# Concurrency settings to ensure only one workflow runs at a time to prevent overlaps
+concurrency:
+  group: testng-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
+  cancel-in-progress: true
+
+on:
+  # Trigger the workflow manually using GitHub's workflow dispatch feature
+  workflow_dispatch:
+    inputs:
+       # Optional: Branch/Tag/SHA to run the tests against a specific reference
+      branch-tag-sha:
+        description: Branch/Tag/SHA of the TestNG tests to run against.
+        required: false
+      # Environment input to specify the environment to test against (e.g., dev, qa, prod)
+      environment:
+        description: The environment to test against
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - stage
+      browser:
+        description: Browser - What Browser to use for the UI tests.
+        type: choice
+        options:
+          - Chrome
+          - Firefox
+          - Edge
+      # Optional: Filter tests by name (TestNG's @Test method name)
+      test-filter:
+        description: Test Filter - input the test name to run.
+        required: false
+        default: '' # Filter for specific tests, leave blank for all tests.
+
+# Permissions required for the workflow to execute successfully
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+
+# Environment variables to be used in the workflow
+env:
+  DISPATCH_REF: ${{ inputs.branch-tag-sha == '' && github.ref_name || inputs.branch-tag-sha }} # Set the reference to the specified branch/tag/SHA
+  JAVA_VERSION: '21' # TODO: Update this to the version of Java required for the tests.
+  # Steps to modify the maven settings are available at   https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md Step no 4,5
+  MAVEN_SETTINGS_PATH: './path/to/setup-custom-maven.sh' # TODO: Update this to the Maven setup script.
+  MAVEN_BIN: 'embedded/maven/bin/mvn' # TODO: Update only if you are modifying the path at shell script.
+  MAVEN_CACHE_PATH: '~/.m2/repository' # Maven Repo path.
+  JAVA_AGENT: 'resources/app-insights/applicationinsights-agent.jar' # # TODO: Update this to the App Insights Java agent JAR location.
+  ENV_TEST_RUN_NAME: '' # TODO: Update this with the name of the health check test run.
+  JAVA_TEST_DIR: '' # TODO: Update this to the name of Java test directory.
+  TESTNG_RESULTS_FILE: '' # TODO: Update this to the TestNG results file.
+  TESTNG_SCREENSHOTS_DIR: '' # TODO: Update this to the path of screenshots directory.
+  TESTNG_REPORT_DIR: '' # TODO: Update this to the path to TestNG reports directory.
+
+jobs:
+  # Job to set up Maven cache and install dependencies
+  setup-testng-cache:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      MAVEN_CACHE_KEY: ${{ env.MAVEN_CACHE_KEY }} # Define cache key for Maven dependencies
+    
+    steps:
+      - name: Calculate Ref to Checkout
+        id: calculate-ref
+        run: |
+          GITHUB_REF="${{ env.DISPATCH_REF }}"
+          echo "GITHUB_REF=$GITHUB_REF" >> $GITHUB_ENV
+          echo "GITHUB_REF=$GITHUB_REF" >> $GITHUB_OUTPUT
+
+      - name: Annotate Inputs
+        run: |
+          echo $'
+          | Inputs                  | Value                                                                                     |
+          | ----------------------- | ----------------------------------------------------------------------------------------- |
+          | Environment             | `${{ inputs.environment }}`                                                               |
+          | Branch/Tag              | `${{ env.GITHUB_REF }}`                                                                   |
+          | Workflow Branch/Tag     | `${{ github.ref_name }}` - SHA: `${{ github.sha }}`                                       |
+          | Browser                 | `${{ inputs.browser-project }}`                                                           |
+          | Playwright Config File  | `${{ inputs.config-file }}`                                                               |
+          | Test Filter             | `${{ inputs.test-filter != 0 && inputs.test-filter || 'NA' }}`                            |' >> $GITHUB_STEP_SUMMARY
+      
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DISPATCH_REF }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Maven
+        # Steps to generate the shell script is available at  https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md Step no 6
+        # This step will run the shell script to setup Maven with the modified settings.xml file.
+        run: |
+          chmod +x ${{ env.MAVEN_SETTINGS_PATH }}
+          ${{ env.MAVEN_SETTINGS_PATH }}
+        shell: bash
+
+      - name: Build Project using Maven 
+        run: ${{ env.MAVEN_BIN }} clean install
+
+      - name: Set up Maven Cache Keys
+        # Generate a cache key based on the pom.xml file. If it changes, a new cache will be created.
+        run: echo "MAVEN_CACHE_KEY=maven_repo-${{ hashFiles('**/pom.xml') }}" >> $GITHUB_ENV
+
+      - name: Check for Maven Cache
+        id: has-cache
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          key: ${{ env.MAVEN_CACHE_KEY }}
+          path: ${{ env.MAVEN_CACHE_PATH }} # Cache path for Maven dependencies.
+          restore-keys: |
+             ${{ runner.os }}-maven-
+
+      - name: Install Maven and Dependencies
+        # Installs Maven dependencies if the cache is not found.
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Setting up Maven and installing dependencies"
+          chmod +x ${{ env.MAVEN_SETTINGS_PATH }}
+          ${{ env.MAVEN_SETTINGS_PATH }}
+
+
+  run-tests:
+    runs-on: ubuntu-latest
+    needs: setup-cache
+    environment: ${{ inputs.environment }} # Use the selected environment input (dev, qa, etc.)
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DISPATCH_REF }}
+
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Build Project with Maven
+        run: ${{ env.MAVEN_BIN }} clean package
+
+      - name: Run TestNG Tests
+        # TODO: Executes TestNG tests. Modify running as needed to run test.
+        run: |
+          ${{ env.MAVEN_BIN }} exec:java \
+          -D"exec.mainClass"="org.testng.TestNG" \
+          -D"exec.args"="-javaagent:${{ env.JAVA_AGENT }} -cp %classpath test.xml -Denvironment=${{ inputs.environment }} -Dbrowser=${{ inputs.browser }}"
+        # TODO: Remove the environment variable below if not using this workflow for UI Healthchecks
+        env:
+            APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
+
+
+      - name: Upload TestNG Report if Tests Fail
+        if: steps.process-testng.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestNG Report ${{ github.run_number }}
+          path: ${{ env.TESTNG_REPORT_DIR }}/
+          retention-days: 5
+
+
+      - name: Fail if Tests Have Failures
+        if: steps.process-testng.outcome == 'failure'
+        run: |
+          echo "The TestNG tests have failures"
+          exit 1
+
+      - name: Upload TestNG Report Always
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestNG Report ${{ github.run_number }}
+          path: ${{ env.TESTNG_REPORT_DIR }}/
+          retention-days: 5

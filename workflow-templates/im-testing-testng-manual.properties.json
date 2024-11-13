@@ -1,0 +1,5 @@
+{
+  "name": "TestNG- Java - Selenium Manual Workflow",
+  "description": "Workflow template for running TestNG tests triggered manually.",
+  "iconName": "im_test"
+}
