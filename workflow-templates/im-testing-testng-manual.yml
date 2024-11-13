@@ -165,7 +165,6 @@ jobs:
         with:
           ref: ${{ env.DISPATCH_REF }}
 
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -185,7 +184,6 @@ jobs:
         env:
             APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
-
       - name: Upload TestNG Report if Tests Fail
         if: steps.process-testng.outcome == 'failure'
         uses: actions/upload-artifact@v4
@@ -193,7 +191,6 @@ jobs:
           name: TestNG Report ${{ github.run_number }}
           path: ${{ env.TESTNG_REPORT_DIR }}/
           retention-days: 5
-
 
       - name: Fail if Tests Have Failures
         if: steps.process-testng.outcome == 'failure'
