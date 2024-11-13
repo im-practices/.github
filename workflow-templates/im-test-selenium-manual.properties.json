@@ -1,0 +1,5 @@
+{
+    "name": "Test - Selenium Manual Workflow",
+    "description": "Workflow template for running Selenium tests triggered manually.",
+    "iconName": "im_test"
+}
