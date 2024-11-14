@@ -83,6 +83,7 @@ jobs:
         # Steps to generate the shell script is available at  https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md Step no 6
         # This step will run the shell script to setup Maven with the modified settings.xml file.
         run: |
+          echo "Setting up Maven and installing dependencies"
           chmod +x ${{ env.MAVEN_SETTINGS_PATH }}
           ${{ env.MAVEN_SETTINGS_PATH }}
         shell: bash
@@ -91,13 +92,6 @@ jobs:
         if: steps.has-cache.outputs.cache-hit != 'true'
         run: ${{ env.MAVEN_BIN }} clean install
 
-      - name: Install Maven and Dependencies
-        # Installs Maven dependencies if the cache is not found.
-        if: steps.has-cache.outputs.cache-hit != 'true'
-        run: |
-          echo "Setting up Maven and installing dependencies"
-          chmod +x ${{ env.MAVEN_SETTINGS_PATH }}
-          ${{ env.MAVEN_SETTINGS_PATH }}
 
   testng-tests:
     # Main job to build and run the tests
