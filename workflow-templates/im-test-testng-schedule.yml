@@ -96,7 +96,7 @@ jobs:
   testng-tests:
     # Main job to build and run the tests
     runs-on: im-linux
-    needs: setup-cache
+    needs: maven-cache
     
     strategy:
       matrix:
