@@ -133,7 +133,7 @@ jobs:
         # Restore the cached Maven dependencies if available.
         uses: actions/cache/restore@v4
         with:
-          key: ${{ needs.setup-cache.outputs.MAVEN_CACHE_KEY }}
+          key: ${{ needs.maven-cache.outputs.MAVEN_CACHE_KEY }}
           enableCrossOsArchive: true
           fail-on-cache-miss: true
           path: ${{ env.MAVEN_CACHE_PATH }}
