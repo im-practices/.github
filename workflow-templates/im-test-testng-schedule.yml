@@ -93,7 +93,7 @@ jobs:
         run: ${{ env.MAVEN_BIN }} clean install
 
 
-  testng-tests:
+  selenium-maven-tests:
     # Main job to build and run the tests
     runs-on: im-linux
     needs: maven-cache
