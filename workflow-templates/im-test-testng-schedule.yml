@@ -42,7 +42,7 @@ env:
   TESTNG_REPORT_DIR: '' # TODO: Update this to the path to TestNG reports directory.
 
 jobs:
-  setup-cache:
+  maven-cache:
     # Sets up the Maven cache to speed up dependency installation
     runs-on: im-linux
 
@@ -65,8 +65,21 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
+          
+      - name: Set up Maven Cache Keys
+         # Generate a cache key based on the pom.xml file. If it changes, a new cache will be created.
+         run: echo "MAVEN_CACHE_KEY=maven_repo-${{ hashFiles('**/pom.xml') }}" >> $GITHUB_ENV
+
+      - name: Check for Maven Cache
+         id: has-cache
+         uses: actions/cache@v4
+         with:
+           lookup-only: true
+           key: ${{ env.MAVEN_CACHE_KEY }}
+           path: ${{ env.MAVEN_CACHE_PATH }} # Cache path for Maven dependencies.
 
       - name: Set up Maven
+         if: steps.has-cache.outputs.cache-hit != 'true'
         # Steps to generate the shell script is available at  https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md Step no 6
         # This step will run the shell script to setup Maven with the modified settings.xml file.
         run: |
@@ -75,21 +88,8 @@ jobs:
         shell: bash
 
       - name: Build Project using Maven 
+         if: steps.has-cache.outputs.cache-hit != 'true'
         run: ${{ env.MAVEN_BIN }} clean install
-
-      - name: Set up Maven Cache Keys
-        # Generate a cache key based on the pom.xml file. If it changes, a new cache will be created.
-        run: echo "MAVEN_CACHE_KEY=maven_repo-${{ hashFiles('**/pom.xml') }}" >> $GITHUB_ENV
-
-      - name: Check for Maven Cache
-        id: has-cache
-        uses: actions/cache@v4
-        with:
-          lookup-only: true
-          key: ${{ env.MAVEN_CACHE_KEY }}
-          path: ${{ env.MAVEN_CACHE_PATH }} # Cache path for Maven dependencies.
-          restore-keys: |
-             ${{ runner.os }}-maven-
 
       - name: Install Maven and Dependencies
         # Installs Maven dependencies if the cache is not found.
