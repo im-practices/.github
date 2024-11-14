@@ -146,8 +146,7 @@ jobs:
         if: steps.has-cache.outputs.cache-hit != 'true'
         run: ${{ env.MAVEN_BIN }} clean install
 
-
-  run-tests:
+  selenium-maven-tests:
     runs-on: ubuntu-latest
     needs: maven-cache
     environment: ${{ inputs.environment }} # Use the selected environment input (dev, qa, etc.)

@@ -146,7 +146,6 @@ jobs:
         env:
           APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
-
       - name: Upload TestNG Screenshots if Tests Fail
         if: steps.process-testng.outcome == 'failure'
         uses: actions/upload-artifact@v4
