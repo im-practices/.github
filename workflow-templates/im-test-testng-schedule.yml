@@ -17,6 +17,7 @@
 #      Detailed setup guidance can be found here:  https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md
 #    - Create the shell script to setup Maven with the modified settings.xml file.details are at the following link Step 4,5
 #    - https://github.com/im-practices/techhub/blob/main/docs/Azure/content/Health-Checks/TestNG-UI-Health-Check.md
+
 name: 🧪 Run Java Selenium TestNG tests on Schedule
 run-name: 🧪 Run Java Selenium TestNG tests on Schedule
 
@@ -92,8 +93,7 @@ jobs:
         if: steps.has-cache.outputs.cache-hit != 'true'
         run: ${{ env.MAVEN_BIN }} clean install
 
-
-  testng-tests:
+  selenium-maven-tests:
     # Main job to build and run the tests
     runs-on: im-linux
     needs: maven-cache
