@@ -102,6 +102,10 @@ on:
         description: The URI for the teams channel where a status will be posted.  This input is the preferred way to provide the URI but the secret should be used instead if the value is defined as a secret.
         required: false
         type: string
+      deployment-description:
+        description: 'The description of the deployment that will be used in the GitHub deployment.'
+        required: false
+        type: string
     secrets:
       MS_TEAMS_URI:
         description: 'The URI for the teams channel where a status will be posted.  The input is the preferred way to provide the URI but the secret should be used if the value is defined as a secret.'
@@ -181,7 +185,7 @@ jobs:
           environment: ${{ inputs.deployment-environment }}
           release-ref: ${{ inputs.release-tag }}
           deployment-status: ${{ steps.conclusion.outputs.workflow_conclusion }}
-          deployment-description: 'Deployment to the ${{ inputs.deployment-environment }} environment of ${{ inputs.release-tag }}'
+          deployment-description: ${{ inputs.deployment-description == 0 && format('Deployment to the {0} environment of {1}',inputs.deployment-environment,inputs.release-tag ) || inputs.deployment-description }}
           entity: ${{ inputs.entity }}
           instance: ${{ inputs.instance }}
 
