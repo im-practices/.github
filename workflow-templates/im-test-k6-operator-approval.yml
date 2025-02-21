@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v12   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v13   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -11,7 +11,7 @@
 #    - On-Prem Service         (Optional Template)
 # # TODO: Prerequisites:
 #    - Ensure each of the repo-level MS_TEAMS_URI and env-level secrets used in this workflow have been populated by an admin in your repository.
-#    - Create environment K6 Operator Approval
+#    - Create environment K6 Stop Test Approval
 
 name: 🧪️ Run K6 Operator Test with Approval
 run-name: Run K6 Operator Test to ${{ inputs.env }} with test ${{ inputs.test-file }}
@@ -390,16 +390,16 @@ jobs:
           # Remove kubectl config
           rm -rf ${{ steps.kube-config.outputs.kube-config-file }}
 
-  # TODO: Create K6 Operator Approval environment and add required approvers.
-  # This job targets the K6 Operator Approval environment.  This will break the workflow and give one of the
+  # TODO: Create K6 Stop Test Approval environment and add required approvers.
+  # This job targets the K6 Stop Test Approval environment.  This will break the workflow and give one of the
   # required reviewers for this environment a chance to validate the k6 test is completed in the previous job and approve it.
-  k6-operator-approval:
+  k6-stop-test-approval:
     needs: [start-k6-operator-test]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
-    environment: 'K6 Operator Approval'
+    environment: 'K6 Stop Test Approval'
     steps:
       - name: Approval Received
-        run: echo "Approval on cleaning up the test run."
+        run: echo "Approval on stopping and cleaning up the test run."
 
   stop-k6-operator-test:
     runs-on: im-linux
@@ -454,7 +454,12 @@ jobs:
 
           echo "kube-config-file=$kube_config_file_path" >> $GITHUB_OUTPUT
 
-          powerstate=$(az aks show --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --query 'powerState.code' --out tsv)
+          nodePoolStatus=$(az aks nodepool list --cluster-name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --query '[].{name:name, enableAutoScaling:enableAutoScaling}' --out tsv)
+          if echo "$nodePoolStatus" | grep 'False'; then
+            powerstate='Scaled Down'
+          else
+            powerstate='Running'
+          fi
           echo "cluster-powerstate=$powerstate" >> $GITHUB_OUTPUT
           echo "::notice title=Cluster Power State::Cluster Power State - $powerstate"
 
