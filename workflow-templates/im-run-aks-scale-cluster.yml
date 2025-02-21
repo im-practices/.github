@@ -198,6 +198,7 @@ jobs:
           scope: ${{ matrix.environment }}
           create-output-variables: true
         env:
+          # TODO: Update the TARGET_RESOURCE_GROUP variable to match the resource groups in the AKS cluster.
           # Resource group you are targeting for deploy.  Also this variable is used to delete and re-create azure locks.
           # Add the NA27 (West Central US) Resource Group to the stage-secondary/prod-secondary to the variables.
           # Add the NA26 (West US2) Resource Groups to dev/qa/stage/demo/uat/prod to the variables
@@ -206,6 +207,7 @@ jobs:
           TARGET_RESOURCE_GROUP@prod: ''
           TARGET_RESOURCE_GROUP@prod-secondary: ''
           
+          # TODO: Update the CLUSTER_NAME variable to match the AKS cluster names in the AKS cluster.
           # The name of the AKS Cluster
           CLUSTER_NAME@dev: ''
           CLUSTER_NAME@dev-secondary: ''
