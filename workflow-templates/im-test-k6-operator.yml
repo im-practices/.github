@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v34   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v35   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -78,8 +78,8 @@ env:
   TIMEZONE: 'america/denver'
   WORKING_DIRECTORY: './tests/k6'
   GRAFANA_INFLUXDB_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1?&from=now-1h&to=now&var-ProductTag=SHOP&var-env=${{ inputs.env }}'
-  GRAFANA_PROMETHEUS_DASHBOARD_URI: 'https://grafana.mktp.io/d/a3b2aaa8-bb66-4008-a1d8-16c49afedbf0/k6-prometheus-native-histograms?orgId=1&refresh=10s&var-quantile=0.99'
-  NODE_VERSION: '20.x'
+  GRAFANA_PROMETHEUS_DASHBOARD_URI: 'https://grafana.mktp.io/d/ccbb2351-2ae2-462f-ae0e-f2c893ad1028/k6-prometheus?orgId=1&refresh=10s&var-quantile=0.99&var-env=bf87d7ae-e91e-4dd6-ad16-186fef9d62e6'
+  NODE_VERSION: '22.x'
 
   K6_DEFAULT_PARAMETERS: "${{ inputs.output-to-prometheus && '--out experimental-prometheus-rw' || '--out influxdb=https://influxdb-v1.mktp.io/loadtesting' }} --insecure-skip-tls-verify --tag product=SHOP,family=EN,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}"
   # TODO: Optional add K6_PROMETHEUS_RW_STALE_MARKERS=true when running long load tests.  This variable will make short tests not show up in grafana
@@ -171,7 +171,7 @@ jobs:
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }} if cache does not exist
         if: steps.has-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -227,7 +227,7 @@ jobs:
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
         if: inputs.run-npm-build
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -438,6 +438,6 @@ jobs:
             [
               {
                 "name": "View Grafana Dashboard",
-                "uri": "${{ inputs.output-to-prometheus && format('{0}&var-testid={1}',env.GRAFANA_PROMETHEUS_DASHBOARD_URI,steps.run-k6-operator-test.outputs.run-name) || env.GRAFANA_INFLUXDB_DASHBOARD_URI }}"
+                "uri": "${{ inputs.output-to-prometheus && format('{0}&from=now-1h&to=now&var-testid={1}',env.GRAFANA_PROMETHEUS_DASHBOARD_URI,steps.run-k6-operator-test.outputs.run-name) || env.GRAFANA_INFLUXDB_DASHBOARD_URI }}"
               }
             ]

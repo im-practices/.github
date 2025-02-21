@@ -1,4 +1,4 @@
-# Workflow Code: ZestyCrocodile_v13   DO NOT REMOVE
+# Workflow Code: ZestyCrocodile_v14   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -75,8 +75,8 @@ env:
   TIMEZONE: 'america/denver' # TODO: Verify timezone
   WORKING_DIRECTORY: './tests/k6' # TODO: Update k6 test folder path
   GRAFANA_INFLUXDB_DASHBOARD_URI: 'https://grafana.mktp.io/d/SizO_pC4k/k6-load-testing-results-with-env?orgId=1?&from=now-1h&to=now&var-ProductTag=SHOP&var-env=${{ inputs.env }}' # TODO: Update product tag
-  GRAFANA_PROMETHEUS_DASHBOARD_URI: 'https://grafana.mktp.io/d/a3b2aaa8-bb66-4008-a1d8-16c49afedbf0/k6-prometheus?orgId=1&refresh=10s&var-quantile=0.99'
-  NODE_VERSION: '20.x' # TODO: Set correct node version
+  GRAFANA_PROMETHEUS_DASHBOARD_URI: 'https://grafana.mktp.io/d/ccbb2351-2ae2-462f-ae0e-f2c893ad1028/k6-prometheus?orgId=1&refresh=10s&var-quantile=0.99&var-env=bf87d7ae-e91e-4dd6-ad16-186fef9d62e6'
+  NODE_VERSION: '22.x' # TODO: Set correct node version
 
   K6_DEFAULT_PARAMETERS: "${{ inputs.output-to-prometheus && '--out experimental-prometheus-rw' || '--out influxdb=https://influxdb-v1.mktp.io/loadtesting' }} --insecure-skip-tls-verify --tag product=SHOP,family=EN,env=${{ inputs.env }} -e RUN_ENV=${{ inputs.env }}" # TODO: Set default k6 parameters specifically replace product and family tags.
   # TODO: Optional add K6_PROMETHEUS_RW_STALE_MARKERS=true when running long load tests.  This variable will make short tests not show up in grafana
@@ -157,7 +157,7 @@ jobs:
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
         if: steps.has-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -237,7 +237,7 @@ jobs:
       # TODO: Delete if you don't build your k6 tests
       - name: Install Node ${{ env.NODE_VERSION }}
         if: inputs.run-npm-build
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -298,7 +298,12 @@ jobs:
 
           echo "kube-config-file=$kube_config_file_path" >> $GITHUB_OUTPUT
 
-          powerstate=$(az aks show --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --query 'powerState.code' --out tsv)
+          nodePoolStatus=$(az aks nodepool list --cluster-name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --query '[].{name:name, enableAutoScaling:enableAutoScaling}' --out tsv)
+          if echo "$nodePoolStatus" | grep 'False'; then
+            powerstate='Scaled Down'
+          else
+            powerstate='Running'
+          fi
           echo "cluster-powerstate=$powerstate" >> $GITHUB_OUTPUT
           echo "::notice title=Cluster Power State::Cluster Power State - $powerstate"
 
@@ -356,7 +361,7 @@ jobs:
             [
               {
                 "name": "View Grafana Dashboard",
-                "uri": "${{ inputs.output-to-prometheus && format('{0}&var-testid={1}',env.GRAFANA_PROMETHEUS_DASHBOARD_URI,steps.start-k6-test.outputs.run-name) || env.GRAFANA_INFLUXDB_DASHBOARD_URI }}"
+                "uri": "${{ inputs.output-to-prometheus && format('{0}&from=now-1h&to=now&var-testid={1}',env.GRAFANA_PROMETHEUS_DASHBOARD_URI,steps.start-k6-test.outputs.run-name) || env.GRAFANA_INFLUXDB_DASHBOARD_URI }}"
               }
             ]
 
@@ -368,8 +373,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.run-k6-operator-test.outputs.deploy-json-artifact }}-bk
-          path: ${{ steps.run-k6-operator-test.outputs.deploy-json-file }}
+          name: ${{ steps.start-k6-test.outputs.deploy-json-artifact }}-bk
+          path: ${{ steps.start-k6-test.outputs.deploy-json-file }}
           retention-days: ${{ env.RETENTION_IN_DAYS }}
 
       ### Cleanup K6-Operator test if workflow is cancelled ###
@@ -403,7 +408,7 @@ jobs:
 
   stop-k6-operator-test:
     runs-on: im-linux
-    needs: [start-k6-operator-test, k6-operator-approval]
+    needs: [start-k6-operator-test, k6-stop-test-approval]
     environment: ${{ inputs.env }}
 
     defaults:
@@ -552,7 +557,7 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          kubectl delete k6s.k6.io/${{ needs.start-k6-operator-test.outputs.run-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
+          kubectl delete testruns.k6.io/${{ needs.start-k6-operator-test.outputs.run-name }} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }} --namespace k6testing
 
       - name: Cleanup Test Configmap if Workflow is Cancelled
         if: steps.conclusion.outputs.workflow_conclusion == 'cancelled' || needs.stop-k6-operator-test.outputs.stop-k6-test-outcome == 'failure'
@@ -615,6 +620,6 @@ jobs:
             [
               {
                 "name": "View Grafana Dashboard",
-                "uri": "${{ inputs.output-to-prometheus && format('{0}&var-testid={1}',env.GRAFANA_PROMETHEUS_DASHBOARD_URI,needs.start-k6-operator-test.outputs.run-name) || env.GRAFANA_INFLUXDB_DASHBOARD_URI }}"
+                "uri": "${{ inputs.output-to-prometheus && format('{0}&from=now-1h&to=now&var-testid={1}',env.GRAFANA_PROMETHEUS_DASHBOARD_URI,needs.start-k6-operator-test.outputs.run-name) || env.GRAFANA_INFLUXDB_DASHBOARD_URI }}"
               }
             ]
