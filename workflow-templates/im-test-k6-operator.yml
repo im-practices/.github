@@ -1,4 +1,4 @@
-# Workflow Code: ZestyAligator_v33   DO NOT REMOVE
+# Workflow Code: ZestyAligator_v34   DO NOT REMOVE
 # Purpose:
 #    Runs K6 tests at scale in Azure Kubernetes.
 #    With the workflow the user specifies when they kick it off manually.
@@ -288,7 +288,12 @@ jobs:
 
           echo "kube-config-file=$kube_config_file_path" >> $GITHUB_OUTPUT
 
-          powerstate=$(az aks show --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --query 'powerState.code' --out tsv)
+          nodePoolStatus=$(az aks nodepool list --cluster-name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} --query '[].{name:name, enableAutoScaling:enableAutoScaling}' --out tsv)
+          if echo "$nodePoolStatus" | grep 'False'; then
+            powerstate='Scaled Down'
+          else
+            powerstate='Running'
+          fi
           echo "cluster-powerstate=$powerstate" >> $GITHUB_OUTPUT
           echo "::notice title=Cluster Power State::Cluster Power State - $powerstate"
 

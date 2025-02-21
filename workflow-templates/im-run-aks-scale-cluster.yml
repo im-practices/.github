@@ -1,0 +1,361 @@
+# Workflow Code: ElatedAnoconda_v2    DO NOT REMOVE
+# Purpose:
+#    Scales AKS Cluster Node Pools down to a specified minimum after work hours
+#    to save costs.  This workflow will switch node pool scaling to manual then
+#    scale down to the minimum number of nodes specified in the workflow.
+#
+# Frequency:
+#    - This workflow should only be used once per repository
+#
+# Projects to use this Template with:
+#    - Azure Kubernetes Service (AKS)
+#
+# # TODO: Prerequisites:
+#    - Ensure each of the repo-level MS_TEAMS_URI variable used in this workflow have been populated by an admin in your repository.
+
+name: 🛠️ Scale Up/Down AKS Cluster
+run-name: Scale ${{ inputs.action == 0 && '' || inputs.action }} AKS Cluster
+on:
+  # See the following site for help creating the right cron syntax: https://crontab.guru/
+  # The cron job is specified in UTC.
+  schedule:
+    # TODO: Update the cron job times to desired Start and End time of workflow
+    # The times must match the SCALING_SCHEDULE environment variable start and end times
+    - cron: '0 11 * * *' # Every day at 4:00 AM MST (11:00 AM UTC) Start Time
+    - cron: '0 2 * * *'  # Every day at 7:00 PM MST (2:00 AM UTC next day) End Time
+  workflow_dispatch:
+    inputs:
+      environment: # TODO: Remove any environment
+        description: Environment
+        required: true
+        type: choice
+        options: 
+          - dev 
+          - dev-secondary
+          - prod
+          - prod-secondary
+      action:
+        description: Scaling Action
+        required: true
+        type: choice
+        options:
+          - up
+          - down
+
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+  actions: read
+
+env:
+  TIMEZONE: 'America/Denver'
+  # The environments that are scheduled to scale up and down.
+  SCHEDULED_ENVIRONMENTS: '["dev","dev-secondary","prod","prod-secondary"]' # TODO: Remove any environments you don't want scaling on a schedule
+  # TODO: Update the scaling schedule start and end times to desired times.
+  # The start and endtime must coincide with the cron job times (cron jobs must be converted to UTC).
+  # The start and end times are in timezone according to the TIMEZONE variable.
+  # The scaling schedule is used to determine when to scale up and down the cluster.
+  SCALING_SCHEDULE: |
+    {
+      "up": {
+        "daysOfTheWeek": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        "startTime": "04:00",
+        "endTime": "19:00"
+      },
+      "down": {
+        "daysOfTheWeek": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        "startTime": "19:00",
+        "endTime": "04:00"
+      }
+    }
+
+jobs:
+  set-matrix:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+    if: always()
+    outputs:
+      # To use these values: ${{ needs.set-vars.outputs.<OUTPUT_NAME> }}
+      MATRIX: ${{ steps.matrix.outputs.MATRIX }}
+    steps:
+      - name: Calculate Scale Action based on Schedule
+        id: calculate-scale-action
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Checking if scale action is manual or scheduled
+            if (context.eventName != 'schedule') {
+              core.setOutput('SCALE_ACTION', '${{ inputs.action }}');
+              core.info(`Scale Action: ${{ inputs.action }}; Trigger: ${context.eventName}`);
+              return;
+            }
+            
+            // Get Scale Action if workflow triggered on a schedule
+            const scalingSchedule = JSON.parse(process.env.SCALING_SCHEDULE);
+            const currentTime = new Date();
+            
+            // Convert current UTC time to timezone in TIMEZONE variable
+            const options = { timeZone: '${{ env.TIMEZONE }}', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false };
+            const formatter = new Intl.DateTimeFormat('en-US', options);
+            const parts = formatter.formatToParts(currentTime);
+            const mstTime = parts.reduce((acc, part) => {
+              if (part.type !== 'literal') {
+                acc[part.type] = part.value;
+              }
+              return acc;
+            }, {});
+
+            const currentDay = mstTime.weekday;
+            const currentHour = parseInt(mstTime.hour, 10);
+            const currentMinute = parseInt(mstTime.minute, 10);
+            const currentTimeMST = `${currentHour}:${currentMinute}`;
+            core.exportVariable('SCHEDULED_SCALE_UP_TIME_MST', scalingSchedule.up.startTime);
+
+            core.info(`Current MST Time: ${mstTime.hour}:${mstTime.minute}`);
+            core.info(`Current MST Day: ${currentDay}`);
+            core.info(`Current MST Hour: ${currentHour}`);
+
+            let scaleAction = 'none';
+            if (scalingSchedule.up.daysOfTheWeek.includes(currentDay)) {
+              const [upStartHour, upStartMinute] = scalingSchedule.up.startTime.split(':').map(Number);
+              const [upEndHour, upEndMinute] = scalingSchedule.up.endTime.split(':').map(Number);
+              if ((currentHour > upStartHour || (currentHour === upStartHour && currentMinute >= upStartMinute)) &&
+                  (currentHour < upEndHour || (currentHour === upEndHour && currentMinute < upEndMinute))) {
+                scaleAction = 'up';
+              }
+            }
+
+            if (scalingSchedule.down.daysOfTheWeek.includes(currentDay) || (currentDay === 'Sat' || currentDay === 'Sun')) {
+              const [downStartHour, downStartMinute] = scalingSchedule.down.startTime.split(':').map(Number);
+              const [downEndHour, downEndMinute] = scalingSchedule.down.endTime.split(':').map(Number);
+              if ((currentHour > downStartHour || (currentHour === downStartHour && currentMinute >= downStartMinute)) ||
+                  (currentHour < downEndHour || (currentHour === downEndHour && currentMinute < downEndMinute))) {
+                scaleAction = 'down';
+              }
+            }
+            core.info(`Scale Action: ${scaleAction}; Trigger: ${context.eventName}`);
+            core.setOutput('SCALE_ACTION', scaleAction);
+
+      - name: Set Matrix
+        id: matrix
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const scheduledEnvironments = JSON.parse(process.env.SCHEDULED_ENVIRONMENTS);
+            const inputEnvironment = ['${{ inputs.environment }}'];
+            const enviroments = '${{ github.event_name }}' == 'schedule' ? scheduledEnvironments : inputEnvironment;
+            core.setOutput('MATRIX_ENV', enviroments);
+            let matrix = { include: [] };
+            enviroments.forEach((env) => {
+              if(env.includes('-secondary')){
+                matrix.include.push({ 
+                  environment: `${env}`,
+                  secretsEnvironment: `${env.replace('-secondary', '')}`,
+                  scaleAction: '${{ steps.calculate-scale-action.outputs.SCALE_ACTION }}'
+                });
+              }else{
+                matrix.include.push({ 
+                  environment: env, 
+                  secretsEnvironment: env, 
+                  scaleAction: '${{ steps.calculate-scale-action.outputs.SCALE_ACTION }}'
+                });
+              }
+              
+            });
+            core.setOutput('MATRIX', matrix);
+
+      - name: Annotate Inputs
+        id: workflow_summary
+        run: |
+          echo $'
+          | Deploy Arguments             | Value                    |
+          | ---                          |  ---                     |
+          | Workflow Trigger             | `${{ github.event_name }}` |
+          | Scale Action                 | `${{ steps.calculate-scale-action.outputs.SCALE_ACTION }}` |
+          | Environment(s)               | `${{ steps.matrix.outputs.MATRIX_ENV }}` |
+          | Branch/Tag                   | `${{ github.ref_name }}`  |
+          | Workflow Branch/Tag          | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |' >> $GITHUB_STEP_SUMMARY
+
+  scale-cluster:
+    runs-on: im-deploy-terraform
+    needs: set-matrix
+    strategy:
+      matrix: ${{ fromJson(needs.set-matrix.outputs.MATRIX) }}
+      fail-fast: false
+    environment: ${{ matrix.secretsEnvironment }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
+      - name: Set Variables
+        id: set-variables
+        uses: im-open/set-environment-variables-by-scope@v1
+        with:
+          scope: ${{ matrix.environment }}
+          create-output-variables: true
+        env:
+          # TODO: Update the TARGET_RESOURCE_GROUP variable to match the resource groups in the AKS cluster.
+          # Resource group you are targeting for deploy.  Also this variable is used to delete and re-create azure locks.
+          # Add the NA27 (West Central US) Resource Group to the stage-secondary/prod-secondary to the variables.
+          # Add the NA26 (West US2) Resource Groups to dev/qa/stage/demo/uat/prod to the variables
+          TARGET_RESOURCE_GROUP@dev: ''
+          TARGET_RESOURCE_GROUP@dev-secondary: ''
+          TARGET_RESOURCE_GROUP@prod: ''
+          TARGET_RESOURCE_GROUP@prod-secondary: ''
+          
+          # TODO: Update the CLUSTER_NAME variable to match the AKS cluster names in the AKS cluster.
+          # The name of the AKS Cluster
+          CLUSTER_NAME@dev: ''
+          CLUSTER_NAME@dev-secondary: ''
+          CLUSTER_NAME@prod: ''
+          CLUSTER_NAME@prod-secondary: ''
+
+          # TODO: Update the NODE_POOL_SCALING variable to match the node pools in the AKS cluster. This is where you set what the workflow will scale to.
+          # The manualMin is what the workflow will scale down to when run.  The autoScaleMin and autoScaleMax are the
+          # values that the workflow will set the node pool to when set to autoscale on the node pool.
+          # List of Node Pools and their autoscale min/max values.  
+          NODE_POOL_SCALING@dev: |
+            [
+              {
+                "name": "",
+                "autoScaleMin": 1,
+                "autoScaleMax": 7,
+                "manualMin": 2
+              }
+            ]
+
+      - name: AZ Login
+        uses: azure/login@v2
+        with:
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
+
+      - name: Check Cluster Scale State
+        id: scale-state
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const pools = JSON.parse(process.env.NODE_POOL_SCALING);     
+            core.info(`Getting Scale State for node pools: ${pools.map(pool => pool.name).join(', ')}`);
+            
+            const output = execSync(`az aks nodepool list --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} -o json`, { encoding: 'utf-8' });
+            const nodePools = JSON.parse(output);
+            const hasManualScaling = nodePools.some(pool => !pool.enableAutoScaling);
+            core.setOutput('NODE_POOL_STATUS', JSON.stringify(nodePools));
+
+            const currentScaleType = hasManualScaling ? 'Manual' : 'Auto';
+            core.exportVariable('CURRENT_SCALE_TYPE', currentScaleType);
+
+            if (hasManualScaling) {
+              core.info('One or more node pools have manual scaling enabled.');
+            } else {
+              core.info('All pools have auto scaling enabled.');
+            }
+
+            // const scaleUp = (context.eventName == 'schedule' && currentScaleType == 'Auto') || (context.eventName != 'schedule' && context.payload?.inputs?.action == 'up');
+            const scaleUp = '${{ matrix.scaleAction }}' == 'up';
+            core.exportVariable('NEW_SCALE_TYPE', scaleUp ? 'Auto' : 'Manual');
+
+            if('${{ matrix.scaleAction }}' == 'none'){
+              core.setFailed('Scale schedule could not calculate scale action.  Please fix SCALE_SCHEDULE environment variable as it has gaps with start and endtimes between the up and down action.');
+              return;
+            }
+
+      - name: Annotate Scaling
+        id: workflow_summary
+        run: |
+          echo $'
+          | Name                         | Value                    |
+          | ---                          |  ---                     |
+          | Environment                  | `${{ matrix.environment }}` |
+          | Scale Action                 | `${{ matrix.scaleAction }}` |
+          | Current Scale Type           | `${{ env.CURRENT_SCALE_TYPE }}`  |
+          | New Scale Type               | `${{ env.NEW_SCALE_TYPE }}` |' >> $GITHUB_STEP_SUMMARY
+         
+      - name: Set Scaling to ${{ env.NEW_SCALE_TYPE }} - Scale ${{ matrix.scaleAction }}
+        uses: actions/github-script@v7
+        env:
+          NODE_POOL_STATUS: ${{ steps.scale-state.outputs.NODE_POOL_STATUS }}
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            core.info(`Setting Scale Type to ${process.env.NEW_SCALE_TYPE}`);
+            
+            const pools = JSON.parse(process.env.NODE_POOL_SCALING);
+            const poolsStatus = JSON.parse(process.env.NODE_POOL_STATUS);
+
+            if('${{matrix.scaleAction}}' == 'up'){
+              // Setting System pool to be scaled up first.
+              const poolsOrdered = pools.map((pool, index) => ({ ...pool, order: poolsStatus.find(p => p.name === pool.name).mode == 'System' ? 0 : index + 1 }));
+
+              // Sort pools by the order property
+              poolsOrdered.sort((a, b) => a.order - b.order);
+
+              poolsOrdered.forEach((pool) => {
+                const poolStatus = poolsStatus.find(p => p.name === pool.name);
+                if(poolStatus.enableAutoScaling){
+                  core.info(`Pool ${pool.name} is already set to AutoScale. Updating min:${pool.autoScaleMin} and max:${pool.autoScaleMax} values.`);
+                  execSync(`az aks nodepool update --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --update-cluster-autoscaler --min-count ${pool.autoScaleMin} --max-count ${pool.autoScaleMax}`, { stdio: 'inherit' });
+                }else{
+                  core.info(`Setting Node Pool ${pool.name} to autoscale between ${pool.autoScaleMin} and ${pool.autoScaleMax}`);
+                  execSync(`az aks nodepool update --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --enable-cluster-autoscaler --min-count ${pool.autoScaleMin} --max-count ${pool.autoScaleMax}`, { stdio: 'inherit' });
+                }
+              });
+            }else{
+              // Setting System pool to be scaled down last.
+              const poolsOrdered = pools.map((pool, index) => ({ ...pool, order: poolsStatus.find(p => p.name === pool.name).mode == 'System' ? 100 : index }));
+
+              // Sort pools by the order property
+              poolsOrdered.sort((a, b) => a.order - b.order);
+
+              poolsOrdered.forEach((pool) => {
+                const poolStatus = poolsStatus.find(p => p.name === pool.name);
+                if(poolStatus.enableAutoScaling){
+                  core.info(`Setting Node Pool ${pool.name} to manual scaling`);
+                  execSync(`az aks nodepool update --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --disable-cluster-autoscaler`, { stdio: 'inherit' });
+                }else{
+                  core.info(`Pool ${pool.name} is already set to Manual scaling.`);
+                }
+                core.info(`Setting Node Pool ${pool.name} to scale with a count of ${pool.manualMin}.  Current count is ${poolStatus.count}`);
+                if(poolStatus.count != pool.manualMin){
+                  core.info(`Setting Node Pool ${pool.name} to scale with a count of ${pool.manualMin}`);
+                  execSync(`az aks nodepool scale --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --node-count ${pool.manualMin}`, { stdio: 'inherit' });
+                }else{
+                  core.info(`Node Pool ${pool.name} is already at the minimum scale of ${pool.manualMin}`);
+                }
+              });  
+            }       
+
+      - name: Azure logout
+        if: always()
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
+      - name: Send Status to Teams
+        if: always()
+        uses: im-open/post-status-to-teams-action@v1
+        with:
+          title: Scaled ${{ matrix.scaleAction }} AKS Cluster ${{ env.CLUSTER_NAME }} Node Pools
+          workflow-status: ${{ job.status }}
+          workflow-type: Runbook
+          teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the job)
+          timezone: ${{ env.TIMEZONE }}
+          custom-facts: |
+            [
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" },
+              { "name": "Environment", "value": "${{ matrix.environment }}" },
+              { "name": "Cluster Original Scale Type", "value": "${{ env.CURRENT_SCALE_TYPE }}" },
+              { "name": "Cluster New Scale Type", "value": "${{ env.NEW_SCALE_TYPE }}" }
+            ]

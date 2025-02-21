@@ -1,0 +1,5 @@
+{
+    "name": "Run - Scale AKS cluster up or down on a schedule or manually",
+    "description": "The Template scales AKS Cluster Node Pools down to a specified minimum after work hours to save costs.  This workflow will switch node pool scaling to manual then scale down to the minimum number of nodes specified in the workflow.",
+    "iconName": "im_azure"
+}
