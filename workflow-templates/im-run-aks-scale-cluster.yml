@@ -1,4 +1,4 @@
-# Workflow Code: ElatedAnoconda_v2    DO NOT REMOVE
+# Workflow Code: ElatedAnoconda_v3    DO NOT REMOVE
 # Purpose:
 #    Scales AKS Cluster Node Pools down to a specified minimum after work hours
 #    to save costs.  This workflow will switch node pool scaling to manual then
@@ -123,9 +123,11 @@ jobs:
                   (currentHour < upEndHour || (currentHour === upEndHour && currentMinute < upEndMinute))) {
                 scaleAction = 'up';
               }
+            }else{
+              scaleAction = 'down';
             }
 
-            if (scalingSchedule.down.daysOfTheWeek.includes(currentDay) || (currentDay === 'Sat' || currentDay === 'Sun')) {
+            if (scalingSchedule.down.daysOfTheWeek.includes(currentDay)) {
               const [downStartHour, downStartMinute] = scalingSchedule.down.startTime.split(':').map(Number);
               const [downEndHour, downEndMinute] = scalingSchedule.down.endTime.split(':').map(Number);
               if ((currentHour > downStartHour || (currentHour === downStartHour && currentMinute >= downStartMinute)) ||
@@ -133,6 +135,7 @@ jobs:
                 scaleAction = 'down';
               }
             }
+
             core.info(`Scale Action: ${scaleAction}; Trigger: ${context.eventName}`);
             core.setOutput('SCALE_ACTION', scaleAction);
 
@@ -221,10 +224,16 @@ jobs:
           NODE_POOL_SCALING@dev: |
             [
               {
-                "name": "",
+                "name": "default-or-system-nodepool-name-here",
                 "autoScaleMin": 1,
-                "autoScaleMax": 7,
+                "autoScaleMax": 3,
                 "manualMin": 2
+              },
+              {
+                "name": "user-nodepool-name-here",
+                "autoScaleMin": 0,
+                "autoScaleMax": 10,
+                "manualMin": 0
               }
             ]
 
@@ -301,12 +310,16 @@ jobs:
 
               poolsOrdered.forEach((pool) => {
                 const poolStatus = poolsStatus.find(p => p.name === pool.name);
-                if(poolStatus.enableAutoScaling){
-                  core.info(`Pool ${pool.name} is already set to AutoScale. Updating min:${pool.autoScaleMin} and max:${pool.autoScaleMax} values.`);
-                  execSync(`az aks nodepool update --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --update-cluster-autoscaler --min-count ${pool.autoScaleMin} --max-count ${pool.autoScaleMax}`, { stdio: 'inherit' });
-                }else{
-                  core.info(`Setting Node Pool ${pool.name} to autoscale between ${pool.autoScaleMin} and ${pool.autoScaleMax}`);
-                  execSync(`az aks nodepool update --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --enable-cluster-autoscaler --min-count ${pool.autoScaleMin} --max-count ${pool.autoScaleMax}`, { stdio: 'inherit' });
+                try{
+                  if(poolStatus.enableAutoScaling){
+                    core.info(`Pool ${pool.name} is already set to AutoScale. Updating min:${pool.autoScaleMin} and max:${pool.autoScaleMax} values.`);
+                    execSync(`az aks nodepool update --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --update-cluster-autoscaler --min-count ${pool.autoScaleMin} --max-count ${pool.autoScaleMax}`, { stdio: 'inherit' });
+                  }else{
+                    core.info(`Setting Node Pool ${pool.name} to autoscale between ${pool.autoScaleMin} and ${pool.autoScaleMax}`);
+                    execSync(`az aks nodepool update --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --enable-cluster-autoscaler --min-count ${pool.autoScaleMin} --max-count ${pool.autoScaleMax}`, { stdio: 'inherit' });
+                  }
+                } catch (error) {
+                  core.setFailed(`Error Scaling Up Cluster Pool ${pool.name}: ${error}`);
                 }
               });
             }else{
@@ -318,21 +331,79 @@ jobs:
 
               poolsOrdered.forEach((pool) => {
                 const poolStatus = poolsStatus.find(p => p.name === pool.name);
-                if(poolStatus.enableAutoScaling){
-                  core.info(`Setting Node Pool ${pool.name} to manual scaling`);
-                  execSync(`az aks nodepool update --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --disable-cluster-autoscaler`, { stdio: 'inherit' });
-                }else{
-                  core.info(`Pool ${pool.name} is already set to Manual scaling.`);
-                }
-                core.info(`Setting Node Pool ${pool.name} to scale with a count of ${pool.manualMin}.  Current count is ${poolStatus.count}`);
-                if(poolStatus.count != pool.manualMin){
-                  core.info(`Setting Node Pool ${pool.name} to scale with a count of ${pool.manualMin}`);
-                  execSync(`az aks nodepool scale --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --node-count ${pool.manualMin}`, { stdio: 'inherit' });
-                }else{
-                  core.info(`Node Pool ${pool.name} is already at the minimum scale of ${pool.manualMin}`);
+                try{
+                  if(poolStatus.enableAutoScaling){
+                    core.info(`Setting Node Pool ${pool.name} to manual scaling`);
+                    execSync(`az aks nodepool update --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --disable-cluster-autoscaler`, { stdio: 'inherit' });
+                  }else{
+                    core.info(`Pool ${pool.name} is already set to Manual scaling.`);
+                  }
+                  core.info(`Setting Node Pool ${pool.name} to scale with a count of ${pool.manualMin}.  Current count is ${poolStatus.count}`);
+                  if(poolStatus.count != pool.manualMin){
+                    core.info(`Setting Node Pool ${pool.name} to scale with a count of ${pool.manualMin}`);
+                    execSync(`az aks nodepool scale --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --node-count ${pool.manualMin}`, { stdio: 'inherit' });
+                  }else{
+                    core.info(`Node Pool ${pool.name} is already at the minimum scale of ${pool.manualMin}. Skipping executing scale down command.`);
+                  }
+                }catch(error){
+                  core.setFailed(`Error Scaling Down Cluster Pool ${pool.name}: ${error}`);
                 }
               });  
-            }       
+            }
+      
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v4
+        if: ${{ matrix.scaleAction == 'up' }}
+        with:
+          version: latest
+
+      - name: Setup Kubelogin
+        uses: azure/use-kubelogin@v1
+        if: ${{ matrix.scaleAction == 'up' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          kubelogin-version: 'latest'
+
+      - name: Setup kubectl config
+        if: ${{ matrix.scaleAction == 'up' }}
+        id: kube-config
+        run: |
+          base_path=$(pwd)
+          kube_config_file_path="$base_path/.kube/config-sp"
+          export KUBECONFIG=$kube_config_file_path
+          az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --format exec --overwrite-existing --public-fqdn --file $kube_config_file_path
+          kubelogin convert-kubeconfig --login azurecli --kubeconfig $kube_config_file_path
+
+          echo "kube-config-file=$kube_config_file_path" >> $GITHUB_OUTPUT
+
+      - name: Restart Pods in Error or Pending State after Scale Up
+        if: ${{ matrix.scaleAction == 'up' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            try {
+              const pods = execSync(`kubectl get pods --all-namespaces -o json --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }}`, { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 10 });
+              const podsJson = JSON.parse(pods);
+              const podStatusToRestart = ['Pending', 'Failed', "Unknown"];
+              const podContainerStatusToRestart = ['CrashLoopBackOff', 'Error', 'ImagePullBackOff'];
+
+              const podsToRestart = podsJson.items.filter(pod =>
+                podStatusToRestart.includes(pod.status.phase) ||
+                podContainerStatusToRestart.some(
+                  containerStatus => pod.status.containerStatuses.some(container =>
+                    !container.started && container.state.waiting && container.state.waiting.reason === containerStatus
+                  )
+                )
+              );
+              console.log(`Pods to Restart: ${podsToRestart.map(pod => `${pod.metadata.namespace}/${pod.metadata.name}`).join(', ')}`);
+              podsToRestart.forEach(pod => {
+                execSync(`kubectl delete pod ${pod.metadata.name} -n ${pod.metadata.namespace} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }}`, { stdio: 'inherit' });
+              });
+            } catch (error) {
+              core.setFailed(`Error restarting pods: ${error}`);
+            }
 
       - name: Azure logout
         if: always()
