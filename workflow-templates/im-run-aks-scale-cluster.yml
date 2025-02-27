@@ -1,4 +1,4 @@
-# Workflow Code: ElatedAnoconda_v3    DO NOT REMOVE
+# Workflow Code: ElatedAnoconda_v4    DO NOT REMOVE
 # Purpose:
 #    Scales AKS Cluster Node Pools down to a specified minimum after work hours
 #    to save costs.  This workflow will switch node pool scaling to manual then
@@ -50,6 +50,9 @@ permissions:
 
 env:
   TIMEZONE: 'America/Denver'
+  SCALE_UP_RESTART_FAILED_PODS_RETRY_COUNT: 5
+  # Recommended to be 60 seconds or more
+  SCALE_UP_RESTART_FAILED_PODS_WAIT_TIME_SECONDS: 60 # TODO: Set wait time for Restarting pods. 
   # The environments that are scheduled to scale up and down.
   SCHEDULED_ENVIRONMENTS: '["dev","dev-secondary","prod","prod-secondary"]' # TODO: Remove any environments you don't want scaling on a schedule
   # TODO: Update the scaling schedule start and end times to desired times.
@@ -220,6 +223,7 @@ jobs:
           # TODO: Update the NODE_POOL_SCALING variable to match the node pools in the AKS cluster. This is where you set what the workflow will scale to.
           # The manualMin is what the workflow will scale down to when run.  The autoScaleMin and autoScaleMax are the
           # values that the workflow will set the node pool to when set to autoscale on the node pool.
+          # enableAutoScaleAfterScaling is used after scaling down to set the node pool to autoscale.
           # List of Node Pools and their autoscale min/max values.  
           NODE_POOL_SCALING@dev: |
             [
@@ -227,13 +231,15 @@ jobs:
                 "name": "default-or-system-nodepool-name-here",
                 "autoScaleMin": 1,
                 "autoScaleMax": 3,
-                "manualMin": 2
+                "manualMin": 2,
+                "enableAutoScaleAfterScaling": false
               },
               {
                 "name": "user-nodepool-name-here",
                 "autoScaleMin": 0,
                 "autoScaleMax": 10,
-                "manualMin": 0
+                "manualMin": 0,
+                "enableAutoScaleAfterScaling": false
               }
             ]
 
@@ -288,6 +294,37 @@ jobs:
           | Scale Action                 | `${{ matrix.scaleAction }}` |
           | Current Scale Type           | `${{ env.CURRENT_SCALE_TYPE }}`  |
           | New Scale Type               | `${{ env.NEW_SCALE_TYPE }}` |' >> $GITHUB_STEP_SUMMARY
+
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v4
+        if: ${{ matrix.scaleAction == 'up' }}
+        with:
+          version: latest
+
+      - name: Setup Kubelogin
+        uses: azure/use-kubelogin@v1
+        if: ${{ matrix.scaleAction == 'up' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          kubelogin-version: 'latest'
+
+      - name: Setup kubectl config
+        if: ${{ matrix.scaleAction == 'up' }}
+        id: kube-config
+        run: |
+          base_path=$(pwd)
+          kube_config_file_path="$base_path/.kube/config-sp"
+          export KUBECONFIG=$kube_config_file_path
+          az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --format exec --overwrite-existing --public-fqdn --file $kube_config_file_path
+          kubelogin convert-kubeconfig --login azurecli --kubeconfig $kube_config_file_path
+
+          echo "kube-config-file=$kube_config_file_path" >> $GITHUB_OUTPUT
+
+      - name: Pre-Scaling Commands # TODO: add any commands you want to run before scaling
+        run: |
+          echo "Running Pre-Scaling Commands"
+          echo "No Commands to run."
          
       - name: Set Scaling to ${{ env.NEW_SCALE_TYPE }} - Scale ${{ matrix.scaleAction }}
         uses: actions/github-script@v7
@@ -345,37 +382,16 @@ jobs:
                   }else{
                     core.info(`Node Pool ${pool.name} is already at the minimum scale of ${pool.manualMin}. Skipping executing scale down command.`);
                   }
+
+                  if(pool.enableAutoScaleAfterScaling && !poolStatus.enableAutoScaling){
+                    core.info(`Setting Node Pool ${pool.name} to autoscale between ${pool.autoScaleMin} and ${pool.autoScaleMax} after scaling down`);
+                    execSync(`az aks nodepool update --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --cluster-name ${{ env.CLUSTER_NAME }} --name ${pool.name} --enable-cluster-autoscaler --min-count ${pool.autoScaleMin} --max-count ${pool.autoScaleMax}`, { stdio: 'inherit' });
+                  }
                 }catch(error){
                   core.setFailed(`Error Scaling Down Cluster Pool ${pool.name}: ${error}`);
                 }
               });  
             }
-      
-      - name: Setup Kubectl
-        uses: azure/setup-kubectl@v4
-        if: ${{ matrix.scaleAction == 'up' }}
-        with:
-          version: latest
-
-      - name: Setup Kubelogin
-        uses: azure/use-kubelogin@v1
-        if: ${{ matrix.scaleAction == 'up' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          kubelogin-version: 'latest'
-
-      - name: Setup kubectl config
-        if: ${{ matrix.scaleAction == 'up' }}
-        id: kube-config
-        run: |
-          base_path=$(pwd)
-          kube_config_file_path="$base_path/.kube/config-sp"
-          export KUBECONFIG=$kube_config_file_path
-          az aks get-credentials --name ${{ env.CLUSTER_NAME }} --resource-group ${{ env.TARGET_RESOURCE_GROUP }} --format exec --overwrite-existing --public-fqdn --file $kube_config_file_path
-          kubelogin convert-kubeconfig --login azurecli --kubeconfig $kube_config_file_path
-
-          echo "kube-config-file=$kube_config_file_path" >> $GITHUB_OUTPUT
 
       - name: Restart Pods in Error or Pending State after Scale Up
         if: ${{ matrix.scaleAction == 'up' }}
@@ -383,27 +399,85 @@ jobs:
         with:
           script: |
             const { execSync } = require('child_process');
-            try {
-              const pods = execSync(`kubectl get pods --all-namespaces -o json --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }}`, { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 10 });
-              const podsJson = JSON.parse(pods);
-              const podStatusToRestart = ['Pending', 'Failed', "Unknown"];
-              const podContainerStatusToRestart = ['CrashLoopBackOff', 'Error', 'ImagePullBackOff'];
+            const podStatusToRestart = ['Pending', 'Failed', "Unknown"];
+            const podContainerStatusToRestart = ['CrashLoopBackOff', 'Error', 'ImagePullBackOff'];
+            const excludedNamespaces = ['default','kube-node-lease','kube-public', 'kube-system','calico-system','gatekeeper-system','tigera-operator'];
+            const kubeConfigFile = '${{ steps.kube-config.outputs.kube-config-file }}';
+            const maxRetries = ${{ env.SCALE_UP_RESTART_FAILED_PODS_RETRY_COUNT }};
+            const waitTime = ${{ env.SCALE_UP_RESTART_FAILED_PODS_WAIT_TIME_SECONDS }};
 
-              const podsToRestart = podsJson.items.filter(pod =>
-                podStatusToRestart.includes(pod.status.phase) ||
-                podContainerStatusToRestart.some(
-                  containerStatus => pod.status.containerStatuses.some(container =>
-                    !container.started && container.state.waiting && container.state.waiting.reason === containerStatus
-                  )
-                )
-              );
-              console.log(`Pods to Restart: ${podsToRestart.map(pod => `${pod.metadata.namespace}/${pod.metadata.name}`).join(', ')}`);
-              podsToRestart.forEach(pod => {
-                execSync(`kubectl delete pod ${pod.metadata.name} -n ${pod.metadata.namespace} --kubeconfig ${{ steps.kube-config.outputs.kube-config-file }}`, { stdio: 'inherit' });
-              });
-            } catch (error) {
-              core.setFailed(`Error restarting pods: ${error}`);
+            function sleep(seconds) {
+              core.info(`Waiting for ${seconds} seconds before checking the pods status again...`);
+              execSync(`sleep ${seconds}`, { stdio: 'inherit' });
             }
+
+            function getPodsToRestart(retryCount, kubeConfigFile) {
+              try {
+                const pods = execSync(`kubectl get pods --all-namespaces -o json --kubeconfig ${kubeConfigFile}`, { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 10 });
+                const podsJson = JSON.parse(pods);
+
+                let podsToRestart = podsJson.items.filter(pod =>
+                  !excludedNamespaces.includes(pod.metadata.namespace) &&
+                  (podStatusToRestart.includes(pod.status.phase) ||
+                    pod.status.containerStatuses.some(container =>
+                      container.state.waiting && podContainerStatusToRestart.includes(container.state.waiting.reason)
+                    )
+                  )
+                );
+                if(retryCount > 2 && podsToRestart.length > 0){
+                  core.info('Filtering out pods in pending state.');
+                  podsToRestart = podsToRestart.filter(pod => pod.status.phase != 'Pending' && !pod.name.includes('node-exporter'));
+                }
+                return podsToRestart;
+              } catch (error) {
+                core.setFailed(`Error getting pods in getPodsToRestart function: ${error}`);
+              }
+            }
+
+            function restartPods(podsToRestart,kubeConfigFile) {
+              try {
+                core.info(`Pods to Restart: ${podsToRestart.map(pod => `${pod.metadata.namespace}/${pod.metadata.name}`).join(', ')}`);
+                podsToRestart.forEach(pod => {
+                  execSync(`kubectl delete pod ${pod.metadata.name} -n ${pod.metadata.namespace} --kubeconfig ${kubeConfigFile}`, { stdio: 'inherit' });
+                });
+              } catch (error) {
+                core.setFailed(`Error restarting pods in restartPods function: ${error}`);
+              }
+            }
+
+            let podsToRestart = getPodsToRestart(0,kubeConfigFile);
+            if(podsToRestart.length > 0){
+              sleep(120);
+            }
+            let retryCount = 1;
+            if (podsToRestart.length > 0) {
+              while (retryCount < maxRetries && podsToRestart.length > 0) {
+                const waitTimeMultiplier = retryCount > 0 ? retryCount * waitTime : waitTime;
+                if(retryCount > 1){
+                  podsToRestart = getPodsToRestart(retryCount, kubeConfigFile);
+                }
+                core.info(`Found ${podsToRestart.length} pods in error or pending state. Restarting pods... Retry count: ${retryCount}`);
+                restartPods(podsToRestart,kubeConfigFile);
+                
+                sleep(waitTimeMultiplier);
+                
+                podsToRestart = getPodsToRestart(retryCount, kubeConfigFile);
+                if(podsToRestart.length > 0 && retryCount < maxRetries -1){
+                  core.info(`Checking pods again...`);
+                }else{
+                  core.info(`No more pods to restart or reached maximum retry count of ${maxRetries}.`);
+                }
+                retryCount++;
+              }
+            } else {
+              core.info('No pods in error or pending state found.');
+              core.info(`Restarted Pods Retry Count: ${retryCount}`);
+            }
+              
+      - name: Post-Scaling Commands # TODO: Run any commands you want to run after scaling
+        run: |
+          echo "Running Post-Scaling Commands"
+          echo "No Commands to run."
 
       - name: Azure logout
         if: always()
