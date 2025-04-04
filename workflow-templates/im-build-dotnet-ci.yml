@@ -252,7 +252,7 @@ jobs:
       # This cache is only valid if the 'nuget-cache' job that creates the cache and this job that downloads the cache use
       # the same runner OS.  If this job changed runner types, the 'nuget-cache' job should be updated to use the same type.
       - name: Download nuget cache
-        uses: im-open/restore-cache@v1.3
+        uses: actions/cache/restore@v4
         with:
           path: ~/.nuget/packages
           key: ${{ needs.nuget-cache.outputs.NUGET_CACHE_KEY }}
@@ -392,7 +392,7 @@ jobs:
       # This cache is only valid if the 'npm-cache' job that creates the cache and this job that downloads the cache use
       # the same runner OS.  If this job changed runner types, the 'npm-cache' job should be updated to use the same type.
       - name: Download npm cache
-        uses: im-open/restore-cache@v1.3
+        uses: actions/cache/restore@v4
         with:
           key: ${{ needs.npm-cache.outputs.NPM_CACHE_KEY }}
           path: '**/node_modules'
@@ -513,13 +513,13 @@ jobs:
       # this job that downloads the caches use the same runner OS.  If this job changed runner types, the
       # 'npm-cache' and 'nuget-cache' jobs should be updated to use the same type.
       - name: Download nuget cache
-        uses: im-open/restore-cache@v1.3
+        uses: actions/cache/restore@v4
         with:
           path: ~/.nuget/packages
           key: ${{ needs.nuget-cache.outputs.NUGET_CACHE_KEY }}
 
       - name: Download npm cache
-        uses: im-open/restore-cache@v1.3
+        uses: actions/cache/restore@v4
         with:
           key: ${{ needs.npm-cache.outputs.NPM_CACHE_KEY }}
           path: '**/node_modules'
