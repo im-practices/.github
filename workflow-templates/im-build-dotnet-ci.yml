@@ -257,6 +257,13 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ needs.nuget-cache.outputs.NUGET_CACHE_KEY }}
 
+      # TODO:  If the project contains internal nuget packages, uncomment and update the orgs with the needed organizations
+      # - name: Authenticate with GitHub Packages
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.1
+      #   with:
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+      #     orgs: ''
+
       - name: Build Database
         uses: im-open/build-database-ci-action@v3.3
         with:
@@ -533,6 +540,13 @@ jobs:
       - name: Rebuild Node Modules
         working-directory: '.' # TODO:  Update if package-lock.json is not at the root of the project
         run: npm rebuild
+
+      # TODO:  If the project contains internal nuget packages, uncomment and update the orgs with the needed organizations
+      # - name: Authenticate with GitHub Packages
+      #   uses: im-open/authenticate-with-gh-package-registries@v1.1
+      #   with:
+      #     read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+      #     orgs: ''
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
