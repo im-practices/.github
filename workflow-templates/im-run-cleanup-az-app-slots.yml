@@ -1,0 +1,301 @@
+# Workflow Code: FunnyAxelotal_v2    DO NOT REMOVE
+# Purpose:
+#    Cleanup slots in Azure App Service or Function on a schedule
+# Frequency:
+#    - This workflow is one per repo
+#
+# Projects to use this Template with:
+#    - Azure App Service or Function (Optional Template)
+#
+
+name: 🛠️ Cleanup App Slots
+
+on:
+  schedule:
+    - cron: '45 18 * * 0'  # Sunday at 12:45 PM MDT / 12:45 PM MST
+  workflow_dispatch:
+    inputs:
+      environment-or-target:
+        description: The environment where slots are being deleted
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - stage
+          - prod
+          - all-lower
+      app-code:
+        description: Application slot to delete.
+        required: true
+        type: choice
+        options:
+          - bff # TODO: Update application codes for your application.  These codes correlate to the app service or azure function name
+          - svc
+
+permissions:
+  # Required for secretless azure access and deploys
+  id-token: write
+  contents: read
+  # Required for create-github-deployment (in the reusable update-github-deployments-and-send-teams-notification job)
+  deployments: write
+  actions: read
+
+env:
+  AZ_APP_TYPE: 'webapp'
+  TIMEZONE: 'america/denver'
+
+jobs:
+  get-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set Matrix
+        id: set-matrix
+        uses: actions/github-script@v7
+        env:
+          INPUT_ENV: ${{ inputs.environment-or-target }}
+          INPUT_APP_CODE: ${{ inputs.app-code }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const event_name = '${{ github.event_name }}';
+            const defaultAppCodes = ['bff', 'svc']; // TODO: Update application codes for your application.  These codes correlate to the app service or azure function name
+            const lowerEnvironments = ['dev', 'qa', 'stage'];
+            let envs, app_codes;
+            if(event_name == 'workflow_dispatch') {
+              envs = process.env.INPUT_ENV == 'all-lower' ? lowerEnvironments : [`${process.env.INPUT_ENV}`];
+              app_codes = [`${process.env.INPUT_APP_CODE}`];
+            } else {
+              envs = lowerEnvironments;
+              app_codes = defaultAppCodes;
+            }
+            const matrix = { environment: envs, 'app-code': app_codes };
+            core.setOutput('matrix', JSON.stringify(matrix));
+            const stepSummary = `
+            | Deploy Arguments          | Value                    |
+            | ---                       |  ---                     |
+            | Environments              | \`${envs.join(', ')}\` |
+            | App Codes                 | \`${app_codes.join(', ')}\` |
+            | Workflow Branch/Tag       | \`${{ github.ref_name }}\` - SHA: \`${{ github.sha }}\` |
+            `;
+            core.summary
+              .addRaw(stepSummary)
+              .write();
+
+  cleanup-slots:
+    needs: [get-matrix]
+    runs-on: im-linux
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.get-matrix.outputs.matrix) }}
+
+    environment: ${{ matrix.environment }}
+
+    steps:
+      - name: Set Application Code
+        id: app-code
+        uses: im-open/set-environment-variables-by-scope@v1
+        with:
+          scope: ${{ matrix.app-code }}
+          create-output-variables: true
+        env:
+          APP_CODE@svc: 'svc' # TODO: Update for your application codes if the app service names or function app names diverge from application codes
+          APP_CODE@bff: 'bff'
+
+          SLOT_PREFIX@svc bff wj: 'myprefix' # TODO: Update for your slot prefix if you have one
+
+          DEPLOYMENT_BOARD_ENTITY@svc: 'example-service' # TODO: Update your deployment board entity(s)
+          DEPLOYMENT_BOARD_ENTITY@bff: 'example-bff'
+
+      - name: App Code UpperCase
+        id: app-code-upper
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const appCode = '${{ steps.app-code.outputs.APP_CODE }}';
+            const appCodeUpper = appCode.toUpperCase();
+            console.log(`Application: ${appCodeUpper}`);
+            core.setOutput('APP_CODE_UPPER', appCodeUpper);
+
+      # For more information and best practices on the usage and options available
+      # for this action go to: https://github.com/im-open/set-environment-variables-by-scope#usage-instructions
+      - name: Set Variables
+        id: set-variables
+        uses: im-open/set-environment-variables-by-scope@v1
+        with:
+          scope: ${{ matrix.environment }}
+          create-output-variables: true
+        env:
+          # Resource group you are targeting for deploy.  Also this variable is used to delete and re-create azure locks.
+          # Add the NA27 (West Central US) Resource Group to the stage-secondary/prod-secondary to the variables.
+          # Add the NA26 (West US2) Resource Groups to dev/qa/stage/demo/uat/prod to the variables
+          TARGET_RESOURCE_GROUP@dev: '' # TODO: Update your resource group name
+          TARGET_RESOURCE_GROUP@qa: ''
+          TARGET_RESOURCE_GROUP@stage: ''
+          TARGET_RESOURCE_GROUP@stage-secondary: ''
+          TARGET_RESOURCE_GROUP@prod: ''
+          TARGET_RESOURCE_GROUP@prod-secondary: ''
+
+          # Resource group holding the state storage account and managed service identities
+          # Add the Stage/Prod NA26 (West US2) Resource Groups below.
+          PRIMARY_RESOURCE_GROUP@dev: '' # TODO: Update your primary resource group name
+          PRIMARY_RESOURCE_GROUP@qa: ''
+          PRIMARY_RESOURCE_GROUP@stage stage-secondary: ''
+          PRIMARY_RESOURCE_GROUP@prod prod-secondary: ''
+
+          # This variable is used to deploy the app, swap slots, annotate app insights and send a teams notification
+          AZ_APP_NAME@dev: 'BDAIM-D-NA26-Example-${{ steps.app-code-upper.outputs.APP_CODE_UPPER }}' # TODO: Update your AZ_APP_NAME
+          AZ_APP_NAME@qa: 'BDAIM-Q-NA26-Example-${{ steps.app-code-upper.outputs.APP_CODE_UPPER }}'
+          AZ_APP_NAME@stage: 'BDAIM-S-NA26-Example-${{ steps.app-code-upper.outputs.APP_CODE_UPPER }}'
+          AZ_APP_NAME@stage-secondary: 'BDAIM-S-NA27-Example-${{ steps.app-code-upper.outputs.APP_CODE_UPPER }}'
+          AZ_APP_NAME@prod: 'BDAIM-P-NA26-Example-${{ steps.app-code-upper.outputs.APP_CODE_UPPER }}'
+          AZ_APP_NAME@prod-secondary: 'BDAIM-P-NA27-Example-${{ steps.app-code-upper.outputs.APP_CODE_UPPER }}'
+
+          DEPLOYMENT_BOARD_INSTANCE@dev qa stage prod demo: 'NA26'
+          DEPLOYMENT_BOARD_INSTANCE@stage-secondary prod-secondary: 'NA27'
+
+      - name: AZ Login
+        id: login
+        uses: azure/login@v2
+        with:
+          # This is an org-level variable
+          tenant-id: ${{ vars.ARM_TENANT_ID }}
+          # These are env-level variables
+          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.ARM_CLIENT_ID }}
+
+      - name: Get Slots for App Service
+        id: get-slots
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { execSync } = require('child_process');
+
+            try {
+              const stdout = execSync('az webapp deployment slot list --name ${{ steps.set-variables.outputs.AZ_APP_NAME }} --resource-group ${{ steps.set-variables.outputs.TARGET_RESOURCE_GROUP }} --subscription ${{ vars.ARM_SUBSCRIPTION_ID }} -o json');
+
+              const slotsJSON = JSON.parse(stdout);
+              const slots = '${{ matrix.environment }}' == 'stage' ? slotsJSON.filter(slot => slot.name !== 'loadtest') : slotsJSON;
+              const numberOfslotsToDelete = slots.length;
+              core.setOutput('NUMBER_OF_SLOTS_TO_DELETE', numberOfslotsToDelete);
+              core.setOutput('SLOTS', JSON.stringify(slots));
+              core.info(`Number Of Slots to Delete: ${numberOfslotsToDelete}`);
+              core.info(`Slots to delete: ${slots.map(slot => slot.name + ':' + slot.tags['ReleaseVersion']).join(', ')}`);
+            } catch (error) {
+              core.setOutput('NUMBER_OF_SLOTS_TO_DELETE', '0');
+              core.setOutput('SLOTS', '[]');
+              core.setFailed(`Failed to get slots: ${error.message}`);
+            }
+
+      # TODO: Uncomment if you have azure locks on your resource group
+      # - name: Delete RGRP Azure Locks
+      #   id: remove-locks
+      #   if: steps.get-slots.outputs.NUMBER_OF_SLOTS_TO_DELETE > 0 && (matrix.environment == 'prod' || matrix.environment == 'stage')
+      #   continue-on-error: true
+      #   shell: pwsh
+      #   env:
+      #     LOCK_NAME: ${{ steps.set-variables.outputs.TARGET_RESOURCE_GROUP }}-delete-locks
+      #     RGRP: ${{ steps.set-variables.outputs.TARGET_RESOURCE_GROUP }}
+      #   run: |
+      #     az group lock delete --name $Env:LOCK_NAME --resource-group $Env:RGRP
+      #     While(
+      #       $(az group lock list --resource-group $Env:RGRP --output tsv --query "[?name=='${$Env:LOCK_NAME}'].id")
+      #     ){
+      #       Start-Sleep -s 0.5
+      #     }
+
+      - name: Delete Slot
+        id: delete-slot
+        if: steps.get-slots.outputs.NUMBER_OF_SLOTS_TO_DELETE > 0
+        env:
+          SLOTS: ${{ steps.get-slots.outputs.SLOTS }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            let failedToDelete = false;
+            let deletedSlots = [];
+            const slots = JSON.parse(process.env.SLOTS);
+            slots.forEach(async (slot) => {
+              try {
+                core.info(`Deleting slot: ${slot.name} - with ReleaseVersion: ${slot.tags['ReleaseVersion']}`);
+                execSync(`az ${process.env.AZ_APP_TYPE} deployment slot delete --slot ${slot.name} --ids ${slot.id}`);
+                deletedSlots.push({ id: slot.id, name: slot.name, releaseVersion: slot.tags['ReleaseVersion'], deleteStatus: 'success' });
+              } catch (error) {
+                deletedSlots.push({ id: slot.id, name: slot.name, releaseVersion: slot.tags['ReleaseVersion'], deleteStatus: 'failed' });
+                core.warning(`Failed to delete slot: ${slot.name} - ${error.message}`);
+                failedToDelete = true;
+              }
+            });
+
+            core.setOutput('DELETED_SLOTS', JSON.stringify(deletedSlots));
+            core.setOutput('DELETED_SLOTS_LIST', deletedSlots.filter(slot => slot.deleteStatus === 'success').map(slot => `${slot.name}:${slot.releaseVersion}`).join(', '));
+            if(failedToDelete) {
+              core.setFailed('One or more slots failed to delete');
+            }
+
+      - name: Azure logout
+        if: always() && steps.login.outcome == 'success'
+        run: |
+          az logout
+          az cache purge
+          az account clear
+
+      - name: Outputs parameters
+        uses: actions/github-script@v7
+        if: always()
+        env:
+          DELETED_SLOTS: ${{ steps.delete-slot.outputs.DELETED_SLOTS }}
+        with:
+          script: |
+            const numberOfSlotsToDelete = ${{ steps.get-slots.outputs.NUMBER_OF_SLOTS_TO_DELETE }};
+            const deletedSlots = numberOfSlotsToDelete > 0 ? JSON.parse(process.env.DELETED_SLOTS) : [];
+            let stepSummary =  `
+            | Arguments | Value                    |
+            | ---              |  ---                     |
+            | Environment      | \`${{ matrix.environment }}\` |
+            | App Code         | \`${{ steps.app-code-upper.outputs.APP_CODE_UPPER }}\` |
+            | Deployment Board          | [${{ steps.app-code.outputs.DEPLOYMENT_BOARD_ENTITY }}](https://techhub.mktp.io/catalog/default/component/${{ steps.app-code.outputs.DEPLOYMENT_BOARD_ENTITY }}/deployments) |
+            | Number of Slots Deleted | \`${{ steps.get-slots.outputs.NUMBER_OF_SLOTS_TO_DELETE }}\` |`;
+
+            if(deletedSlots.length > 0) {
+              deletedSlots.forEach(slot => {
+                stepSummary += `
+              | Deleted Slot | Name: \`${slot.name}\`, Version: \`${slot.releaseVersion}\`, Delete Status: \`${slot.deleteStatus}\` |`;
+              });
+            }else{
+              stepSummary += `
+            | Deleted Slots | None |`;
+            }
+
+            core.summary
+              .addRaw(stepSummary)
+              .write();
+
+      - name: Send Status to Teams
+        if: always()
+        continue-on-error: true
+        uses: im-open/post-status-to-teams-action@v1
+        with:
+          title: 'Example ${{ steps.app-code-upper.outputs.APP_CODE_UPPER }} Slots were Deleted in ${{ inputs.environment-or-target }}' # TODO: Update Title for your application
+          workflow-status: ${{ job.status }}
+          workflow-type: Build
+          teams-uri: ${{ vars.MS_TEAMS_URI }} # This is a repo-level secret (unless 'environment:' has been added to the finish-build job)
+          timezone: ${{ env.TIMEZONE }}
+          custom-facts: |
+            [
+              { "name": "Event", "value": "${{ github.event_name }}" },
+              { "name": "Workflow", "value": "${{ github.workflow }}" },
+              { "name": "Run", "value": "${{ github.run_id }}" },
+              { "name": "Actor", "value": "${{ github.actor }}" },
+              { "name": "Number of Slots Deleted", "value": "${{ steps.get-slots.outputs.NUMBER_OF_SLOTS_TO_DELETE }}" },
+              { "name": "Slots Deleted", "value": "${{ steps.get-slots.outputs.NUMBER_OF_SLOTS_TO_DELETE > 0 && steps.delete-slot.outputs.DELETED_SLOTS_LIST || 'NA' }}" }
+            ]
+          custom-actions: |
+            [
+              { "name": "View Deployment Board", "uri": "https://techhub.mktp.io/catalog/default/component/${{ steps.set-variables.outputs.DEPLOYMENT_BOARD_ENTITY }}/deployments" }
+            ]
