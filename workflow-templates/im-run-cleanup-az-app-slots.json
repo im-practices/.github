@@ -1,0 +1,5 @@
+{
+    "name": "Run - Cleanup App Slots on a Schedule or Manually",
+    "description": "Template that can be used to cleanup Azure App Service or Azure Function slots on a schedule",
+    "iconName": "im_run"
+}
