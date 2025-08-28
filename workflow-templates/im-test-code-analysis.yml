@@ -1,0 +1,421 @@
+# Workflow Code: TrickyFox_v1    DO NOT REMOVE
+# Purpose:
+#    The main purpose of this workflow is to have regular code scanning reported to Github Advanced Security
+#
+# Frequency:
+#    - This workflow should only be used once per repository
+#
+# Projects to use this Template with:
+#    - All code bases with terraform, C#, Javascript, Typescript, Powershell, and many other languages
+
+name: 📋 GHAS Code Scans
+run-name: 📋 GHAS Code Scan - ${{ inputs.pr-title != 0 && inputs.pr-title || github.ref_name }}
+# https://github.com/github/codeql-action
+
+concurrency:
+  group: ghas-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      branch-tag-sha:
+        description: The branch, tag or sha of the GHAS scan should be run against. Leave blank to use the workflow's branch/tag.
+        required: false
+      pr-title:
+        description: 'Pull Request Title'
+        required: false
+  schedule:
+    #        ┌───────────── minute (0 - 59)
+    #        │  ┌───────────── hour (0 - 23)
+    #        │  │ ┌───────────── day of the month (1 - 31)
+    #        │  │ │ ┌───────────── month (1 - 12 or JAN-DEC)
+    #        │  │ │ │ ┌───────────── day of the week (0 - 6 or SUN-SAT)
+    #        │  │ │ │ │
+    #        │  │ │ │ │
+    #        │  │ │ │ │
+    #        *  * * * *
+    - cron: 0 8 * * 1 # 1:00 AM MST Monday # TODO: Updated scheduled time to run
+
+env:
+  INPUTS_REF: ${{ inputs.branch-tag-sha == 0 && github.ref_name || inputs.branch-tag-sha }}
+  # TODO: Update with C# Dotnet version
+  DOTNET_VERSION: |
+    9.x
+  SOLUTION_FILE: '' # TODO: Update Solution File name and path from root repo folder
+  DOTNET_INSTALL_DIR: './.dotnet'
+
+jobs:
+  set-vars:
+    runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
+
+    outputs:
+      GITHUB_REF: ${{ env.GITHUB_REF }}
+
+    steps:
+      - name: Return GITHUB_REF
+        id: release-tag
+        run: |
+          echo "GITHUB_REF=${{ github.event_name == 'schedule' && 'main' || env.INPUTS_REF }}" >> $GITHUB_ENV
+
+      - name: Annotate Inputs
+        run: |
+          echo $'
+          | Workflow Arguments        | Value                    |
+          | ---                       |  ---                     |
+          | Branch/Tag                | `${{ env.GITHUB_REF }}`  |
+          | Workflow Branch/Tag       | `${{ github.ref_name }}` - SHA: `${{ github.sha }}` |
+          | PR Title                  | `${{ inputs.pr-title != 0 && inputs.pr-title || 'NA'}}` |' >> $GITHUB_STEP_SUMMARY
+
+  Dependency-Review:
+    runs-on:
+      labels: im-ghas-linux
+      group: dynamic-runners
+    needs: [set-vars]
+
+    permissions:
+      actions: read # only required for workflows in private repositories
+      contents: read # for actions/checkout fetch code
+      pull-requests: write # can write to pull requests
+      security-events: write # required for all workflows
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-vars.outputs.GITHUB_REF }}
+
+      # https://github.com/actions/dependency-review-action
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          base-ref: 'main'
+          head-ref: ${{ needs.set-vars.outputs.GITHUB_REF }}
+
+  nuget-cache:
+    runs-on: im-ghas-linux
+    needs: [set-vars]
+
+    defaults:
+      run:
+        shell: bash
+
+    outputs:
+      NUGET_CACHE_KEY: ${{ env.NUGET_CACHE_KEY }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-vars.outputs.GITHUB_REF }}
+
+      - name: Set Cache Keys
+        # As long as these files don't change the cache will remain in tact and the time
+        # to restore the different packages in the various jobs will be reduced.  If one
+        # of the files does change though, a new cache will be uploaded the next time
+        # it runs, then subsequent runs should be faster.
+        run: echo "NUGET_CACHE_KEY=nuget-${{ hashFiles('**/*.csproj') }}" >> $GITHUB_ENV
+
+      - name: Check for a nuget cache
+        id: has-cache
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          path: '~/.nuget/packages'
+          key: ${{ env.NUGET_CACHE_KEY }}
+
+      # The remaining steps will only be executed if the cache was not found, otherwise they will be skipped.
+
+      - name: Authenticate with GitHub Packages
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        uses: im-open/authenticate-with-gh-package-registries@v1
+        with:
+          read-pkg-token: ${{ secrets.READ_PKG_TOKEN }} # This is an org-level secret
+          orgs: 'im-client,im-enrollment,im-customer-engagement,im-practices' # TODO: Update with required orgs to authenticate to
+
+      - name: Dotnet Restore Nuget Packages
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        run: dotnet restore ${{ env.SOLUTION_FILE }}
+
+      # This action creates a post-job step that will upload the ./.nuget/packages dir to the cache if the job
+      # completes successfully.  Subsequent jobs and workflow runs can use this cached version of the ./.nuget/packages
+      # folder if the csproj files haven't changed and it uses a ubuntu-20.04 runner to restore the cache from.
+      - name: Save cache for nuget packages
+        if: steps.has-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ env.NUGET_CACHE_KEY }}
+          enableCrossOsArchive: true
+          path: ~/.nuget/packages
+
+  CodeQL-Scan-csharp:
+    runs-on:
+      labels: im-ghas-linux
+      group: dynamic-runners
+    needs: [set-vars, nuget-cache]
+
+    env:
+      PROJECT_ROOT: '' # TODO: Update to include project root
+
+    permissions:
+      actions: read # only required for workflows in private repositories
+      contents: read # for actions/checkout fetch code
+      pull-requests: write # can write to pull requests
+      security-events: write # required for all workflows
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-vars.outputs.GITHUB_REF }}
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+        env:
+          DOTNET_INSTALL_DIR: ${{ env.DOTNET_INSTALL_DIR }}
+
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          # TODO: Update to required RAM if 3.5gb isn't required
+          ram: 3560 # Give 3.5 GB ram to CodeQL, 1024 can lead to out of memory issues for some C# repos
+          # Using additional queries to get more results
+          # See https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/customizing-code-scanning#using-queries-in-ql-packs
+          # queries: security-extended # TODO: Uncomment if you want more scan results.  Without this input, it defaults to the base scan with higher-confidence alerts
+          languages: csharp
+
+      # These caches are only valid if the 'npm-cache' and 'nuget-cache' jobs that creates the cache and
+      # this job that downloads the caches use the same runner OS.  If this job changed runner types, the
+      # 'npm-cache' and 'nuget-cache' jobs should be updated to use the same type.
+      - name: Download nuget cache
+        id: restore-nuget-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ needs.nuget-cache.outputs.NUGET_CACHE_KEY }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+
+      - name: Build
+        if: steps.restore-nuget-cache.outputs.cache-hit == 'true'
+        run: |
+          dotnet build --configuration Release ${{ env.SOLUTION_FILE }}
+
+      - name: Perform C# CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /codeql-scan:csharp
+
+  PowerShell-Scan: # TODO: Delete if no powershell is in repo
+    runs-on:
+      labels: im-ghas-linux
+      group: dynamic-runners
+    needs: [set-vars]
+
+    permissions:
+      actions: read # only required for workflows in private repositories
+      contents: read # for actions/checkout fetch code
+      pull-requests: write # can write to pull requests
+      security-events: write # required for all workflows
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-vars.outputs.GITHUB_REF }}
+
+      - name: Perform PowerShell Scan
+        # Rules URL
+        # https://github.com/PowerShell/PSScriptAnalyzer/blob/master/docs/Rules/README.md
+        uses: microsoft/psscriptanalyzer-action@v1.1
+        with:
+          # Check https://github.com/microsoft/psscriptanalyzer-action for more info about the options.
+          # The below set up runs PSScriptAnalyzer to your entire repository and runs some basic security rules.
+          path: .\
+          recurse: true
+          output: powershell.sarif
+
+      - name: Upload PowerShell SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: powershell.sarif
+
+  CodeQL-Scan: #TODO: Delete if no javascript is in repo
+    needs: [set-vars]
+    strategy:
+      matrix:
+        languages: [javascript]
+
+    runs-on:
+      labels: im-ghas-linux
+      group: dynamic-runners
+
+    permissions:
+      actions: read # only required for workflows in private repositories
+      contents: read # for actions/checkout fetch code
+      pull-requests: write # can write to pull requests
+      security-events: write # required for all workflows
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-vars.outputs.GITHUB_REF }}
+
+      # For JavaScript use filter-sarif action so we can remove results from dist folders
+      # https://github.com/advanced-security/filter-sarif
+
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          ram: 3072
+          # Using additional queries to get more results
+          # See https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/customizing-code-scanning#using-queries-in-ql-packs
+          queries: security-extended
+          languages: ${{ matrix.languages }}
+
+      # Autobuild attempts to build any compiled languages (C/C++, C#, Go, or Java).
+      # If this step fails, then you should remove it and run the build manually (see below).
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      # ℹ️ Command-line programs to run using the OS shell.
+      # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
+
+      # ✏️ If the Autobuild fails above, remove it and uncomment the following
+      #    three lines and modify them (or add more) to build your code if your
+      #    project uses a compiled language
+
+      # - run: |
+      #   echo "Run, Build Application using script"
+      #   ./location_of_script_within_repo/buildscript.sh
+
+      # Perform normal analysis
+      - name: Perform CodeQL Analysis
+        if: matrix.languages != 'javascript'
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /codeql-scan:${{ matrix.languages }}
+
+      # For JavaScript run analysis differently so we can ignore directories in the results
+      - name: Perform JavaScript CodeQL Analysis
+        if: matrix.languages == 'javascript'
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /codeql-scan:${{ matrix.languages }}
+          upload: False
+          output: sarif-results
+
+      - name: Filter JavaScript SARIF Results
+        if: matrix.languages == 'javascript'
+        # Information about this tool
+        # https://github.com/advanced-security/filter-sarif
+        uses: advanced-security/filter-sarif@f3b8118a9349d88f7b1c0c488476411145b6270d
+        with:
+          # Remove results under dist directory
+          patterns: |
+            -**/dist/**
+          input: sarif-results/javascript.sarif
+          output: sarif-results/javascript.sarif
+
+      - name: Upload JavaScript SARIF Results
+        if: matrix.languages == 'javascript'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: sarif-results/javascript.sarif
+
+  Terraform-Scan:
+    runs-on:
+      labels: im-ghas-linux
+      group: dynamic-runners
+    needs: [set-vars]
+
+    permissions:
+      actions: read # only required for workflows in private repositories
+      contents: read # for actions/checkout fetch code
+      pull-requests: write # can write to pull requests
+      security-events: write # required for all workflows
+
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [dev, qa, stage] # TODO: Update environments to run scans agains
+
+    environment: ${{ matrix.env }}
+
+    env:
+      SSH_KEY_STORAGE_ACCOUNT: ${{ secrets.SSH_STORAGE_ACCOUNT }}
+      SSH_KEY_NETWORK_INFO: ${{ secrets.SSH_NETWORK_INFO }}
+      SSH_KEY_AAD_GROUP_MEMBERS: ${{ secrets.SSH_AAD_GROUP_MEMBERS }}
+      SSH_DEPLOY_KEY_INFO: |
+        [
+          { "orgAndRepo": "im-platform/storage-account-network-rules", "envName" : "SSH_KEY_STORAGE_ACCOUNT" },
+          { "orgAndRepo": "im-platform/network-information", "envName" : "SSH_KEY_NETWORK_INFO" },
+          { "orgAndRepo": "im-platform/aad-group-members", "envName" : "SSH_KEY_AAD_GROUP_MEMBERS" }
+        ]
+      TF_ROOT_DIR: './infrastructure' # TODO: Update Terraform root directory
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-vars.outputs.GITHUB_REF }}
+
+      - name: Setup SSH Keys and known_hosts
+        uses: im-open/setup-deploy-keys@v1
+        with:
+          deploy-key-info: ${{ env.SSH_DEPLOY_KEY_INFO }}
+
+      - name: Set skip-dirs
+        id: skip-dirs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const matrixEnv = '${{ matrix.env }}' || 'dev';
+            const dirs = ['dev', 'qa', 'stage', 'stage-secondary','prod','prod-secondary'];
+
+            let skipDirs = dirs
+              .filter(dir => dir !== matrixEnv)
+              .map(dir => `${{ env.TF_ROOT_DIR }}/${dir}`);
+            skipDirs.push('infrastructure-old');
+            skipDirsJoined = skipDirs.join(',');
+            core.setOutput('SKIP_DIRS', skipDirsJoined);
+            core.info(`Skip dirs: ${skipDirsJoined}`);
+
+      - name: Setup tfvars
+        working-directory: ${{ env.TF_ROOT_DIR }}/${{ matrix.env }}
+        run: |
+          cat << EOF > creds.auto.tfvars # TODO: Update with required variables for terraform
+            github_token    = "${{ secrets.PIPELINE_BOT_PAT }}"
+            pagerduty_token = "${{ secrets.PAGERDUTY_API_KEY }}"
+          EOF
+
+      - name: Perform Terraform Scan
+        uses: aquasecurity/trivy-action@0.32.0
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2,public.ecr.aws/aquasecurity/trivy-db:2
+        with:
+          cache-dir: trivy-cache
+          skip-dirs: ${{ steps.skip-dirs.outputs.SKIP_DIRS }}
+          tf-vars: ${{ env.TF_ROOT_DIR }}/${{ matrix.env }}/creds.auto.tfvars
+          scan-type: config
+          format: sarif
+          output: terraform.sarif
+
+      - name: Upload Terraform SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: terraform.sarif
+
+      - name: Clean Up auto.tfvars
+        working-directory: ${{ env.TF_ROOT_DIR }}/${{ matrix.env }}
+        continue-on-error: true
+        run: |
+          rm -f creds.auto.tfvars

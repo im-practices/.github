@@ -1,0 +1,5 @@
+{
+  "name": "Test - GHAS Code Scanning with CodeQL",
+  "description": "Workflow template for Github Advanced Security (GHAS) code scanning with CodeQL",
+  "iconName": "im_test"
+}
