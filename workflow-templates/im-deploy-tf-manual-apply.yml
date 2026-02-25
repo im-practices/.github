@@ -150,7 +150,7 @@ jobs:
           # RUNS_ON_GROUP@stage-secondary prod-secondary: 'dynamic-runners-secondary' # TODO: Uncomment if you are deploying to Managed SQL Server as it requires a region specific runner
 
   tf-plan:
-    needs: [set-vars, stakeholder-approval]
+    needs: [set-vars]
     runs-on: im-linux
     # runs-on: # TODO: Delete if you don't deploy to Managed SQL Server
     #   labels: im-linux
@@ -262,7 +262,7 @@ jobs:
   # Each env has their own stakeholder approval environment.  If no required reviewers are set for
   # that environment, the workflow will continue without requiring anyone to approve the deployment.
   stakeholder-approval:
-    needs: [set-vars]
+    needs: [set-vars, tf-plan]
     runs-on: ubuntu-latest # Force this to run on github-hosted runner by using a tag that does not exist on self-hosted runners
     environment: '${{ needs.set-vars.outputs.GITHUB_SECRETS_ENVIRONMENT }} Stakeholder Approval' # Use inputs context because env context is not available to environment:
     steps:
