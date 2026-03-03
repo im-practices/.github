@@ -1,4 +1,4 @@
-# Workflow Code: InsaneHamster_v53    DO NOT REMOVE
+# Workflow Code: InsaneHamster_v54    DO NOT REMOVE
 # Purpose:
 #    Deploys the terraform from a specified root module at a
 #    specified when someone kicks off the workflow manually.
@@ -164,7 +164,6 @@ jobs:
 
     outputs:
       tf_plan_name: ${{ steps.upload.outputs.tf_plan_name }}
-      maintenance_window_id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
     steps:
       - name: Checkout Repository
@@ -382,7 +381,7 @@ jobs:
         uses: im-open/close-pagerduty-maintenance-window@v1.2
         with:
           pagerduty-api-key: ${{ secrets.PAGERDUTY_API_KEY }} # This is an org-level secret
-          maintenance-window-id: ${{ needs.tf-plan.outputs.maintenance_window_id }}
+          maintenance-window-id: ${{ steps.open-window.outputs.maintenance-window-id }}
 
       - name: Annotate App Insights
         uses: im-open/create-app-insights-annotation@v1.0
