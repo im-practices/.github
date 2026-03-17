@@ -56,7 +56,7 @@ jobs:
 
     steps:
       - name: Print inputs
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             function printInput(inputName, inputValue, isMultilineInput){
@@ -82,7 +82,7 @@ jobs:
 
       - name: Construct Workflow Summary
         id: summary
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             let summary = process.env.SUMMARY;
@@ -110,7 +110,7 @@ jobs:
       # Also use fetch-depth: 0 to retrieve the history and tags so we can check if a tag is
       # exists, is reachable from the default branch and is production ready.
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.default-branch }}
           fetch-depth: 0
@@ -122,7 +122,7 @@ jobs:
 
       - name: Determine if deployment is to Prod
         id: check-env
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const prodEnvsRaw = '${{ inputs.production-environments }}';

@@ -1,3 +1,16 @@
-* @im-practices/swat
-/.github/CODEOWNERS @im-practices/swat
-/workflow-templates/im-test-k6-* @im-practices/swat @im-practices/sre-strategy @im-practices/devops
+# Syntax notes:
+# - The syntax matches most of the same rules as gitignore files.
+# - https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
+# - Each line is a file pattern followed by one or more owners (@user or @org/team-slug).
+# - Prefer team owners over individuals.
+# - Paths are case sensitive.
+# - Order is important.  The last matching pattern takes the most precedence.
+
+# These owners will be the default owners for everything in the repo. Unless a later match takes
+# precedence, these teams will be requested for review when someone opens a pull request.
+# Draft PRs do not automatically request reviews until they are marked as Ready for Review.
+# If the repo's Branch Protection Rule requires code owner reviews, one of these team members
+# must sign off before a PR can be merged.
+* @im-practices/devops-delta @im-practices/swat
+.github/CODEOWNERS @im-practices/devops-delta-admin
+.github/workflows/* @im-practices/devops-delta @im-practices/swat
