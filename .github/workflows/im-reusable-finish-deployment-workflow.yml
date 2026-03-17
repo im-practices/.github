@@ -117,7 +117,7 @@ jobs:
     environment: ${{ inputs.gh-secrets-environment }}
     steps:
       - name: Check if workflow should post to teams
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             // Some teams have these as a secret and some as a var, allow either way but if not present do not post
@@ -131,7 +131,7 @@ jobs:
             }
 
       - name: Print inputs
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             function printInput(inputName, inputValue, isMultilineInput){
@@ -192,7 +192,7 @@ jobs:
       - name: Configure facts for team's notification channel
         if: always()
         id: team-channel-facts
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const rawFacts = process.env.FACTS;
@@ -232,7 +232,7 @@ jobs:
       - name: Determine if a post should be made in Deployment Notifications channel
         if: always()
         id: post-to-deployment-channel
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const postInProd = ${{ inputs.post-status-in-deployment-notifications-channel }};
@@ -259,7 +259,7 @@ jobs:
       - name: Configure facts for Deployment Notifications channel
         if: always() && steps.post-to-deployment-channel.outputs.post == 'true'
         id: deployment-channel-facts
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const rawFacts = process.env.FACTS;
