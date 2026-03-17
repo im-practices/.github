@@ -11,6 +11,6 @@
 # Draft PRs do not automatically request reviews until they are marked as Ready for Review.
 # If the repo's Branch Protection Rule requires code owner reviews, one of these team members
 # must sign off before a PR can be merged.
-* @im-practices/devops-delta
+* @im-practices/devops-delta @im-practices/swat
 .github/CODEOWNERS @im-practices/devops-delta-admin
 .github/workflows/* @im-practices/devops-delta
