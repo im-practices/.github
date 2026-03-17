@@ -13,4 +13,4 @@
 # must sign off before a PR can be merged.
 * @im-practices/devops-delta @im-practices/swat
 .github/CODEOWNERS @im-practices/devops-delta-admin
-.github/workflows/* @im-practices/devops-delta
+.github/workflows/* @im-practices/devops-delta @im-practices/swat
