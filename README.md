@@ -1,4 +1,13 @@
-# .github
+Before you archive, please consider:
+
+* Updating any repository settings
+* Closing all open issues and pull requests
+* Update Readme with header 
+# Repo Migrated
+
+This repo is migrated.  You can find the new repo in the new organization [wtw-bdoim](https://github.com/wtw-bdoim/.github)
+
+## .github
 
 Community Health Files for the `im-practices` organization.
 
